@@ -80,9 +80,6 @@ export function DashboardSidebar() {
 
   return (
     <>
-      {/* Mobile overlay */}
-      <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" />
-      
       {/* Sidebar */}
       <aside
         className={cn(

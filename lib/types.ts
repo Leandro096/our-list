@@ -84,11 +84,22 @@ export interface EventAttendance {
   updated_at: string
 }
 
+export interface Table {
+  id: string
+  name: string
+  number: string
+  category: string | null
+  notes: string | null
+  capacity: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SeatingAssignment {
   id: string
   guest_id: string
-  table_number: string
-  seat_number: number | null
+  table_id: string
   created_at: string
   updated_at: string
 }

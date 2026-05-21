@@ -116,13 +116,27 @@ CREATE TABLE public.scan_logs (
   CONSTRAINT scan_logs_scanned_by_fkey FOREIGN KEY (scanned_by) REFERENCES public.users(id)
 );
 
+CREATE TABLE public.tables (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  number text NOT NULL UNIQUE,
+  category text,
+  notes text,
+  capacity integer NOT NULL DEFAULT 10,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tables_pkey PRIMARY KEY (id),
+  CONSTRAINT tables_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+
 CREATE TABLE public.seating_assignments (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   guest_id uuid NOT NULL UNIQUE,
-  table_number text NOT NULL,
-  seat_number integer,
+  table_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT seating_assignments_pkey PRIMARY KEY (id),
-  CONSTRAINT seating_assignments_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id)
+  CONSTRAINT seating_assignments_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id),
+  CONSTRAINT seating_assignments_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id) ON DELETE CASCADE
 );
