@@ -3,20 +3,11 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { assignRole, removeRole } from '@/services'
+import { updateUserSuperAdmin, updateUserRoles } from '@/services'
 import type { UserWithRoleAssignments } from '@/services'
 import type { Role } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,11 +22,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Shield, User, Crown } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Pencil, Shield, User, Crown } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
 import { formatDistanceToNow } from 'date-fns'
+import { es as esLocale } from 'date-fns/locale'
+import { useTranslation } from '@/locales/i18n-provider'
+import { useLocale } from '@/locales/i18n-provider'
 
 interface UserManagementProps {
   users: UserWithRoleAssignments[]
@@ -45,37 +42,47 @@ interface UserManagementProps {
 export function UserManagement({ users, roles }: UserManagementProps) {
   const supabase = createClient()
   const router = useRouter()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UserWithRoleAssignments | null>(null)
-  const [selectedRole, setSelectedRole] = useState<string>('')
+  const { t } = useTranslation()
+  const { locale } = useLocale()
+  const dateFnsLocale = locale === 'es' ? esLocale : undefined
 
-  const handleAssignRole = async () => {
-    if (!selectedUser || !selectedRole) return
+  const [editingUser, setEditingUser] = useState<UserWithRoleAssignments | null>(null)
+  const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false)
+  const [editRoleIds, setEditRoleIds] = useState<string[]>([])
+  const [isSaving, setIsSaving] = useState(false)
 
-    try {
-      const existingRole = selectedUser.user_roles.find((ur) => ur.role_id === selectedRole)
-      if (existingRole) {
-        alert('This role is already assigned to the user')
-        return
-      }
-
-      await assignRole(supabase, selectedUser.id, selectedRole)
-
-      router.refresh()
-      setIsDialogOpen(false)
-      setSelectedUser(null)
-      setSelectedRole('')
-    } catch (error) {
-      console.error('Error assigning role:', error)
-    }
+  const openEdit = (user: UserWithRoleAssignments) => {
+    setEditingUser(user)
+    setEditIsSuperAdmin(user.is_super_admin)
+    setEditRoleIds(user.user_roles.map((ur) => ur.role_id))
   }
 
-  const handleRemoveRole = async (userId: string, roleId: string) => {
+  const closeEdit = () => {
+    setEditingUser(null)
+    setEditIsSuperAdmin(false)
+    setEditRoleIds([])
+  }
+
+  const toggleRole = (roleId: string) => {
+    setEditRoleIds((prev) =>
+      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId],
+    )
+  }
+
+  const handleSave = async () => {
+    if (!editingUser) return
+    setIsSaving(true)
     try {
-      await removeRole(supabase, userId, roleId)
+      await Promise.all([
+        updateUserSuperAdmin(supabase, editingUser.id, editIsSuperAdmin),
+        updateUserRoles(supabase, editingUser.id, editRoleIds),
+      ])
       router.refresh()
+      closeEdit()
     } catch (error) {
-      console.error('Error removing role:', error)
+      console.error('Error updating user:', error)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -83,8 +90,6 @@ export function UserManagement({ users, roles }: UserManagementProps) {
     switch (roleName.toLowerCase()) {
       case 'admin':
         return <Shield className="h-3 w-3" />
-      case 'coordinator':
-        return <User className="h-3 w-3" />
       default:
         return <User className="h-3 w-3" />
     }
@@ -95,24 +100,24 @@ export function UserManagement({ users, roles }: UserManagementProps) {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Staff Members</CardTitle>
+          <CardTitle>{t('settings.users_section.staffMembers')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead className="hidden md:table-cell">Joined</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead>{t('settings.users_section.user')}</TableHead>
+                  <TableHead>{t('settings.roles')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('settings.users_section.joined')}</TableHead>
+                  <TableHead className="w-[80px]">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No users found
+                      {t('settings.users_section.noUsers')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -131,7 +136,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                           </div>
                           <div>
                             <p className="font-medium">
-                              {user.display_name || 'Unnamed User'}
+                              {user.display_name || t('settings.users_section.unnamedUser')}
                             </p>
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
@@ -142,88 +147,31 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                           {user.is_super_admin && (
                             <Badge className="bg-primary text-primary-foreground">
                               <Crown className="mr-1 h-3 w-3" />
-                              Super Admin
+                              {t('settings.users_section.superAdmin')}
                             </Badge>
                           )}
                           {user.user_roles.map((ur) => (
-                            <Badge
-                              key={ur.role_id}
-                              variant="outline"
-                              className="cursor-pointer hover:bg-destructive/10"
-                              onClick={() => handleRemoveRole(user.id, ur.role_id)}
-                              title="Click to remove"
-                            >
+                            <Badge key={ur.role_id} variant="outline">
                               {getRoleIcon(ur.roles.name)}
                               <span className="ml-1">{ur.roles.name}</span>
                             </Badge>
                           ))}
                           {user.user_roles.length === 0 && !user.is_super_admin && (
-                            <span className="text-sm text-muted-foreground">No roles</span>
+                            <span className="text-sm text-muted-foreground">{t('settings.users_section.noRoles')}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(user.created_at), { addSuffix: true, locale: dateFnsLocale })}
                       </TableCell>
                       <TableCell>
-                        <Dialog open={isDialogOpen && selectedUser?.id === user.id} onOpenChange={(open) => {
-                          setIsDialogOpen(open)
-                          if (!open) {
-                            setSelectedUser(null)
-                            setSelectedRole('')
-                          }
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedUser(user)}
-                            >
-                              <Plus className="mr-1 h-3 w-3" />
-                              Add Role
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Assign Role</DialogTitle>
-                              <DialogDescription className="sr-only">Select a role to assign to this user.</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <p className="text-sm text-muted-foreground">
-                                Assign a role to {user.display_name || user.email}
-                              </p>
-                              <div className="space-y-2">
-                                <Label>Role</Label>
-                                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a role" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {roles.map((role) => (
-                                      <SelectItem key={role.id} value={role.id}>
-                                        <div>
-                                          <p className="font-medium">{role.name}</p>
-                                          {role.description && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {role.description}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <Button
-                                onClick={handleAssignRole}
-                                className="w-full"
-                                disabled={!selectedRole}
-                              >
-                                Assign Role
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(user)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -234,26 +182,87 @@ export function UserManagement({ users, roles }: UserManagementProps) {
         </CardContent>
       </Card>
 
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => { if (!open) closeEdit() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('settings.users_section.editUser')}</DialogTitle>
+            <DialogDescription>
+              {editingUser?.display_name || editingUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Super Admin toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="super-admin-switch" className="text-sm font-medium">
+                  {t('settings.users_section.superAdmin')}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.users_section.superAdminDesc')}
+                </p>
+              </div>
+              <Switch
+                id="super-admin-switch"
+                checked={editIsSuperAdmin}
+                onCheckedChange={setEditIsSuperAdmin}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Roles */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t('settings.users_section.availableRoles')}</Label>
+              <div className="space-y-2">
+                {roles.map((role) => (
+                  <div key={role.id} className="flex items-start gap-3 rounded-md border border-border p-3">
+                    <Checkbox
+                      id={`role-${role.id}`}
+                      checked={editRoleIds.includes(role.id)}
+                      onCheckedChange={() => toggleRole(role.id)}
+                    />
+                    <div className="space-y-0.5">
+                      <Label htmlFor={`role-${role.id}`} className="cursor-pointer text-sm font-medium">
+                        {role.name}
+                      </Label>
+                      {role.description && (
+                        <p className="text-xs text-muted-foreground">{role.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={closeEdit} disabled={isSaving}>
+                {t('common.cancel')}
+              </Button>
+              <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? t('common.saving') : t('common.save')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Roles Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Roles</CardTitle>
+          <CardTitle>{t('settings.users_section.availableRoles')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {roles.map((role) => (
-              <div
-                key={role.id}
-                className="rounded-lg border border-border p-4"
-              >
+              <div key={role.id} className="rounded-lg border border-border p-4">
                 <div className="flex items-center gap-2">
                   {getRoleIcon(role.name)}
                   <h4 className="font-medium">{role.name}</h4>
                 </div>
                 {role.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {role.description}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{role.description}</p>
                 )}
               </div>
             ))}

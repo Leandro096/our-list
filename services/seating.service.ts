@@ -34,6 +34,14 @@ export type CreateTableInput = {
   created_by?: string | null
 }
 
+export type UpdateTableInput = {
+  name?: string
+  number?: string
+  category?: string | null
+  notes?: string | null
+  capacity?: number
+}
+
 // ---- Queries ----
 
 export async function getSeatingData(supabase: SupabaseClient): Promise<SeatingData> {
@@ -82,6 +90,22 @@ export async function deleteTable(
     .eq('id', tableId)
 
   if (error) throw error
+}
+
+export async function updateTable(
+  supabase: SupabaseClient,
+  tableId: string,
+  input: UpdateTableInput,
+): Promise<Table> {
+  const { data, error } = await supabase
+    .from('tables')
+    .update(input)
+    .eq('id', tableId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
 }
 
 export async function assignSeat(

@@ -285,10 +285,11 @@ BEGIN
       ),
       'seating', (
         SELECT jsonb_build_object(
-          'table_number', sa.table_number,
-          'seat_number',  sa.seat_number
+          'table_number', t.number,
+          'seat_number',  NULL
         )
         FROM   public.seating_assignments sa
+        JOIN   public.tables t ON t.id = sa.table_id
         WHERE  sa.guest_id = v_guest_id
         LIMIT  1
       )

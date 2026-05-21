@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { LogOut, User, Moon, Sun, Monitor, Menu, Heart } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,13 @@ import {
   Tags,
   Settings,
   History,
+  ChevronDown,
+  UserCog,
+  Shield,
 } from "lucide-react";
 import { LanguageSwitcher } from "../language-switcher";
 import { useI18n } from "@/locales/i18n-provider";
+import { useState } from "react";
 
 const navigationItems = [
   {
@@ -73,6 +77,20 @@ const navigationItems = [
     href: "/dashboard/settings",
     icon: Settings,
     permission: PERMISSIONS.SETTINGS_USERS,
+    children: [
+      {
+        key: "nav.users" as const,
+        href: "/dashboard/settings/users",
+        icon: UserCog,
+        permission: PERMISSIONS.SETTINGS_USERS,
+      },
+      {
+        key: "nav.roles" as const,
+        href: "/dashboard/settings/roles",
+        icon: Shield,
+        permission: PERMISSIONS.SETTINGS_ROLES,
+      },
+    ],
   },
 ];
 
@@ -82,6 +100,10 @@ export function DashboardHeader() {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const { t } = useI18n();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(
+    pathname.startsWith("/dashboard/settings"),
+  );
 
   const userPermissions = profile?.permissions || [];
   const isSuperAdmin = profile?.is_super_admin || false;
@@ -108,7 +130,7 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4 md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60 md:px-6">
       {/* Mobile menu */}
-      <Sheet>
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden">
             <Menu className="h-5 w-5" />
@@ -120,12 +142,70 @@ export function DashboardHeader() {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
               <Heart className="h-5 w-5 text-primary" />
             </div>
-            <span className="font-serif text-lg font-semibold">
+            <SheetTitle className="font-serif text-lg font-semibold">
               Wedding Manager
-            </span>
+            </SheetTitle>
           </div>
           <nav className="space-y-1 p-3">
             {filteredNavigation.map((item) => {
+              const hasChildren = "children" in item && !!item.children?.length;
+
+              if (hasChildren) {
+                const visibleChildren = item.children!.filter((child) =>
+                  hasPermission(userPermissions, child.permission, isSuperAdmin),
+                );
+                if (visibleChildren.length === 0) return null;
+                const isGroupActive = pathname.startsWith(item.href);
+
+                return (
+                  <div key={item.key}>
+                    <button
+                      onClick={() => setSettingsOpen((prev) => !prev)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        isGroupActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="flex-1 text-left">{t(item.key)}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          settingsOpen && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {settingsOpen && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
+                        {visibleChildren.map((child) => {
+                          const isActive =
+                            pathname === child.href ||
+                            pathname.startsWith(child.href);
+                          return (
+                            <Link
+                              key={child.key}
+                              href={child.href}
+                              onClick={() => setMobileOpen(false)}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                isActive
+                                  ? "bg-accent text-accent-foreground"
+                                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                              )}
+                            >
+                              <child.icon className="h-4 w-4 shrink-0" />
+                              <span>{t(child.key)}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -134,6 +214,7 @@ export function DashboardHeader() {
                 <Link
                   key={item.key}
                   href={item.href}
+                  onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
