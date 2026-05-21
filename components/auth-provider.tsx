@@ -29,76 +29,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(
     async (userId: string) => {
-      // Fetch user profile with roles and permissions
-      const { data: userData, error: userError } = await supabase
+      const { data, error } = await supabase
         .from("users")
-        .select("*")
+        .select(`
+          *,
+          user_roles!user_roles_user_id_fkey(
+            roles(
+              id,
+              name,
+              description,
+              role_permissions(
+                permissions(id, scope, description)
+              )
+            )
+          )
+        `)
         .eq("id", userId)
         .single();
 
-      if (userError || !userData) {
-        console.error("Error fetching user profile:", userError);
+      if (error || !data) {
+        console.error("Error fetching user profile:", error);
         return null;
       }
 
-      // Fetch user roles
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select(
-          `
-        role_id,
-        roles (
-          id,
-          name,
-          description
-        )
-      `,
-        )
-        .eq("user_id", userId);
+      type RoleRow = {
+        id: string;
+        name: string;
+        description: string | null;
+        role_permissions: Array<{
+          permissions: { id: string; scope: string; description: string | null } | null;
+        }>;
+      };
 
-      // Fetch permissions for each role
-      const roleIds = userRoles?.map((ur) => ur.role_id) || [];
-      const { data: rolePermissions } = await supabase
-        .from("role_permissions")
-        .select(
-          `
-        permission_id,
-        permissions (
-          id,
-          scope,
-          description
-        )
-      `,
-        )
-        .in("role_id", roleIds);
+      const roles: { id: string; name: string; description: string | null }[] =
+        (data.user_roles as Array<{ roles: RoleRow | null }>)
+          ?.map((ur) => ur.roles)
+          .filter((r): r is RoleRow => r !== null)
+          .map(({ id, name, description }) => ({ id, name, description })) ?? [];
 
-      // Extract unique permission scopes
       const permissions = [
         ...new Set(
-          rolePermissions
-            ?.map((rp) => (rp.permissions as { scope: string })?.scope)
-            .filter(Boolean) || [],
+          (data.user_roles as Array<{ roles: RoleRow | null }>)
+            ?.flatMap((ur) => ur.roles?.role_permissions ?? [])
+            .map((rp) => rp.permissions?.scope)
+            .filter((scope): scope is string => Boolean(scope)) ?? [],
         ),
       ];
 
-      // Extract roles
-      const roles =
-        userRoles
-          ?.map(
-            (ur) =>
-              ur.roles as {
-                id: string;
-                name: string;
-                description: string | null;
-              },
-          )
-          .filter(Boolean) || [];
+      const { user_roles: _omit, ...userData } = data;
 
-      return {
-        ...userData,
-        roles,
-        permissions,
-      } as UserWithRoles;
+      return { ...userData, roles, permissions } as UserWithRoles;
     },
     [supabase],
   );

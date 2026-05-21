@@ -24,7 +24,7 @@ interface GuestDetailProps {
     updated_at: string
     guest_categories: Array<{
       category_id: string
-      categories: Category
+      categories: Pick<Category, 'id' | 'name' | 'color'>
     }>
     event_attendance: Array<{
       event_type: string

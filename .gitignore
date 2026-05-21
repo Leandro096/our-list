@@ -6,3 +6,6 @@
 node_modules
 .next/
 .DS_Store
+
+# TypeScript build info files
+*.tsbuildinfo

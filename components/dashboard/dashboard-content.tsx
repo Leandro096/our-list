@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, UserCheck, Clock, UserX, ScanLine } from 'lucide-react'
-import type { DashboardStats } from '@/lib/types'
+import type { DashboardStats, RecentActivityItem } from '@/lib/types'
 import {
   BarChart,
   Bar,
@@ -17,12 +17,32 @@ import {
   Legend,
 } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
+import { es as esLocale } from 'date-fns/locale'
+import { useTranslation } from '@/locales/i18n-provider'
+import { useLocale } from '@/locales/i18n-provider'
 
 interface DashboardContentProps {
   stats: DashboardStats
 }
 
 export function DashboardContent({ stats }: DashboardContentProps) {
+  const { t } = useTranslation();
+  const { locale } = useLocale();
+  const dateFnsLocale = locale === 'es' ? esLocale : undefined
+  const TooltipContent = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string }>; label?: string }) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground shadow-md">
+        {label && <p className="mb-1 font-medium">{label}</p>}
+        {payload.map((entry, i) => (
+          <p key={i} style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
   const statusColors: Record<string, string> = {
     Confirmed: 'var(--chart-2)',
     Pending: 'var(--chart-1)',
@@ -37,14 +57,14 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Guests
+              {t('dashboard.totalGuests')}
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.totalGuests}</div>
             <p className="text-xs text-muted-foreground">
-              Invited to your wedding
+              {t('dashboard.invitedToWedding')}
             </p>
           </CardContent>
         </Card>
@@ -52,7 +72,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Confirmed
+              {t('dashboard.confirmed')}
             </CardTitle>
             <UserCheck className="h-4 w-4 text-sage" />
           </CardHeader>
@@ -60,8 +80,8 @@ export function DashboardContent({ stats }: DashboardContentProps) {
             <div className="text-3xl font-bold text-sage">{stats.confirmedGuests}</div>
             <p className="text-xs text-muted-foreground">
               {stats.totalGuests > 0
-                ? `${Math.round((stats.confirmedGuests / stats.totalGuests) * 100)}% confirmed`
-                : 'No guests yet'}
+                ? t('dashboard.percentConfirmed', { percent: Math.round((stats.confirmedGuests / stats.totalGuests) * 100) })
+                : t('dashboard.noGuestsYet')}
             </p>
           </CardContent>
         </Card>
@@ -69,14 +89,14 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending
+              {t('dashboard.pending')}
             </CardTitle>
             <Clock className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">{stats.pendingGuests}</div>
             <p className="text-xs text-muted-foreground">
-              Awaiting response
+              {t('dashboard.awaitingResponse')}
             </p>
           </CardContent>
         </Card>
@@ -84,14 +104,14 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Declined
+              {t('dashboard.declined')}
             </CardTitle>
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.declinedGuests}</div>
             <p className="text-xs text-muted-foreground">
-              Unable to attend
+              {t('dashboard.unableToAttend')}
             </p>
           </CardContent>
         </Card>
@@ -102,7 +122,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ceremony Check-ins
+              {t('dashboard.ceremonyCheckIns')}
             </CardTitle>
             <ScanLine className="h-4 w-4 text-primary" />
           </CardHeader>
@@ -110,8 +130,8 @@ export function DashboardContent({ stats }: DashboardContentProps) {
             <div className="text-3xl font-bold">{stats.checkedInCeremony}</div>
             <p className="text-xs text-muted-foreground">
               {stats.confirmedGuests > 0
-                ? `${Math.round((stats.checkedInCeremony / stats.confirmedGuests) * 100)}% of confirmed guests`
-                : 'No confirmed guests'}
+                ? t('dashboard.percentOfConfirmed', { percent: Math.round((stats.checkedInCeremony / stats.confirmedGuests) * 100) })
+                : t('dashboard.noConfirmedGuests')}
             </p>
           </CardContent>
         </Card>
@@ -119,7 +139,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Reception Check-ins
+              {t('dashboard.receptionCheckIns')}
             </CardTitle>
             <ScanLine className="h-4 w-4 text-accent" />
           </CardHeader>
@@ -127,8 +147,8 @@ export function DashboardContent({ stats }: DashboardContentProps) {
             <div className="text-3xl font-bold">{stats.checkedInReception}</div>
             <p className="text-xs text-muted-foreground">
               {stats.confirmedGuests > 0
-                ? `${Math.round((stats.checkedInReception / stats.confirmedGuests) * 100)}% of confirmed guests`
-                : 'No confirmed guests'}
+                ? t('dashboard.percentOfConfirmed', { percent: Math.round((stats.checkedInReception / stats.confirmedGuests) * 100) })
+                : t('dashboard.noConfirmedGuests')}
             </p>
           </CardContent>
         </Card>
@@ -139,8 +159,8 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         {/* Status Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-serif">RSVP Status</CardTitle>
-            <CardDescription>Guest response breakdown</CardDescription>
+            <CardTitle className="font-serif">{t('dashboard.rsvpStatus')}</CardTitle>
+            <CardDescription>{t('dashboard.guestResponseBreakdown')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -155,7 +175,6 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                     paddingAngle={2}
                     dataKey="count"
                     nameKey="status"
-                    label={({ status, count }) => `${status}: ${count}`}
                     labelLine={false}
                   >
                     {stats.guestsByStatus.map((entry, index) => (
@@ -165,13 +184,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                       />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                  />
+                  <Tooltip content={<TooltipContent />} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -182,8 +195,8 @@ export function DashboardContent({ stats }: DashboardContentProps) {
         {/* Category Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-serif">Guests by Category</CardTitle>
-            <CardDescription>Distribution across guest categories</CardDescription>
+            <CardTitle className="font-serif">{t('dashboard.guestsByCategory')}</CardTitle>
+            <CardDescription>{t('dashboard.guestsByCategoryDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -197,13 +210,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                     width={100}
                     tick={{ fontSize: 12 }}
                   />
-                  <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                  />
+                  <Tooltip content={<TooltipContent />} />
                   <Bar 
                     dataKey="count" 
                     radius={[0, 4, 4, 0]}
@@ -222,24 +229,17 @@ export function DashboardContent({ stats }: DashboardContentProps) {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-serif">Recent Activity</CardTitle>
-          <CardDescription>Latest check-ins and scans</CardDescription>
+          <CardTitle className="font-serif">{t("dashboard.recentActivity")}</CardTitle>
+          <CardDescription>{t('dashboard.latestActivity')}</CardDescription>
         </CardHeader>
         <CardContent>
           {stats.recentActivity.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
-              No scan activity yet. Start checking in guests!
+              {t('dashboard.noScanActivity')}
             </p>
           ) : (
             <div className="space-y-4">
-              {stats.recentActivity.map((scan: {
-                id: string
-                scanned_at: string
-                event_type: string
-                is_duplicate: boolean
-                guests: { first_name: string; last_name: string }
-                users: { display_name: string }
-              }) => (
+              {stats.recentActivity.map((scan: RecentActivityItem) => (
                 <div
                   key={scan.id}
                   className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
@@ -257,14 +257,14 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                         {scan.guests?.first_name} {scan.guests?.last_name}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {scan.event_type === 'ceremony' ? 'Ceremony' : 'Reception'} check-in
-                        {scan.is_duplicate && ' (Duplicate)'}
+                        {scan.event_type === 'ceremony' ? t('scanner.ceremony') : t('scanner.reception')} {t('dashboard.checkIn')}
+                        {scan.is_duplicate && ` (${t('dashboard.duplicate')})`}
                       </p>
                     </div>
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
-                    <p>{formatDistanceToNow(new Date(scan.scanned_at), { addSuffix: true })}</p>
-                    <p>by {scan.users?.display_name || 'Unknown'}</p>
+                    <p>{formatDistanceToNow(new Date(scan.scanned_at), { addSuffix: true, locale: dateFnsLocale })}</p>
+                    <p>{t('dashboard.scannedBy', { name: scan.users?.display_name || t('common.unknown') })}</p>
                   </div>
                 </div>
               ))}

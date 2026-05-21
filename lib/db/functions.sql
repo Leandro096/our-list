@@ -5,6 +5,89 @@
 
 
 -- ------------------------------------------------------------
+-- 0. get_dashboard_stats
+--    Returns all dashboard aggregations in a single round-trip.
+--    All counts are computed in PostgreSQL — no JS-side filtering.
+--
+--    Requires Supabase Realtime enabled on:
+--      · public.guests
+--      · public.scan_logs
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_dashboard_stats()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+AS $$
+  SELECT jsonb_build_object(
+    'totalGuests',        (SELECT COUNT(*)                  FROM public.guests),
+    'confirmedGuests',    (SELECT COUNT(*) FILTER (WHERE status = 'confirmed')  FROM public.guests),
+    'pendingGuests',      (SELECT COUNT(*) FILTER (WHERE status = 'pending')    FROM public.guests),
+    'declinedGuests',     (SELECT COUNT(*) FILTER (WHERE status = 'declined')   FROM public.guests),
+    'checkedInCeremony',  (
+      SELECT COUNT(DISTINCT guest_id)
+      FROM   public.scan_logs
+      WHERE  event_type = 'ceremony' AND is_duplicate = false
+    ),
+    'checkedInReception', (
+      SELECT COUNT(DISTINCT guest_id)
+      FROM   public.scan_logs
+      WHERE  event_type = 'reception' AND is_duplicate = false
+    ),
+    'guestsByStatus', jsonb_build_array(
+      jsonb_build_object('status', 'Confirmed', 'count', (SELECT COUNT(*) FROM public.guests WHERE status = 'confirmed')),
+      jsonb_build_object('status', 'Pending',   'count', (SELECT COUNT(*) FROM public.guests WHERE status = 'pending')),
+      jsonb_build_object('status', 'Declined',  'count', (SELECT COUNT(*) FROM public.guests WHERE status = 'declined')),
+      jsonb_build_object('status', 'Tentative', 'count', (SELECT COUNT(*) FROM public.guests WHERE status = 'tentative'))
+    ),
+    'guestsByCategory', (
+      SELECT COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'name',  c.name,
+            'color', c.color,
+            'count', COALESCE(cnt.guest_count, 0)
+          ) ORDER BY c.name
+        ),
+        '[]'::jsonb
+      )
+      FROM public.categories c
+      LEFT JOIN (
+        SELECT category_id, COUNT(*) AS guest_count
+        FROM   public.guest_categories
+        GROUP  BY category_id
+      ) cnt ON cnt.category_id = c.id
+    ),
+    'recentActivity', (
+      SELECT COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'id',           sl.id,
+            'guest_id',     sl.guest_id,
+            'scanned_by',   sl.scanned_by,
+            'scanned_at',   sl.scanned_at,
+            'event_type',   sl.event_type,
+            'is_duplicate', sl.is_duplicate,
+            'notes',        sl.notes,
+            'guests',       jsonb_build_object('first_name', g.first_name, 'last_name', g.last_name),
+            'users',        CASE WHEN u.display_name IS NOT NULL
+                              THEN jsonb_build_object('display_name', u.display_name)
+                              ELSE NULL END
+          ) ORDER BY sl.scanned_at DESC
+        ),
+        '[]'::jsonb
+      )
+      FROM (
+        SELECT * FROM public.scan_logs ORDER BY scanned_at DESC LIMIT 10
+      ) sl
+      LEFT JOIN public.guests g ON g.id = sl.guest_id
+      LEFT JOIN public.users  u ON u.id = sl.scanned_by
+    )
+  )
+$$;
+
+
+
+-- ------------------------------------------------------------
 -- 1. create_guest_full
 --    Inserts a guest + categories + event_attendance atomically.
 --    Replaces 3 sequential round-trips in createGuest().

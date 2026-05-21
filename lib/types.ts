@@ -122,6 +122,11 @@ export interface RoleWithPermissions extends Role {
   permissions?: Permission[]
 }
 
+export type RecentActivityItem = ScanLog & {
+  guests: { first_name: string; last_name: string } | null
+  users: { display_name: string } | null
+}
+
 // Dashboard stats
 export interface DashboardStats {
   totalGuests: number
@@ -132,5 +137,5 @@ export interface DashboardStats {
   checkedInReception: number
   guestsByCategory: { name: string; count: number; color: string }[]
   guestsByStatus: { status: string; count: number }[]
-  recentActivity: ScanLog[]
+  recentActivity: RecentActivityItem[]
 }
