@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react'
 import { useTranslation } from '@/locales/i18n-provider'
+import { toast } from '@/hooks/use-toast'
 
 interface RolesManagerProps {
   roles: RoleWithPermissions[]
@@ -118,8 +119,10 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
       }
       router.refresh()
       closeEdit()
+      toast({ title: t('settings.roles_section.roleSaved') })
     } catch (error) {
       console.error('Error saving role:', error)
+      toast({ title: t('common.error'), description: t('settings.roles_section.roleSaveError'), variant: 'destructive' })
     } finally {
       setIsSaving(false)
     }
@@ -130,8 +133,10 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
     try {
       await deleteRole(supabase, deletingRoleId)
       router.refresh()
+      toast({ title: t('settings.roles_section.roleDeleted') })
     } catch (error) {
       console.error('Error deleting role:', error)
+      toast({ title: t('common.error'), description: t('settings.roles_section.roleDeleteError'), variant: 'destructive' })
     } finally {
       setDeletingRoleId(null)
     }

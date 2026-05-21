@@ -113,8 +113,10 @@ export function SeatingManager({ guests, assignments, tables: initialTables }: S
       await deleteTable(supabase, tableId)
       setTables(tables.filter(t => t.id !== tableId))
       router.refresh()
+      toast({ title: t('seating.tableDeleted') })
     } catch (error) {
       console.error('Error deleting table:', error)
+      toast({ title: t('common.error'), description: t('seating.tableDeleteError'), variant: 'destructive' })
     }
   }
 
@@ -152,8 +154,10 @@ export function SeatingManager({ guests, assignments, tables: initialTables }: S
     try {
       await removeSeatAssignment(supabase, guestId)
       router.refresh()
+      toast({ title: t('seating.guestUnassigned') })
     } catch (error) {
       console.error('Error removing assignment:', error)
+      toast({ title: t('common.error'), description: t('seating.guestUnassignError'), variant: 'destructive' })
     }
   }
 

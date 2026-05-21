@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth-provider";
 import { useTranslation } from "@/locales/i18n-provider";
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import {
   CheckCircle,
   XCircle,
@@ -45,46 +45,54 @@ export default function ScannerPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [todayStats, setTodayStats] = useState({ ceremony: 0, reception: 0 });
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
     fetchTodayStats();
   }, []);
 
   const fetchTodayStats = async () => {
-    const stats = await getTodayStats(supabase);
-    setTodayStats(stats);
+    try {
+      const stats = await getTodayStats(supabase);
+      setTodayStats(stats);
+    } catch (error) {
+      console.error("Error fetching today stats:", error);
+    }
   };
 
   useEffect(() => {
     if (!isScanning) return;
 
-    const scanner = new Html5QrcodeScanner(
-      "qr-reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1,
-      },
-      false,
-    );
+    const scanner = new Html5Qrcode("qr-reader");
+    scannerRef.current = scanner;
 
-    scanner.render(
-      async (decodedText) => {
-        scanner.clear();
+    scanner
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          await scanner.stop().catch(() => {});
+          scannerRef.current = null;
+          setIsScanning(false);
+          await handleScan(decodedText);
+        },
+        undefined,
+      )
+      .catch(() => {
+        scannerRef.current = null;
         setIsScanning(false);
-        await handleScan(decodedText);
-      },
-      (error) => {
-        // Ignore scan errors - they happen frequently when no QR code is in frame
-      },
-    );
+      });
 
     return () => {
-      scanner.clear().catch(() => {});
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
     };
   }, [isScanning]);
 
   const handleScan = async (invitationGuid: string) => {
+    try {
     const result = await processGuestScan(supabase, invitationGuid, eventType, profile?.id);
 
     if (!result.found) {
@@ -105,6 +113,13 @@ export default function ScannerPage() {
         ? t("scanner.alreadyCheckedIn")
         : t("scanner.checkInSuccess"),
     });
+    } catch (error) {
+      console.error("Error processing scan:", error);
+      setScanResult({
+        success: false,
+        message: t("scanner.checkInError"),
+      });
+    }
   };
 
   const startScanning = () => {
@@ -196,7 +211,13 @@ export default function ScannerPage() {
               />
               <Button
                 variant="outline"
-                onClick={() => setIsScanning(false)}
+                onClick={async () => {
+                  if (scannerRef.current) {
+                    await scannerRef.current.stop().catch(() => {});
+                    scannerRef.current = null;
+                  }
+                  setIsScanning(false);
+                }}
                 className="w-full"
               >
                 {t("scanner.stopScanning")}

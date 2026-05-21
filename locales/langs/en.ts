@@ -288,6 +288,10 @@ export const en = {
     tableUpdateError: "Could not update table. Try again.",
     assignedGuests: "Assigned Guests",
     addMoreGuests: "Add Guests",
+    tableDeleted: "Table deleted.",
+    tableDeleteError: "Could not delete table. Try again.",
+    guestUnassigned: "Guest unassigned.",
+    guestUnassignError: "Could not unassign guest. Try again.",
   },
   settings: {
     title: "Settings",
@@ -346,6 +350,10 @@ export const en = {
       permissions: "Permissions",
       noRoles: "No roles found. Create one to get started.",
       noPermissions: "No permissions assigned",
+      roleSaved: "Role saved.",
+      roleDeleted: "Role deleted.",
+      roleSaveError: "Could not save role. Try again.",
+      roleDeleteError: "Could not delete role. Try again.",
     },
   },
   home: {

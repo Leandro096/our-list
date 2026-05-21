@@ -113,8 +113,13 @@ export function DashboardHeader() {
   );
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push("/auth/login");
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error during sign out:", error);
+    } finally {
+      router.push("/auth/login");
+    }
   };
 
   const getInitials = (name: string | null | undefined) => {

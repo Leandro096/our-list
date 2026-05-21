@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Pencil, Trash2, Tags } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
+import { useTranslation } from '@/locales/i18n-provider'
 
 interface CategoriesManagerProps {
   categories: CategoryWithCount[]
@@ -39,6 +41,7 @@ const colorOptions = [
 export function CategoriesManager({ categories }: CategoriesManagerProps) {
   const supabase = createClient()
   const router = useRouter()
+  const { t } = useTranslation()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<CategoryWithCount | null>(null)
   const [formData, setFormData] = useState({
@@ -72,8 +75,10 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
 
       setIsDialogOpen(false)
       router.refresh()
+      toast({ title: t('categories.categorySaved') })
     } catch (error) {
       console.error('Error saving category:', error)
+      toast({ title: t('common.error'), description: t('common.error'), variant: 'destructive' })
     }
   }
 
@@ -83,8 +88,10 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
     try {
       await deleteCategory(supabase, id)
       router.refresh()
+      toast({ title: t('categories.categoryDeleted') })
     } catch (error) {
       console.error('Error deleting category:', error)
+      toast({ title: t('common.error'), description: t('common.error'), variant: 'destructive' })
     }
   }
 

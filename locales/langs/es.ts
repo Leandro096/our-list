@@ -289,6 +289,10 @@ export const es: Dictionary = {
     tableUpdateError: "No se pudo actualizar la mesa. Inténtalo de nuevo.",
     assignedGuests: "Invitados Asignados",
     addMoreGuests: "Agregar Invitados",
+    tableDeleted: "Mesa eliminada.",
+    tableDeleteError: "No se pudo eliminar la mesa. Inténtalo de nuevo.",
+    guestUnassigned: "Invitado quitado de la mesa.",
+    guestUnassignError: "No se pudo quitar al invitado. Inténtalo de nuevo.",
   },
   settings: {
     title: "Configuración",
@@ -347,6 +351,10 @@ export const es: Dictionary = {
       permissions: "Permisos",
       noRoles: "No se encontraron roles. Crea uno para comenzar.",
       noPermissions: "Sin permisos asignados",
+      roleSaved: "Rol guardado.",
+      roleDeleted: "Rol eliminado.",
+      roleSaveError: "No se pudo guardar el rol. Inténtalo de nuevo.",
+      roleDeleteError: "No se pudo eliminar el rol. Inténtalo de nuevo.",
     },
   },
   home: {
