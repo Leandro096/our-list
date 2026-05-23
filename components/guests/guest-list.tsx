@@ -26,8 +26,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui';
 import {
@@ -45,13 +47,14 @@ import type { GuestListItem } from '@/services';
 import { ExportDialog } from './export-dialog';
 import { ImportDialog } from './import-dialog';
 import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
+import { useTranslation } from '@/locales/i18n-provider';
 
 // ---- Types ----
 
 export interface GuestFilters {
   q: string;
   status: string;
-  category: string;
+  categoryIds: string[];
   sort: string;
   order: string;
   page: number;
@@ -69,20 +72,9 @@ interface GuestListProps {
 
 const PAGE_SIZES = [50, 100, 300];
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'declined', label: 'Declined' },
-  { value: 'tentative', label: 'Tentative' },
-];
+const STATUS_OPTIONS = ['all', 'pending', 'confirmed', 'declined', 'tentative'] as const;
 
-const SORT_OPTIONS = [
-  { value: 'first_name', label: 'First Name' },
-  { value: 'last_name', label: 'Last Name' },
-  { value: 'status', label: 'Status' },
-  { value: 'created_at', label: 'Date Added' },
-];
+const SORT_OPTIONS = ['first_name', 'last_name', 'status', 'created_at'] as const;
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
   pending: 'outline',
@@ -96,6 +88,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
 export function GuestList({ guests, categories, totalCount, currentParams }: GuestListProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
@@ -131,7 +124,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
     const qs = new URLSearchParams();
     if (next.q) qs.set('q', next.q);
     if (next.status && next.status !== 'all') qs.set('status', next.status);
-    if (next.category && next.category !== 'all') qs.set('category', next.category);
+    if (next.categoryIds.length > 0) qs.set('category', next.categoryIds.join(','));
     if (next.sort !== 'first_name') qs.set('sort', next.sort);
     if (next.order !== 'asc') qs.set('order', next.order);
     if (next.page !== 1) qs.set('page', String(next.page));
@@ -205,6 +198,34 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
     );
   }
 
+  function getStatusLabel(value: string) {
+    if (value === 'all') return t('guests.allStatus');
+    return t(`guests.statuses.${value}`);
+  }
+
+  function getSortLabel(value: string) {
+    if (value === 'first_name') return t('guests.firstName');
+    if (value === 'last_name') return t('guests.lastName');
+    if (value === 'status') return t('guests.status');
+    return t('guests.dateAdded');
+  }
+
+  const selectedCategories = categories.filter((cat) => currentParams.categoryIds.includes(cat.id));
+
+  function getCategoryFilterLabel() {
+    if (selectedCategories.length === 0) return t('guests.allCategories');
+    if (selectedCategories.length === 1) return selectedCategories[0].name;
+    return t('guests.categoriesSelected', { count: selectedCategories.length });
+  }
+
+  function toggleCategoryFilter(categoryId: string) {
+    const nextIds = currentParams.categoryIds.includes(categoryId)
+      ? currentParams.categoryIds.filter((id) => id !== categoryId)
+      : [...currentParams.categoryIds, categoryId];
+
+    navigate({ categoryIds: nextIds, page: 1 });
+  }
+
   // ---- Render ----
 
   return (
@@ -225,23 +246,25 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       {/* Single delete confirm */}
       <AlertDialog
         open={!!deleteTargetId}
-        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Guest</AlertDialogTitle>
+            <AlertDialogTitle>{t('guests.deleteGuest')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this guest? This action cannot be undone.
+              {t('guests.deleteGuestConfirm')} {t('common.thisActionCannotBeUndone')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting…' : 'Delete'}
+              {isDeleting ? t('guests.deleting') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -251,20 +274,26 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.size} guests</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t('guests.deleteManyTitle', { count: selectedIds.size })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {selectedIds.size} guest
-              {selectedIds.size !== 1 ? 's' : ''}. This action cannot be undone.
+              {t('guests.deleteManyDescription', {
+                count: selectedIds.size,
+                suffix: selectedIds.size !== 1 ? 's' : '',
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting…' : `Delete ${selectedIds.size}`}
+              {isDeleting
+                ? t('guests.deleting')
+                : t('guests.deleteCount', { count: selectedIds.size })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -277,105 +306,130 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by name or email…"
+              placeholder={t('guests.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9"
+              className="h-8 pl-9"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Import</span>
+            <span className="hidden sm:inline">{t('common.import')}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setExportOpen(true)}>
             <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline">{t('common.export')}</span>
           </Button>
         </div>
 
         {/* Row 2: filters + sort + page size */}
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          {/* Status filter */}
           <Select
             value={currentParams.status}
             onValueChange={(v) => navigate({ status: v, page: 1 })}
           >
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
+              <SelectValue placeholder={t('guests.status')} />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
-                  {o.label}
+                <SelectItem key={o} value={o} className="text-xs">
+                  {getStatusLabel(o)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select
-            value={currentParams.category}
-            onValueChange={(v) => navigate({ category: v, page: 1 })}
-          >
-            <SelectTrigger className="h-8 w-[150px] text-xs">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="text-xs">All Categories</SelectItem>
+          {/* Category filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-between text-xs font-normal leading-none sm:w-[190px]"
+              >
+                <span className="truncate">{getCategoryFilterLabel()}</span>
+                <ChevronRight className="h-3 w-3 rotate-90 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[260px]">
+              <DropdownMenuCheckboxItem
+                checked={currentParams.categoryIds.length === 0}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={() => navigate({ categoryIds: [], page: 1 })}
+                className="text-xs"
+              >
+                {t('guests.allCategories')}
+              </DropdownMenuCheckboxItem>
+              {categories.length > 0 && <DropdownMenuSeparator />}
               {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                <DropdownMenuCheckboxItem
+                  key={cat.id}
+                  checked={currentParams.categoryIds.includes(cat.id)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={() => toggleCategoryFilter(cat.id)}
+                  className="text-xs"
+                >
                   <div className="flex items-center gap-2">
                     <span
                       className="inline-block h-2 w-2 rounded-full"
                       style={{ backgroundColor: cat.color }}
                     />
-                    {cat.name}
+                    <span className="truncate">{cat.name}</span>
                   </div>
-                </SelectItem>
+                </DropdownMenuCheckboxItem>
               ))}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
+          {/* Sort filter */}
           <Select
             value={currentParams.sort}
             onValueChange={(v) => navigate({ sort: v, order: 'asc', page: 1 })}
           >
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue placeholder="Sort by" />
+            <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
+              <SelectValue placeholder={t('guests.sortBy')} />
             </SelectTrigger>
             <SelectContent>
               {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
-                  {o.label}
+                <SelectItem key={o} value={o} className="text-xs">
+                  {getSortLabel(o)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
+          {/* Order toggle */}
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-xs"
-            onClick={() =>
-              navigate({ order: currentParams.order === 'asc' ? 'desc' : 'asc' })
-            }
+            className="w-full px-2 text-xs leading-none sm:w-auto"
+            onClick={() => navigate({ order: currentParams.order === 'asc' ? 'desc' : 'asc' })}
           >
             {currentParams.order === 'asc' ? (
-              <><ArrowUp className="mr-1 h-3 w-3" /> Asc</>
+              <>
+                <ArrowUp className="mr-1 h-3 w-3" /> {t('guests.asc')}
+              </>
             ) : (
-              <><ArrowDown className="mr-1 h-3 w-3" /> Desc</>
+              <>
+                <ArrowDown className="mr-1 h-3 w-3" /> {t('guests.desc')}
+              </>
             )}
           </Button>
 
+          {/* Page size filter */}
           <Select
             value={String(currentParams.size)}
             onValueChange={(v) => navigate({ size: parseInt(v), page: 1 })}
           >
-            <SelectTrigger className="h-8 w-[80px] text-xs">
+            <SelectTrigger size="sm" className="w-full text-xs sm:w-[110px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PAGE_SIZES.map((s) => (
                 <SelectItem key={s} value={String(s)} className="text-xs">
-                  {s} / page
+                  {t('guests.perPage', { count: s })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -387,7 +441,10 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       {selectedIds.size > 0 && (
         <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2">
           <span className="text-sm font-medium">
-            {selectedIds.size} guest{selectedIds.size !== 1 ? 's' : ''} selected
+            {t('guests.selectedCount', {
+              count: selectedIds.size,
+              suffix: selectedIds.size !== 1 ? 's' : '',
+            })}
           </span>
           <Button
             variant="destructive"
@@ -396,7 +453,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
             disabled={isDeleting}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete selected
+            {t('guests.deleteSelected')}
           </Button>
         </div>
       )}
@@ -404,8 +461,12 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       {/* ---- Count ---- */}
       <p className="text-sm text-muted-foreground">
         {totalCount === 0
-          ? 'No guests found'
-          : `Showing ${(currentParams.page - 1) * currentParams.size + 1}–${Math.min(currentParams.page * currentParams.size, totalCount)} of ${totalCount} guests`}
+          ? t('guests.noGuestsFound')
+          : t('guests.showingRange', {
+              start: (currentParams.page - 1) * currentParams.size + 1,
+              end: Math.min(currentParams.page * currentParams.size, totalCount),
+              total: totalCount,
+            })}
       </p>
 
       {/* ---- Table ---- */}
@@ -424,10 +485,14 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
               <TableHead className="px-3">
                 <Checkbox
                   checked={allSelected}
-                  ref={(el) => { if (el) (el as HTMLButtonElement).dataset.indeterminate = String(someSelected); }}
+                  ref={(el) => {
+                    if (el) (el as HTMLButtonElement).dataset.indeterminate = String(someSelected);
+                  }}
                   onCheckedChange={toggleAll}
-                  aria-label="Select all"
-                  data-state={someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'}
+                  aria-label={t('guests.selectAll')}
+                  data-state={
+                    someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'
+                  }
                 />
               </TableHead>
               <TableHead>
@@ -435,7 +500,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
                   onClick={() => handleSort('first_name')}
                 >
-                  Name <SortIcon column="first_name" />
+                  {t('guests.fullName')} <SortIcon column="first_name" />
                 </button>
               </TableHead>
               <TableHead>
@@ -443,14 +508,14 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
                   onClick={() => handleSort('status')}
                 >
-                  Status <SortIcon column="status" />
+                  {t('guests.status')} <SortIcon column="status" />
                 </button>
               </TableHead>
               <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wide">
-                Categories
+                {t('nav.categories')}
               </TableHead>
               <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wide">
-                Table
+                {t('guests.table')}
               </TableHead>
               <TableHead />
             </TableRow>
@@ -459,7 +524,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
             {guests.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No guests found
+                  {t('guests.noGuestsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -489,9 +554,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                     <p className="truncate font-medium leading-tight">
                       {guest.first_name} {guest.last_name}
                       {guest.is_plus_one && (
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          +1
-                        </span>
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">+1</span>
                       )}
                     </p>
                     {guest.email && (
@@ -502,7 +565,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   {/* Status */}
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[guest.status] ?? 'outline'} className="text-xs">
-                      {guest.status.charAt(0).toUpperCase() + guest.status.slice(1)}
+                      {t(`guests.statuses.${guest.status}`)}
                     </Badge>
                   </TableCell>
 
@@ -531,7 +594,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
 
                   {/* Table # */}
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                    {guest.seating_assignments?.[0]?.tables?.number ?? '—'}
+                    {guest.seating_assignments?.[0]?.tables?.number ?? t('common.no')}
                   </TableCell>
 
                   {/* Actions */}
@@ -540,30 +603,30 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
+                          <span className="sr-only">{t('common.actions')}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/guests/${guest.id}`}>
-                            <Eye className="mr-2 h-4 w-4" /> View
+                            <Eye className="mr-2 h-4 w-4" /> {t('common.view')}
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/guests/${guest.id}/edit`}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                            <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/guests/${guest.id}/qr`}>
-                            <QrCode className="mr-2 h-4 w-4" /> QR Code
+                            <QrCode className="mr-2 h-4 w-4" /> {t('guests.qrCode')}
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => setDeleteTargetId(guest.id)}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -579,7 +642,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
-            Page {currentParams.page} of {totalPages}
+            {t('guests.pageOf', { page: currentParams.page, totalPages })}
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -617,7 +680,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   >
                     {p}
                   </Button>
-                ),
+                )
               )}
             <Button
               variant="outline"

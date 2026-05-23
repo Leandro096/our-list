@@ -1,1 +1,2 @@
-export * from "./categories-manager";
+export * from './categories-dialog';
+export * from './categories-manager';

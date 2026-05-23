@@ -38,22 +38,27 @@ export async function getCategoriesWithGuestCount(
 export async function createCategory(
   supabase: SupabaseClient,
   input: CategoryInput
-): Promise<void> {
-  const { error } = await supabase.from('categories').insert({
-    name: input.name,
-    color: input.color,
-    description: input.description || null,
-  });
+): Promise<Category> {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({
+      name: input.name,
+      color: input.color,
+      description: input.description || null,
+    })
+    .select()
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
 export async function updateCategory(
   supabase: SupabaseClient,
   id: string,
   input: CategoryInput
-): Promise<void> {
-  const { error } = await supabase
+): Promise<Category> {
+  const { data, error } = await supabase
     .from('categories')
     .update({
       name: input.name,
@@ -61,9 +66,12 @@ export async function updateCategory(
       description: input.description || null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select()
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
 export async function deleteCategory(supabase: SupabaseClient, id: string): Promise<void> {

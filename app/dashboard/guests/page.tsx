@@ -1,9 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
-import { getGuestsPaginated, getCategories } from "@/services";
-import { PageHeader } from "@/components/page-header";
-import { GuestList } from "@/components/guests/guest-list";
+import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/page-header';
+import { GuestList } from '@/components/guests/guest-list';
+import { getGuestsPaginated, getCategories } from '@/services';
 
-const VALID_SORT = ["first_name", "last_name", "status", "created_at"] as const;
+const VALID_SORT = ['first_name', 'last_name', 'status', 'created_at'] as const;
 type SortBy = (typeof VALID_SORT)[number];
 
 export default async function GuestsPage({
@@ -12,22 +12,24 @@ export default async function GuestsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  const categoryIds = (params.category ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0 && value !== 'all');
 
   const sortBy = (
-    VALID_SORT.includes(params.sort as SortBy) ? params.sort : "first_name"
+    VALID_SORT.includes(params.sort as SortBy) ? params.sort : 'first_name'
   ) as SortBy;
-  const sortOrder = params.order === "desc" ? "desc" : "asc";
-  const page = Math.max(1, parseInt(params.page ?? "1") || 1);
-  const size = [50, 100, 300].includes(parseInt(params.size ?? ""))
-    ? parseInt(params.size!)
-    : 50;
+  const sortOrder = params.order === 'desc' ? 'desc' : 'asc';
+  const page = Math.max(1, parseInt(params.page ?? '1') || 1);
+  const size = [50, 100, 300].includes(parseInt(params.size ?? '')) ? parseInt(params.size!) : 50;
 
   const supabase = await createClient();
   const [{ data: guests, count }, categories] = await Promise.all([
     getGuestsPaginated(supabase, {
       search: params.q,
       status: params.status,
-      categoryId: params.category,
+      categoryIds,
       sortBy,
       sortOrder,
       page,
@@ -49,9 +51,9 @@ export default async function GuestsPage({
         categories={categories}
         totalCount={count}
         currentParams={{
-          q: params.q ?? "",
-          status: params.status ?? "all",
-          category: params.category ?? "all",
+          q: params.q ?? '',
+          status: params.status ?? 'all',
+          categoryIds,
           sort: sortBy,
           order: sortOrder,
           page,

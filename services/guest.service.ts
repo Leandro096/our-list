@@ -96,7 +96,7 @@ export async function getGuests(
 export interface GuestListParams {
   search?: string;
   status?: string;
-  categoryId?: string;
+  categoryIds?: string[];
   sortBy?: "first_name" | "last_name" | "status" | "created_at";
   sortOrder?: "asc" | "desc";
   page?: number;
@@ -115,7 +115,7 @@ export async function getGuestsPaginated(
   const {
     search,
     status,
-    categoryId,
+    categoryIds,
     sortBy = "first_name",
     sortOrder = "asc",
     page = 1,
@@ -127,12 +127,12 @@ export async function getGuestsPaginated(
 
   // Pre-filter by category via a separate query (PostgREST join filtering)
   let guestIds: string[] | null = null;
-  if (categoryId && categoryId !== "all") {
+  if (categoryIds && categoryIds.length > 0) {
     const { data: catRows } = await supabase
       .from("guest_categories")
       .select("guest_id")
-      .eq("category_id", categoryId);
-    guestIds = (catRows ?? []).map((r: { guest_id: string }) => r.guest_id);
+      .in("category_id", categoryIds);
+    guestIds = Array.from(new Set((catRows ?? []).map((r: { guest_id: string }) => r.guest_id)));
     if (guestIds.length === 0) return { data: [], count: 0 };
   }
 

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Label,
@@ -15,63 +15,72 @@ import {
   SelectValue,
   SelectContent,
   SelectTrigger,
-} from "@/components/ui";
-import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { Category, Guest } from "@/lib";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { createGuest, updateGuest } from "@/services";
-import { useTranslation } from "@/locales/i18n-provider";
+} from '@/components/ui';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Category, Guest } from '@/lib';
+import { ArrowLeft, Loader2, Plus } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { createGuest, updateGuest } from '@/services';
+import { useTranslation } from '@/locales/i18n-provider';
+import { CategoriesDialog } from '@/components/categories';
 
 interface GuestFormProps {
   categories: Category[];
   guest?: Guest & { guest_categories?: { category_id: string }[] };
-  mode?: "create" | "edit";
+  mode?: 'create' | 'edit';
 }
 
-export function GuestForm({
-  categories,
-  guest,
-  mode = "create",
-}: GuestFormProps) {
+export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
   const router = useRouter();
   const supabase = createClient();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [categoriesState, setCategoriesState] = useState(categories);
+
+  const handleOpenDialog = () => {
+    setIsDialogOpen(true);
+  };
+
+  const handleSaved = (saved: Category, isNew: boolean) => {
+    setCategoriesState((prev) =>
+      isNew
+        ? [...prev, saved].sort((a, b) => a.name.localeCompare(b.name))
+        : prev.map((c) => (c.id === saved.id ? saved : c))
+    );
+  };
 
   const [formData, setFormData] = useState({
-    first_name: guest?.first_name || "",
-    last_name: guest?.last_name || "",
-    email: guest?.email || "",
-    phone: guest?.phone || "",
-    status: guest?.status || "pending",
-    dietary_restrictions: guest?.dietary_restrictions || "",
-    notes: guest?.notes || "",
+    first_name: guest?.first_name || '',
+    last_name: guest?.last_name || '',
+    email: guest?.email || '',
+    phone: guest?.phone || '',
+    status: guest?.status || 'pending',
+    dietary_restrictions: guest?.dietary_restrictions || '',
+    notes: guest?.notes || '',
     is_plus_one: guest?.is_plus_one || false,
-    selectedCategories:
-      guest?.guest_categories?.map((gc) => gc.category_id) || [],
+    selectedCategories: guest?.guest_categories?.map((gc) => gc.category_id) || [],
     ceremony_attending: true,
     reception_attending: true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[GuestForm] handleSubmit called, mode:", mode);
+
     setIsLoading(true);
     setError(null);
 
     try {
-      if (mode === "create") {
-        console.log("[GuestForm] calling createGuest...");
+      if (mode === 'create') {
         await createGuest(supabase, {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
           phone: formData.phone,
-          status: formData.status as Guest["status"],
+          status: formData.status as Guest['status'],
           dietary_restrictions: formData.dietary_restrictions,
           notes: formData.notes,
           is_plus_one: formData.is_plus_one,
@@ -79,33 +88,29 @@ export function GuestForm({
           ceremony_attending: formData.ceremony_attending,
           reception_attending: formData.reception_attending,
         });
-        console.log("[GuestForm] createGuest succeeded, navigating...");
 
-        router.push("/dashboard/guests");
+        router.push('/dashboard/guests');
         router.refresh();
       } else {
-        console.log("[GuestForm] calling updateGuest...");
         await updateGuest(supabase, guest!.id, {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
           phone: formData.phone,
-          status: formData.status as Guest["status"],
+          status: formData.status as Guest['status'],
           dietary_restrictions: formData.dietary_restrictions,
           notes: formData.notes,
           is_plus_one: formData.is_plus_one,
           selectedCategories: formData.selectedCategories,
         });
-        console.log("[GuestForm] updateGuest succeeded, navigating...");
 
         router.push(`/dashboard/guests/${guest!.id}`);
         router.refresh();
       }
     } catch (err) {
-      console.error("[GuestForm] caught error:", err);
+      console.error('[GuestForm] caught error:', err);
       setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
-      console.log("[GuestForm] finally: setIsLoading(false)");
       setIsLoading(false);
     }
   };
@@ -128,6 +133,7 @@ export function GuestForm({
         </Link>
       </Button>
 
+      {/* Personal Information */}
       <Card>
         <CardHeader>
           <CardTitle>{t('guests.personalInfo')}</CardTitle>
@@ -140,9 +146,7 @@ export function GuestForm({
                 id="first_name"
                 required
                 value={formData.first_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, first_name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -151,9 +155,7 @@ export function GuestForm({
                 id="last_name"
                 required
                 value={formData.last_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, last_name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               />
             </div>
           </div>
@@ -164,9 +166,7 @@ export function GuestForm({
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -175,15 +175,14 @@ export function GuestForm({
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* RSVP Status */}
       <Card>
         <CardHeader>
           <CardTitle>{t('guests.rsvpStatus')}</CardTitle>
@@ -194,7 +193,7 @@ export function GuestForm({
             <Select
               value={formData.status}
               onValueChange={(value) =>
-                setFormData({ ...formData, status: value as Guest["status"] })
+                setFormData({ ...formData, status: value as Guest['status'] })
               }
             >
               <SelectTrigger>
@@ -213,16 +212,14 @@ export function GuestForm({
             <Checkbox
               id="is_plus_one"
               checked={formData.is_plus_one}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, is_plus_one: !!checked })
-              }
+              onCheckedChange={(checked) => setFormData({ ...formData, is_plus_one: !!checked })}
             />
             <Label htmlFor="is_plus_one" className="font-normal">
               {t('guests.isPlusOne')}
             </Label>
           </div>
 
-          {mode === "create" && (
+          {mode === 'create' && (
             <div className="space-y-3">
               <Label>{t('guests.events')}</Label>
               <div className="flex flex-col gap-2">
@@ -262,26 +259,25 @@ export function GuestForm({
         </CardContent>
       </Card>
 
+      {/* Categories */}
       <Card>
         <CardHeader>
           <CardTitle>{t('nav.categories')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
+            {categoriesState.map((category) => (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => toggleCategory(category.id)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   formData.selectedCategories.includes(category.id)
-                    ? "text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    ? 'text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
                 style={{
-                  backgroundColor: formData.selectedCategories.includes(
-                    category.id,
-                  )
+                  backgroundColor: formData.selectedCategories.includes(category.id)
                     ? category.color
                     : undefined,
                 }}
@@ -289,10 +285,24 @@ export function GuestForm({
                 {category.name}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => handleOpenDialog()}
+              className={'rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center'}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+
+            <CategoriesDialog
+              isOpen={isDialogOpen}
+              onOpenChange={setIsDialogOpen}
+              onSave={handleSaved}
+            />
           </div>
         </CardContent>
       </Card>
 
+      {/* Additional Information */}
       <Card>
         <CardHeader>
           <CardTitle>{t('guests.additionalInfo')}</CardTitle>
@@ -317,9 +327,7 @@ export function GuestForm({
             <Textarea
               id="notes"
               value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder={t('guests.notesPlaceholder')}
               rows={3}
             />
@@ -328,9 +336,7 @@ export function GuestForm({
       </Card>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
       )}
 
       <div className="flex gap-4">
@@ -340,7 +346,7 @@ export function GuestForm({
           disabled={isLoading}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === "create" ? t('guests.addGuest') : t('settings.saveChanges')}
+          {mode === 'create' ? t('guests.addGuest') : t('settings.saveChanges')}
         </Button>
         <Button type="button" variant="outline" asChild>
           <Link href="/dashboard/guests">{t('common.cancel')}</Link>

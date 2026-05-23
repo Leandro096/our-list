@@ -109,7 +109,82 @@ export function UserManagement({ users, roles }: UserManagementProps) {
           <CardTitle>{t("settings.users_section.staffMembers")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-border">
+          {/* Mobile grid */}
+          {users.length === 0 ? (
+            <p className="h-24 text-center text-sm text-muted-foreground flex items-center justify-center md:hidden">
+              {t("settings.users_section.noUsers")}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:hidden">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="rounded-lg border border-border p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                          user.is_super_admin ? "bg-primary/10" : "bg-muted"
+                        }`}
+                      >
+                        {user.is_super_admin ? (
+                          <Crown className="h-4 w-4 text-primary" />
+                        ) : (
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {user.display_name ||
+                            t("settings.users_section.unnamedUser")}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => openEdit(user)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {user.is_super_admin && (
+                      <Badge className="bg-primary text-primary-foreground">
+                        <Crown className="mr-1 h-3 w-3" />
+                        {t("settings.users_section.superAdmin")}
+                      </Badge>
+                    )}
+                    {user.user_roles.map((ur) => (
+                      <Badge key={ur.role_id} variant="outline">
+                        {getRoleIcon(ur.roles.name)}
+                        <span className="ml-1">{ur.roles.name}</span>
+                      </Badge>
+                    ))}
+                    {user.user_roles.length === 0 && !user.is_super_admin && (
+                      <span className="text-sm text-muted-foreground">
+                        {t("settings.users_section.noRoles")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(user.created_at), {
+                      addSuffix: true,
+                      locale: dateFnsLocale,
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop table */}
+          <div className="hidden rounded-lg border border-border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
