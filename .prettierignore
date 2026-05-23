@@ -1,0 +1,32 @@
+# Ignore all files in the node_modules folder
+public/*
+**/out/*
+**/.next/*
+**/node_modules/*
+
+# Ignore all build output
+dist/
+build/
+
+# Ignore all log files
+*.log
+
+# Ignore all temporary files
+*.tmp
+*.temp
+
+# Ignore all coverage reports
+coverage/
+
+# Ignore all IDE specific files
+.vscode/
+.idea/
+
+# Ignore all environment variable files.env
+.env.local
+.env.*.local
+.env
+
+# Ignore all lock files
+pnpm-lock.yaml
+pnpm-workspace.yaml
