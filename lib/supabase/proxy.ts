@@ -40,14 +40,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages.
+  // Use a clean URL (no query params) to avoid leaking ?next= into the dashboard.
   if (
     request.nextUrl.pathname.startsWith("/auth") &&
     user &&
     !request.nextUrl.pathname.startsWith("/auth/callback")
   ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    const url = new URL("/dashboard", request.url);
     return NextResponse.redirect(url);
   }
 

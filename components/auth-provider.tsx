@@ -226,14 +226,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const getInitialSession = async () => {
       try {
-        // Race getSession() against a 5 s timeout so a hanging refresh call
-        // (network stall, Supabase lock, etc.) cannot block the UI forever.
-        const { data: { session } } = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<{ data: { session: null } }>((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), 5000),
-          ),
-        ]);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         setUser(session?.user ?? null);
 
