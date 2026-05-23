@@ -1,21 +1,21 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import {
   Card,
+  Input,
+  Label,
+  Button,
+  CardTitle,
+  CardHeader,
   CardContent,
   CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Heart } from "lucide-react";
-import { useTranslation } from "@/locales/i18n-provider";
+import { useTranslation } from "@/locales";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -64,10 +64,10 @@ export default function LoginPage() {
 
           <Card className="border-border/50 shadow-lg">
             <CardHeader className="text-center">
-              <CardTitle className="font-serif text-xl">{t("auth.welcomeBack")}</CardTitle>
-              <CardDescription>
-                {t("auth.signInDescription")}
-              </CardDescription>
+              <CardTitle className="font-serif text-xl">
+                {t("auth.welcomeBack")}
+              </CardTitle>
+              <CardDescription>{t("auth.signInDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin}>

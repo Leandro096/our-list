@@ -1,25 +1,5 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/components/auth-provider";
-import { useTranslation } from "@/locales/i18n-provider";
-import {
-  getTodayStats,
-  processGuestScan,
-} from "@/services";
-import type { ScannerGuest } from "@/services";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Html5Qrcode } from "html5-qrcode";
 import {
   CheckCircle,
   XCircle,
@@ -27,6 +7,26 @@ import {
   ScanLine,
   Users,
 } from "lucide-react";
+
+import {
+  Badge,
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
+import { useAuth } from "@/components/auth-provider";
+import { Html5Qrcode } from "html5-qrcode";
+import { useTranslation } from "@/locales";
+import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { type ScannerGuest, getTodayStats, processGuestScan } from "@/services";
 
 type ScanResult = {
   success: boolean;
@@ -93,26 +93,31 @@ export default function ScannerPage() {
 
   const handleScan = async (invitationGuid: string) => {
     try {
-    const result = await processGuestScan(supabase, invitationGuid, eventType, profile?.id);
+      const result = await processGuestScan(
+        supabase,
+        invitationGuid,
+        eventType,
+        profile?.id,
+      );
 
-    if (!result.found) {
+      if (!result.found) {
+        setScanResult({
+          success: false,
+          message: t("scanner.guestNotFound"),
+        });
+        return;
+      }
+
+      setTodayStats(result.today_stats);
+
       setScanResult({
-        success: false,
-        message: t("scanner.guestNotFound"),
+        success: true,
+        isDuplicate: result.is_duplicate,
+        guest: result.guest,
+        message: result.is_duplicate
+          ? t("scanner.alreadyCheckedIn")
+          : t("scanner.checkInSuccess"),
       });
-      return;
-    }
-
-    setTodayStats(result.today_stats);
-
-    setScanResult({
-      success: true,
-      isDuplicate: result.is_duplicate,
-      guest: result.guest,
-      message: result.is_duplicate
-        ? t("scanner.alreadyCheckedIn")
-        : t("scanner.checkInSuccess"),
-    });
     } catch (error) {
       console.error("Error processing scan:", error);
       setScanResult({
@@ -133,9 +138,7 @@ export default function ScannerPage() {
         <h1 className="font-serif text-3xl font-semibold tracking-tight">
           {t("scanner.title")}
         </h1>
-        <p className="mt-1 text-muted-foreground">
-          {t("scanner.description")}
-        </p>
+        <p className="mt-1 text-muted-foreground">{t("scanner.description")}</p>
       </div>
 
       {/* Stats */}
@@ -186,8 +189,12 @@ export default function ScannerPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ceremony">{t("scanner.ceremony")}</SelectItem>
-                <SelectItem value="reception">{t("scanner.reception")}</SelectItem>
+                <SelectItem value="ceremony">
+                  {t("scanner.ceremony")}
+                </SelectItem>
+                <SelectItem value="reception">
+                  {t("scanner.reception")}
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -294,9 +301,20 @@ export default function ScannerPage() {
                             {t("scanner.seatingAssignment")}
                           </p>
                           <p className="text-lg font-semibold">
-                            {t("scanner.tableNumber", { number: String(scanResult.guest.seating.table_number) })}
+                            {t("scanner.tableNumber", {
+                              number: String(
+                                scanResult.guest.seating.table_number,
+                              ),
+                            })}
                             {scanResult.guest.seating.seat_number && (
-                              <>, {t("scanner.seatNumber", { number: String(scanResult.guest.seating.seat_number) })}</>
+                              <>
+                                ,{" "}
+                                {t("scanner.seatNumber", {
+                                  number: String(
+                                    scanResult.guest.seating.seat_number,
+                                  ),
+                                })}
+                              </>
                             )}
                           </p>
                         </div>

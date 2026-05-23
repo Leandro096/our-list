@@ -1,39 +1,47 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { getDashboardStats } from '@/services'
-import { DashboardContent } from './dashboard-content'
-import type { DashboardStats } from '@/lib/types'
+import type { DashboardStats } from "@/lib";
+import { getDashboardStats } from "@/services";
+import { createClient } from "@/lib/supabase/client";
+import { DashboardContent } from "./dashboard-content";
+import { useState, useEffect, useCallback } from "react";
 
 interface DashboardRealtimeProps {
-  initialStats: DashboardStats
+  initialStats: DashboardStats;
 }
 
 export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
-  const [stats, setStats] = useState<DashboardStats>(initialStats)
-  const supabase = createClient()
+  const [stats, setStats] = useState<DashboardStats>(initialStats);
+  const supabase = createClient();
 
   const refetch = useCallback(async () => {
     try {
-      const fresh = await getDashboardStats(supabase)
-      setStats(fresh)
+      const fresh = await getDashboardStats(supabase);
+      setStats(fresh);
     } catch (err) {
-      console.error('Error refreshing dashboard stats:', err)
+      console.error("Error refreshing dashboard stats:", err);
     }
-  }, [supabase])
+  }, [supabase]);
 
   useEffect(() => {
     const channel = supabase
-      .channel('dashboard-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, refetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scan_logs' }, refetch)
-      .subscribe()
+      .channel("dashboard-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "guests" },
+        refetch,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scan_logs" },
+        refetch,
+      )
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [supabase, refetch])
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, refetch]);
 
-  return <DashboardContent stats={stats} />
+  return <DashboardContent stats={stats} />;
 }

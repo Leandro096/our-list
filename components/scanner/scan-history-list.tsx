@@ -1,52 +1,53 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react'
-import { Input } from '@/components/ui/input'
+import { useState, useMemo } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
+  Input,
+  Badge,
   Table,
+  Select,
+  TableRow,
   TableBody,
   TableCell,
   TableHead,
+  SelectItem,
+  SelectValue,
   TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Search, ScanLine } from 'lucide-react'
-import { format } from 'date-fns'
-import type { ScanHistoryItem } from '@/services'
+  SelectContent,
+  SelectTrigger,
+} from "@/components/ui";
+import { format } from "date-fns";
+import { Search, ScanLine } from "lucide-react";
+import type { ScanHistoryItem } from "@/services";
 
 interface ScanHistoryListProps {
-  scanLogs: ScanHistoryItem[]
+  scanLogs: ScanHistoryItem[];
 }
 
 export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
-  const [search, setSearch] = useState('')
-  const [eventFilter, setEventFilter] = useState<string>('all')
-  const [duplicateFilter, setDuplicateFilter] = useState<string>('all')
+  const [search, setSearch] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [duplicateFilter, setDuplicateFilter] = useState<string>("all");
 
   const filteredLogs = useMemo(() => {
-    return scanLogs.filter(log => {
-      const searchLower = search.toLowerCase()
-      const matchesSearch = search === '' ||
+    return scanLogs.filter((log) => {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        search === "" ||
         log.guests?.first_name?.toLowerCase().includes(searchLower) ||
         log.guests?.last_name?.toLowerCase().includes(searchLower) ||
-        log.users?.display_name?.toLowerCase().includes(searchLower)
+        log.users?.display_name?.toLowerCase().includes(searchLower);
 
-      const matchesEvent = eventFilter === 'all' || log.event_type === eventFilter
-      const matchesDuplicate = duplicateFilter === 'all' || 
-        (duplicateFilter === 'duplicate' && log.is_duplicate) ||
-        (duplicateFilter === 'unique' && !log.is_duplicate)
+      const matchesEvent =
+        eventFilter === "all" || log.event_type === eventFilter;
+      const matchesDuplicate =
+        duplicateFilter === "all" ||
+        (duplicateFilter === "duplicate" && log.is_duplicate) ||
+        (duplicateFilter === "unique" && !log.is_duplicate);
 
-      return matchesSearch && matchesEvent && matchesDuplicate
-    })
-  }, [scanLogs, search, eventFilter, duplicateFilter])
+      return matchesSearch && matchesEvent && matchesDuplicate;
+    });
+  }, [scanLogs, search, eventFilter, duplicateFilter]);
 
   return (
     <div className="space-y-4">
@@ -103,7 +104,10 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
           <TableBody>
             {filteredLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No scans found
                 </TableCell>
               </TableRow>
@@ -112,12 +116,16 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
                 <TableRow key={log.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        log.is_duplicate ? 'bg-destructive/10' : 'bg-sage/10'
-                      }`}>
-                        <ScanLine className={`h-4 w-4 ${
-                          log.is_duplicate ? 'text-destructive' : 'text-sage'
-                        }`} />
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                          log.is_duplicate ? "bg-destructive/10" : "bg-sage/10"
+                        }`}
+                      >
+                        <ScanLine
+                          className={`h-4 w-4 ${
+                            log.is_duplicate ? "text-destructive" : "text-sage"
+                          }`}
+                        />
                       </div>
                       <span className="font-medium">
                         {log.guests?.first_name} {log.guests?.last_name}
@@ -126,25 +134,29 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {log.event_type === 'ceremony' ? 'Ceremony' : 'Reception'}
+                      {log.event_type === "ceremony" ? "Ceremony" : "Reception"}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {log.users?.display_name || 'Unknown'}
+                    {log.users?.display_name || "Unknown"}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <p>{format(new Date(log.scanned_at), 'MMM d, yyyy')}</p>
+                      <p>{format(new Date(log.scanned_at), "MMM d, yyyy")}</p>
                       <p className="text-muted-foreground">
-                        {format(new Date(log.scanned_at), 'h:mm a')}
+                        {format(new Date(log.scanned_at), "h:mm a")}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
                     {log.is_duplicate ? (
-                      <Badge variant="destructive" className="text-xs">Duplicate</Badge>
+                      <Badge variant="destructive" className="text-xs">
+                        Duplicate
+                      </Badge>
                     ) : (
-                      <Badge variant="default" className="bg-sage text-xs">First Scan</Badge>
+                      <Badge variant="default" className="bg-sage text-xs">
+                        First Scan
+                      </Badge>
                     )}
                   </TableCell>
                 </TableRow>
@@ -154,5 +166,5 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
         </Table>
       </div>
     </div>
-  )
+  );
 }

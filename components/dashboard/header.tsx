@@ -1,39 +1,42 @@
 "use client";
 
-import { useAuth } from "@/components/auth-provider";
-import { Button } from "@/components/ui/button";
 import {
+  Sheet,
+  Button,
+  Avatar,
+  SheetTitle,
+  SheetTrigger,
+  SheetContent,
   DropdownMenu,
-  DropdownMenuContent,
+  AvatarFallback,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
-import { LogOut, User, Moon, Sun, Monitor, Menu, Heart } from "lucide-react";
-import { useTheme } from "next-themes";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+} from "@/components/ui";
 import {
-  LayoutDashboard,
+  Tags,
   Users,
+  Shield,
+  History,
+  UserCog,
   ScanLine,
   Armchair,
-  Tags,
   Settings,
-  History,
   ChevronDown,
-  UserCog,
-  Shield,
+  LayoutDashboard,
 } from "lucide-react";
-import { LanguageSwitcher } from "../language-switcher";
-import { useI18n } from "@/locales/i18n-provider";
+import Link from "next/link";
 import { useState } from "react";
+import { useI18n } from "@/locales";
+import { useTheme } from "next-themes";
+import { useAuth } from "@/components/auth-provider";
+import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { cn, hasPermission, PERMISSIONS } from "@/lib";
+import { LanguageSwitcher } from "../language-switcher";
+import { LogOut, User, Moon, Sun, Monitor, Menu, Heart, Check } from "lucide-react";
 
 const navigationItems = [
   {
@@ -95,7 +98,7 @@ const navigationItems = [
 ];
 
 export function DashboardHeader() {
-  const { profile, signOut, isLoading } = useAuth();
+  const { profile, signOut, isLoading, activeRole, activePermissions, selectRole } = useAuth();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
@@ -105,7 +108,7 @@ export function DashboardHeader() {
     pathname.startsWith("/dashboard/settings"),
   );
 
-  const userPermissions = profile?.permissions || [];
+  const userPermissions = activePermissions;
   const isSuperAdmin = profile?.is_super_admin || false;
 
   const filteredNavigation = navigationItems.filter((item) =>
@@ -157,7 +160,11 @@ export function DashboardHeader() {
 
               if (hasChildren) {
                 const visibleChildren = item.children!.filter((child) =>
-                  hasPermission(userPermissions, child.permission, isSuperAdmin),
+                  hasPermission(
+                    userPermissions,
+                    child.permission,
+                    isSuperAdmin,
+                  ),
                 );
                 if (visibleChildren.length === 0) return null;
                 const isGroupActive = pathname.startsWith(item.href);
@@ -299,6 +306,30 @@ export function DashboardHeader() {
               {t("settings.account")}
             </Link>
           </DropdownMenuItem>
+
+          {/* Role switcher — only when the user has more than one role */}
+          {(profile?.roles?.length ?? 0) > 1 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                {activeRole?.name ?? t("nav.activeRole")}
+              </DropdownMenuLabel>
+              {profile!.roles!.map((role) => (
+                <DropdownMenuItem
+                  key={role.id}
+                  onClick={() => selectRole(role)}
+                  className="cursor-pointer"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  {role.name}
+                  {activeRole?.id === role.id && (
+                    <Check className="ml-auto h-4 w-4" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </>
+          )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleSignOut}

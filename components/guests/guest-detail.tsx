@@ -31,8 +31,7 @@ interface GuestDetailProps {
       attending: boolean | null
     }>
     seating_assignments: Array<{
-      table_number: string
-      seat_number: number | null
+      tables: { number: string } | null
     }>
     scan_logs: Array<{
       id: string
@@ -133,8 +132,7 @@ export function GuestDetail({ guest }: GuestDetailProps) {
                 <div className="flex items-center gap-3 text-sm">
                   <Armchair className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    Table {seating.table_number}
-                    {seating.seat_number && `, Seat ${seating.seat_number}`}
+                    Table {seating.tables?.number}
                   </span>
                 </div>
               )}

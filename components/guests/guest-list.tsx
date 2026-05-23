@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui'
+import { Button } from '@/components/ui'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/components/ui'
 import {
   Table,
   TableBody,
@@ -17,17 +17,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+} from '@/components/ui'
+import { Badge } from '@/components/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Search, MoreHorizontal, Eye, Pencil, Trash2, QrCode } from 'lucide-react'
+} from '@/components/ui'
+import { Search, MoreHorizontal, Eye, Pencil, Trash2, QrCode, Download, Upload } from 'lucide-react'
 import Link from 'next/link'
-import type { Category } from '@/lib/types'
+import { useRouter } from 'next/navigation'
+import type { Category } from '@/lib'
+import { ExportDialog } from './export-dialog'
+import { ImportDialog } from './import-dialog'
 
 interface GuestWithRelations {
   id: string
@@ -50,8 +53,7 @@ interface GuestWithRelations {
     attending: boolean | null
   }>
   seating_assignments: Array<{
-    table_number: string
-    seat_number: number | null
+    tables: { number: string } | null
   }>
 }
 
@@ -68,9 +70,12 @@ const statusConfig = {
 }
 
 export function GuestList({ guests, categories }: GuestListProps) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [exportOpen, setExportOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const filteredGuests = useMemo(() => {
     return guests.filter(guest => {
@@ -94,7 +99,19 @@ export function GuestList({ guests, categories }: GuestListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        guests={filteredGuests}
+        categories={categories}
+      />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => router.refresh()}
+      />
+
+      {/* Filters + actions */}
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -136,6 +153,17 @@ export function GuestList({ guests, categories }: GuestListProps) {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {/* Results count */}
@@ -207,7 +235,7 @@ export function GuestList({ guests, categories }: GuestListProps) {
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    {guest.seating_assignments?.[0]?.table_number || '-'}
+                    {guest.seating_assignments?.[0]?.tables?.number || '-'}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

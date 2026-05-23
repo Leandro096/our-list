@@ -1,12 +1,19 @@
-"use client"
+"use client";
 
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Heart, Users, ScanLine, Armchair, Shield, Sparkles } from 'lucide-react'
-import { useTranslation } from '@/locales/i18n-provider'
+import {
+  Heart,
+  Users,
+  ScanLine,
+  Armchair,
+  Shield,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui";
+import { useTranslation } from "@/locales";
 
 export default function HomePage() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -17,13 +24,18 @@ export default function HomePage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
               <Heart className="h-5 w-5 text-primary" />
             </div>
-            <span className="font-serif text-xl font-semibold">{t("home.appName")}</span>
+            <span className="font-serif text-xl font-semibold">
+              {t("home.appName")}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
               <Link href="/auth/login">{t("home.signIn")}</Link>
             </Button>
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              asChild
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               <Link href="/auth/sign-up">{t("home.getStarted")}</Link>
             </Button>
           </div>
@@ -39,14 +51,18 @@ export default function HomePage() {
               {t("home.badge")}
             </div>
             <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-              {t("home.heroTitle")}{' '}
+              {t("home.heroTitle")}{" "}
               <span className="text-primary">{t("home.heroHighlight")}</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground md:text-xl">
               {t("home.heroDescription")}
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center">
-              <Button size="lg" asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button
+                size="lg"
+                asChild
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
                 <Link href="/auth/sign-up">
                   {t("home.startPlanning")}
                   <Heart className="ml-2 h-4 w-4" />
@@ -105,10 +121,12 @@ export default function HomePage() {
               <p className="mt-4 text-muted-foreground">
                 {t("home.ctaDescription")}
               </p>
-              <Button size="lg" asChild className="mt-8 bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/auth/sign-up">
-                  {t("home.getStartedFree")}
-                </Link>
+              <Button
+                size="lg"
+                asChild
+                className="mt-8 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Link href="/auth/sign-up">{t("home.getStartedFree")}</Link>
               </Button>
             </div>
           </div>
@@ -122,11 +140,13 @@ export default function HomePage() {
             <Heart className="h-4 w-4 text-primary" />
             <span>{t("home.appName")}</span>
           </div>
-          <p>&copy; {new Date().getFullYear()} {t("home.allRightsReserved")}</p>
+          <p>
+            &copy; {new Date().getFullYear()} {t("home.allRightsReserved")}
+          </p>
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
 function FeatureCard({
@@ -134,9 +154,9 @@ function FeatureCard({
   title,
   description,
 }: {
-  icon: React.ElementType
-  title: string
-  description: string
+  icon: React.ElementType;
+  title: string;
+  description: string;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/30">
@@ -146,5 +166,5 @@ function FeatureCard({
       <h3 className="mt-4 font-serif text-lg font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
     </div>
-  )
+  );
 }

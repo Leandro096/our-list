@@ -1,20 +1,23 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { UserManagement } from '@/components/settings/user-management'
-import { getUsersWithRoles, getRoles } from '@/services'
-import { PageHeader } from '@/components/page-header'
-import { hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/page-header";
+import { getUsersWithRoles, getRoles } from "@/services";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { UserManagement } from "@/components/settings/user-management";
 
 export default async function UsersSettingsPage() {
   // 1. Verify the current user is authenticated
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
 
   // 2. Fetch the current user's profile to check permissions
   const { data: profile } = await supabase
-    .from('users')
-    .select(`
+    .from("users")
+    .select(
+      `
       is_super_admin,
       user_roles!user_roles_user_id_fkey(
         roles(
@@ -23,15 +26,16 @@ export default async function UsersSettingsPage() {
           )
         )
       )
-    `)
-    .eq('id', user.id)
-    .single()
+    `,
+    )
+    .eq("id", user.id)
+    .single();
 
-  if (!profile) redirect('/auth/login')
+  if (!profile) redirect("/auth/login");
 
   type RoleRow = {
-    role_permissions: Array<{ permissions: { scope: string } | null }>
-  }
+    role_permissions: Array<{ permissions: { scope: string } | null }>;
+  };
 
   const userPermissions = [
     ...new Set(
@@ -40,26 +44,29 @@ export default async function UsersSettingsPage() {
         .map((rp) => rp.permissions?.scope)
         .filter((scope): scope is string => Boolean(scope)) ?? [],
     ),
-  ]
+  ];
 
   const canManageUsers = hasPermission(
     userPermissions,
     PERMISSIONS.SETTINGS_USERS,
     profile.is_super_admin,
-  )
+  );
 
-  if (!canManageUsers) redirect('/dashboard')
+  if (!canManageUsers) redirect("/dashboard");
 
   // 3. Use the regular client to read all users (RLS policy allows authenticated users to read all rows)
   const [users, roles] = await Promise.all([
     getUsersWithRoles(supabase),
     getRoles(supabase),
-  ])
+  ]);
 
   return (
     <div className="space-y-6">
-      <PageHeader titleKey="settings.users_section.title" descriptionKey="settings.usersDescription" />
+      <PageHeader
+        titleKey="settings.users_section.title"
+        descriptionKey="settings.usersDescription"
+      />
       <UserManagement users={users} roles={roles} />
     </div>
-  )
+  );
 }

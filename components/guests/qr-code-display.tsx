@@ -1,30 +1,35 @@
-'use client'
+"use client";
 
-import { QRCodeSVG } from 'qrcode.react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, Printer, Download } from 'lucide-react'
-import Link from 'next/link'
-import { useRef } from 'react'
+import {
+  Card,
+  Button,
+  CardTitle,
+  CardHeader,
+  CardContent,
+} from "@/components/ui";
+import { useRef } from "react";
+import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
+import { ArrowLeft, Printer, Download } from "lucide-react";
 
 interface QRCodeDisplayProps {
   guest: {
-    id: string
-    invitation_guid: string
-    first_name: string
-    last_name: string
-  }
+    id: string;
+    invitation_guid: string;
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
-  const printRef = useRef<HTMLDivElement>(null)
+  const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
-    const printContent = printRef.current
-    if (!printContent) return
+    const printContent = printRef.current;
+    if (!printContent) return;
 
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -78,39 +83,39 @@ export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
             <h1>${guest.first_name} ${guest.last_name}</h1>
             <p>Wedding Guest Invitation</p>
             <div class="qr-container">
-              ${document.getElementById('qr-svg')?.outerHTML || ''}
+              ${document.getElementById("qr-svg")?.outerHTML || ""}
             </div>
             <p class="footer">Scan this code at check-in</p>
           </div>
         </body>
       </html>
-    `)
-    printWindow.document.close()
-    printWindow.print()
-  }
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const handleDownload = () => {
-    const svg = document.getElementById('qr-svg')
-    if (!svg) return
+    const svg = document.getElementById("qr-svg");
+    if (!svg) return;
 
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    const img = new Image()
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
 
     img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx?.drawImage(img, 0, 0)
-      const pngFile = canvas.toDataURL('image/png')
-      const downloadLink = document.createElement('a')
-      downloadLink.download = `qr-${guest.first_name}-${guest.last_name}.png`
-      downloadLink.href = pngFile
-      downloadLink.click()
-    }
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = `qr-${guest.first_name}-${guest.last_name}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
 
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
-  }
+    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+  };
 
   return (
     <div className="space-y-6">
@@ -126,7 +131,9 @@ export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
           <CardTitle className="font-serif text-2xl">
             {guest.first_name} {guest.last_name}
           </CardTitle>
-          <p className="text-sm text-muted-foreground">Wedding Guest Invitation</p>
+          <p className="text-sm text-muted-foreground">
+            Wedding Guest Invitation
+          </p>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6">
           <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -156,5 +163,5 @@ export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

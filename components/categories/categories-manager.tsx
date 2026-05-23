@@ -1,106 +1,125 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { createCategory, updateCategory, deleteCategory } from '@/services'
-import type { CategoryWithCount } from '@/services'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  type CategoryWithCount,
+} from "@/services";
+import {
+  Card,
+  Input,
+  Label,
+  Badge,
   Dialog,
+  Button,
+  Textarea,
+  CardTitle,
+  CardHeader,
+  CardContent,
+  DialogTitle,
+  DialogHeader,
+  DialogTrigger,
   DialogContent,
   DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Pencil, Trash2, Tags } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
-import { useTranslation } from '@/locales/i18n-provider'
+} from "@/components/ui";
+import { toast } from "@/hooks";
+import { useState } from "react";
+import { useTranslation } from "@/locales";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Plus, Pencil, Trash2, Tags } from "lucide-react";
 
 interface CategoriesManagerProps {
-  categories: CategoryWithCount[]
+  categories: CategoryWithCount[];
 }
 
 const colorOptions = [
-  { name: 'Blush', value: '#F4B8C1' },
-  { name: 'Sage', value: '#A8B5A2' },
-  { name: 'Gold', value: '#C9A84C' },
-  { name: 'Gray', value: '#6B7280' },
-  { name: 'Purple', value: '#8B5CF6' },
-  { name: 'Blue', value: '#3B82F6' },
-  { name: 'Coral', value: '#F97316' },
-  { name: 'Teal', value: '#14B8A6' },
-]
+  { name: "Blush", value: "#F4B8C1" },
+  { name: "Sage", value: "#A8B5A2" },
+  { name: "Gold", value: "#C9A84C" },
+  { name: "Gray", value: "#6B7280" },
+  { name: "Purple", value: "#8B5CF6" },
+  { name: "Blue", value: "#3B82F6" },
+  { name: "Coral", value: "#F97316" },
+  { name: "Teal", value: "#14B8A6" },
+];
 
 export function CategoriesManager({ categories }: CategoriesManagerProps) {
-  const supabase = createClient()
-  const router = useRouter()
-  const { t } = useTranslation()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<CategoryWithCount | null>(null)
+  const supabase = createClient();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] =
+    useState<CategoryWithCount | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    color: '#C9A84C',
-    description: '',
-  })
+    name: "",
+    color: "#C9A84C",
+    description: "",
+  });
 
   const handleOpenDialog = (category?: CategoryWithCount) => {
     if (category) {
-      setEditingCategory(category)
+      setEditingCategory(category);
       setFormData({
         name: category.name,
         color: category.color,
-        description: category.description || '',
-      })
+        description: category.description || "",
+      });
     } else {
-      setEditingCategory(null)
-      setFormData({ name: '', color: '#C9A84C', description: '' })
+      setEditingCategory(null);
+      setFormData({ name: "", color: "#C9A84C", description: "" });
     }
-    setIsDialogOpen(true)
-  }
+    setIsDialogOpen(true);
+  };
 
   const handleSave = async () => {
     try {
       if (editingCategory) {
-        await updateCategory(supabase, editingCategory.id, formData)
+        await updateCategory(supabase, editingCategory.id, formData);
       } else {
-        await createCategory(supabase, formData)
+        await createCategory(supabase, formData);
       }
 
-      setIsDialogOpen(false)
-      router.refresh()
-      toast({ title: t('categories.categorySaved') })
+      setIsDialogOpen(false);
+      router.refresh();
+      toast({ title: t("categories.categorySaved") });
     } catch (error) {
-      console.error('Error saving category:', error)
-      toast({ title: t('common.error'), description: t('common.error'), variant: 'destructive' })
+      console.error("Error saving category:", error);
+      toast({
+        title: t("common.error"),
+        description: t("common.error"),
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category?')) return
+    if (!confirm("Are you sure you want to delete this category?")) return;
 
     try {
-      await deleteCategory(supabase, id)
-      router.refresh()
-      toast({ title: t('categories.categoryDeleted') })
+      await deleteCategory(supabase, id);
+      router.refresh();
+      toast({ title: t("categories.categoryDeleted") });
     } catch (error) {
-      console.error('Error deleting category:', error)
-      toast({ title: t('common.error'), description: t('common.error'), variant: 'destructive' })
+      console.error("Error deleting category:", error);
+      toast({
+        title: t("common.error"),
+        description: t("common.error"),
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
       {/* Add Category Button */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button onClick={() => handleOpenDialog()} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            onClick={() => handleOpenDialog()}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Category
           </Button>
@@ -108,9 +127,11 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? 'Edit Category' : 'Add New Category'}
+              {editingCategory ? "Edit Category" : "Add New Category"}
             </DialogTitle>
-            <DialogDescription className="sr-only">Fill in the details to save the category.</DialogDescription>
+            <DialogDescription className="sr-only">
+              Fill in the details to save the category.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -118,7 +139,9 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., Family - Bride"
               />
             </div>
@@ -129,11 +152,13 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                   <button
                     key={color.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, color: color.value })}
+                    onClick={() =>
+                      setFormData({ ...formData, color: color.value })
+                    }
                     className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
                       formData.color === color.value
-                        ? 'border-foreground scale-110'
-                        : 'border-transparent'
+                        ? "border-foreground scale-110"
+                        : "border-transparent"
                     }`}
                     style={{ backgroundColor: color.value }}
                     title={color.name}
@@ -146,13 +171,19 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Brief description of this category"
                 rows={2}
               />
             </div>
-            <Button onClick={handleSave} className="w-full" disabled={!formData.name}>
-              {editingCategory ? 'Save Changes' : 'Add Category'}
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              disabled={!formData.name}
+            >
+              {editingCategory ? "Save Changes" : "Add Category"}
             </Button>
           </div>
         </DialogContent>
@@ -180,7 +211,9 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                       className="h-4 w-4 rounded-full"
                       style={{ backgroundColor: category.color }}
                     />
-                    <CardTitle className="font-serif text-lg">{category.name}</CardTitle>
+                    <CardTitle className="font-serif text-lg">
+                      {category.name}
+                    </CardTitle>
                   </div>
                   <Badge variant="outline">{category.guestCount} guests</Badge>
                 </div>
@@ -216,5 +249,5 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

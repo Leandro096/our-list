@@ -1,20 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { GuestDetail } from '@/components/guests/guest-detail'
-import { getGuestById } from '@/services'
+import { getGuestById } from "@/services";
+import { GuestDetail } from "@/components";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function GuestDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params
-  const supabase = await createClient()
-  const guest = await getGuestById(supabase, id)
+  const { id } = await params;
+  const supabase = await createClient();
+  const guest = await getGuestById(supabase, id);
 
   if (!guest) {
-    notFound()
+    notFound();
   }
 
-  return <GuestDetail guest={guest} />
+  return <GuestDetail guest={guest} />;
 }

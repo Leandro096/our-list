@@ -92,14 +92,14 @@ const navigation: NavItem[] = [
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { profile } = useAuth()
+  const { profile, activePermissions } = useAuth()
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith('/dashboard/settings'),
   )
 
-  const userPermissions = profile?.permissions || []
+  const userPermissions = activePermissions
   const isSuperAdmin = profile?.is_super_admin || false
 
   const filteredNavigation = navigation.filter((item) =>

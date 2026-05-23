@@ -2,15 +2,15 @@
 
 import {
   Card,
+  Button,
+  CardTitle,
+  CardHeader,
   CardContent,
   CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui";
 import Link from "next/link";
+import { useTranslation } from "@/locales";
 import { Heart, AlertCircle } from "lucide-react";
-import { useTranslation } from "@/locales/i18n-provider";
 
 export default function AuthErrorPage() {
   const { t } = useTranslation();
