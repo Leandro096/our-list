@@ -1,65 +1,56 @@
-'use client'
+'use client';
 
-import { useState, useMemo } from 'react'
-import { Input } from '@/components/ui'
-import { Button } from '@/components/ui'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui'
-import { Badge } from '@/components/ui'
+import { useState, useMemo, useTransition } from 'react';
+import { Input } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui'
-import { Search, MoreHorizontal, Eye, Pencil, Trash2, QrCode, Download, Upload } from 'lucide-react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import type { Category } from '@/lib'
-import { ExportDialog } from './export-dialog'
-import { ImportDialog } from './import-dialog'
-
-interface GuestWithRelations {
-  id: string
-  invitation_guid: string
-  first_name: string
-  last_name: string
-  email: string | null
-  phone: string | null
-  status: 'pending' | 'confirmed' | 'declined' | 'tentative'
-  dietary_restrictions: string | null
-  notes: string | null
-  is_plus_one: boolean
-  created_at: string
-  guest_categories: Array<{
-    category_id: string
-    categories: Pick<Category, 'id' | 'name' | 'color'>
-  }>
-  event_attendance: Array<{
-    event_type: string
-    attending: boolean | null
-  }>
-  seating_assignments: Array<{
-    tables: { number: string } | null
-  }>
-}
+} from '@/components/ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
+  Search,
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  QrCode,
+  Download,
+  Upload,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import type { Category } from '@/lib';
+import type { GuestListItem } from '@/services';
+import { ExportDialog } from './export-dialog';
+import { ImportDialog } from './import-dialog';
+import { deleteGuestAction } from '@/app/dashboard/guests/actions';
 
 interface GuestListProps {
-  guests: GuestWithRelations[]
-  categories: Category[]
+  guests: GuestListItem[];
+  categories: Category[];
 }
 
 const statusConfig = {
@@ -67,35 +58,63 @@ const statusConfig = {
   confirmed: { label: 'Confirmed', variant: 'default' as const },
   declined: { label: 'Declined', variant: 'secondary' as const },
   tentative: { label: 'Tentative', variant: 'outline' as const },
-}
+};
+
+const PAGE_SIZE = 15;
 
 export function GuestList({ guests, categories }: GuestListProps) {
-  const router = useRouter()
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [exportOpen, setExportOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
+  const router = useRouter();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const filteredGuests = useMemo(() => {
-    return guests.filter(guest => {
-      // Search filter
-      const searchLower = search.toLowerCase()
-      const matchesSearch = search === '' || 
+    return guests.filter((guest) => {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        search === '' ||
         guest.first_name.toLowerCase().includes(searchLower) ||
         guest.last_name.toLowerCase().includes(searchLower) ||
-        guest.email?.toLowerCase().includes(searchLower)
+        guest.email?.toLowerCase().includes(searchLower);
 
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || guest.status === statusFilter
+      const matchesStatus = statusFilter === 'all' || guest.status === statusFilter;
 
-      // Category filter
-      const matchesCategory = categoryFilter === 'all' || 
-        guest.guest_categories.some(gc => gc.category_id === categoryFilter)
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        guest.guest_categories.some((gc) => gc.category_id === categoryFilter);
 
-      return matchesSearch && matchesStatus && matchesCategory
-    })
-  }, [guests, search, statusFilter, categoryFilter])
+      return matchesSearch && matchesStatus && matchesCategory;
+    });
+  }, [guests, search, statusFilter, categoryFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGuests.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedGuests = filteredGuests.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  function handleFilterChange(setter: (v: string) => void) {
+    return (value: string) => {
+      setter(value);
+      setPage(1);
+    };
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function handleDelete() {
+    if (!deleteTargetId) return;
+    startTransition(async () => {
+      await deleteGuestAction(deleteTargetId);
+      setDeleteTargetId(null);
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -111,6 +130,32 @@ export function GuestList({ guests, categories }: GuestListProps) {
         onImported={() => router.refresh()}
       />
 
+      <AlertDialog
+        open={!!deleteTargetId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Guest</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this guest? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Filters + actions */}
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
@@ -118,11 +163,11 @@ export function GuestList({ guests, categories }: GuestListProps) {
           <Input
             placeholder="Search guests..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={handleFilterChange(setStatusFilter)}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -134,19 +179,16 @@ export function GuestList({ guests, categories }: GuestListProps) {
             <SelectItem value="tentative">Tentative</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={handleFilterChange(setCategoryFilter)}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="h-3 w-3 rounded-full" 
-                    style={{ backgroundColor: cat.color }} 
-                  />
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: cat.color }} />
                   {cat.name}
                 </div>
               </SelectItem>
@@ -168,7 +210,8 @@ export function GuestList({ guests, categories }: GuestListProps) {
 
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
-        Showing {filteredGuests.length} of {guests.length} guests
+        Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+        {Math.min(currentPage * PAGE_SIZE, filteredGuests.length)} of {filteredGuests.length} guests
       </p>
 
       {/* Table */}
@@ -185,15 +228,19 @@ export function GuestList({ guests, categories }: GuestListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGuests.length === 0 ? (
+            {pagedGuests.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   No guests found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredGuests.map((guest) => (
-                <TableRow key={guest.id}>
+              pagedGuests.map((guest) => (
+                <TableRow
+                  key={guest.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/dashboard/guests/${guest.id}`)}
+                >
                   <TableCell>
                     <div>
                       <p className="font-medium">
@@ -204,9 +251,7 @@ export function GuestList({ guests, categories }: GuestListProps) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {guest.email || '-'}
-                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{guest.email || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={statusConfig[guest.status].variant}>
                       {statusConfig[guest.status].label}
@@ -219,7 +264,7 @@ export function GuestList({ guests, categories }: GuestListProps) {
                           key={gc.category_id}
                           variant="outline"
                           className="text-xs"
-                          style={{ 
+                          style={{
                             borderColor: gc.categories.color,
                             color: gc.categories.color,
                           }}
@@ -237,7 +282,7 @@ export function GuestList({ guests, categories }: GuestListProps) {
                   <TableCell className="hidden lg:table-cell">
                     {guest.seating_assignments?.[0]?.tables?.number || '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -264,7 +309,10 @@ export function GuestList({ guests, categories }: GuestListProps) {
                             QR Code
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteTargetId(guest.id)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -277,6 +325,50 @@ export function GuestList({ guests, categories }: GuestListProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPage((p) => Math.max(1, p - 1));
+                }}
+                aria-disabled={currentPage === 1}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  href="#"
+                  isActive={p === currentPage}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage(p);
+                  }}
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPage((p) => Math.min(totalPages, p + 1));
+                }}
+                aria-disabled={currentPage === totalPages}
+                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
-  )
+  );
 }

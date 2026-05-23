@@ -224,3 +224,11 @@ export async function updateGuest(
 
   if (error) throw error;
 }
+
+export async function deleteGuest(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("guests").delete().eq("id", id);
+  if (error) throw error;
+}

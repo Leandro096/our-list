@@ -1,8 +1,10 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { validateImportRows } from '@/lib/validations/guest-import'
 import type { ImportRowInput } from '@/lib/validations/guest-import'
+import { deleteGuest } from '@/services'
 
 const MAX_IMPORT_ROWS = 1000
 
@@ -142,4 +144,10 @@ function buildAttendanceRows(
     rows.push({ guest_id: guestId, event_type: 'reception', attending: data.reception_attending })
   }
   return rows
+}
+
+export async function deleteGuestAction(id: string): Promise<void> {
+  const supabase = await createClient()
+  await deleteGuest(supabase, id)
+  revalidatePath('/dashboard/guests')
 }

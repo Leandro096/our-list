@@ -218,20 +218,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
-        if (profileData?.roles) {
-          await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+        if (session?.user) {
+          const profileData = await fetchProfile(session.user.id);
+          setProfile(profileData);
+          if (profileData?.roles) {
+            await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+          }
         }
+      } catch (err) {
+        console.error("[AuthProvider] getInitialSession error:", err);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     getInitialSession();
@@ -239,24 +243,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+      try {
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
-        if (profileData?.roles) {
-          await resolveActiveRole(
-            session.user.id,
-            profileData.roles as Role[],
-          );
+        if (session?.user) {
+          const profileData = await fetchProfile(session.user.id);
+          setProfile(profileData);
+          if (profileData?.roles) {
+            await resolveActiveRole(
+              session.user.id,
+              profileData.roles as Role[],
+            );
+          }
+        } else {
+          setProfile(null);
+          setActiveRole(null);
+          setActivePermissions([]);
         }
-      } else {
-        setProfile(null);
-        setActiveRole(null);
-        setActivePermissions([]);
+      } catch (err) {
+        console.error("[AuthProvider] onAuthStateChange error:", err);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     });
 
     return () => {
