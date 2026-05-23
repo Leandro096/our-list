@@ -29,6 +29,8 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // Use getUser() to authenticate the token against the Supabase Auth server.
+  // This is required for security — getSession() reads from cookies without verification.
   const {
     data: { user },
   } = await supabase.auth.getUser();

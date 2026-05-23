@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Role, User, Permission } from '@/lib/types'
+import type { Role, User, Permission, UserWithRoles } from '@/lib/types'
 
 // ---- Return types ----
 
@@ -183,4 +183,64 @@ export async function updateRolePermissions(
 
     if (insertError) throw insertError
   }
+}
+
+/**
+ * Fetches the full user profile with roles and their permissions embedded.
+ *
+ * Designed for **server-side usage** (RSC layouts, server actions) so the
+ * result can be passed as `initialProfile` to `<AuthProvider>`. This allows
+ * the client to skip ALL Supabase calls on initial mount, avoiding the Web
+ * Lock contention that causes the 8-second loading spinner on page refresh.
+ */
+export async function getInitialProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserWithRoles | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select(`
+      *,
+      user_roles!user_roles_user_id_fkey(
+        roles(
+          id,
+          name,
+          description,
+          role_permissions(
+            permissions(id, scope, description)
+          )
+        )
+      )
+    `)
+    .eq('id', userId)
+    .single()
+
+  if (error || !data) return null
+
+  type RoleRow = {
+    id: string
+    name: string
+    description: string | null
+    role_permissions: Array<{
+      permissions: { id: string; scope: string; description: string | null } | null
+    }>
+  }
+
+  const roles = (data.user_roles as Array<{ roles: RoleRow | null }>)
+    ?.map((ur) => ur.roles)
+    .filter((r): r is RoleRow => r !== null)
+    .map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      // Embed permissions so AuthProvider never needs a follow-up DB query.
+      permissions: role.role_permissions
+        .map((rp) => rp.permissions?.scope)
+        .filter((scope): scope is string => Boolean(scope)),
+    })) ?? []
+
+  const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))]
+
+  const { user_roles: _omit, ...userData } = data
+  return { ...userData, roles, permissions } as UserWithRoles
 }

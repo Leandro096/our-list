@@ -25,6 +25,13 @@ export interface Role {
   description: string | null
   created_at: string
   updated_at: string
+  /**
+   * Resolved permission scopes for this role.
+   * Populated when the role is fetched with role_permissions → permissions joins
+   * (e.g. from getInitialProfile or fetchProfile). Optional so it doesn't break
+   * usages that only query the roles table directly.
+   */
+  permissions?: string[]
 }
 
 export interface RolePermission {
@@ -127,10 +134,6 @@ export interface GuestWithRelations extends Guest {
 export interface UserWithRoles extends User {
   roles?: Role[]
   permissions?: string[] // Resolved permission scopes
-}
-
-export interface RoleWithPermissions extends Role {
-  permissions?: Permission[]
 }
 
 export type RecentActivityItem = ScanLog & {

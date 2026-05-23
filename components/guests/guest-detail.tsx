@@ -1,59 +1,75 @@
-'use client'
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, Pencil, QrCode, Mail, Phone, UtensilsCrossed, StickyNote, Armchair, ScanLine } from 'lucide-react'
-import Link from 'next/link'
-import { formatDistanceToNow, format } from 'date-fns'
-import type { Category } from '@/lib/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  ArrowLeft,
+  Pencil,
+  QrCode,
+  Mail,
+  Phone,
+  UtensilsCrossed,
+  StickyNote,
+  Armchair,
+  ScanLine,
+} from 'lucide-react';
+import Link from 'next/link';
+import { formatDistanceToNow, format } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
+import type { Category } from '@/lib/types';
+import { useTranslation } from '@/locales/i18n-provider';
+import { useLocale } from '@/locales/i18n-provider';
 
 interface GuestDetailProps {
   guest: {
-    id: string
-    invitation_guid: string
-    first_name: string
-    last_name: string
-    email: string | null
-    phone: string | null
-    status: 'pending' | 'confirmed' | 'declined' | 'tentative'
-    dietary_restrictions: string | null
-    notes: string | null
-    is_plus_one: boolean
-    created_at: string
-    updated_at: string
+    id: string;
+    invitation_guid: string;
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    phone: string | null;
+    status: 'pending' | 'confirmed' | 'declined' | 'tentative';
+    dietary_restrictions: string | null;
+    notes: string | null;
+    is_plus_one: boolean;
+    created_at: string;
+    updated_at: string;
     guest_categories: Array<{
-      category_id: string
-      categories: Pick<Category, 'id' | 'name' | 'color'>
-    }>
+      category_id: string;
+      categories: Pick<Category, 'id' | 'name' | 'color'>;
+    }>;
     event_attendance: Array<{
-      event_type: string
-      attending: boolean | null
-    }>
+      event_type: string;
+      attending: boolean | null;
+    }>;
     seating_assignments: Array<{
-      tables: { number: string } | null
-    }>
+      tables: { number: string } | null;
+    }>;
     scan_logs: Array<{
-      id: string
-      scanned_at: string
-      event_type: string
-      is_duplicate: boolean
-      users: { display_name: string }
-    }>
-  }
+      id: string;
+      scanned_at: string;
+      event_type: string;
+      is_duplicate: boolean;
+      users: { display_name: string };
+    }>;
+  };
 }
 
-const statusConfig = {
-  pending: { label: 'Pending', variant: 'outline' as const, color: 'text-primary' },
-  confirmed: { label: 'Confirmed', variant: 'default' as const, color: 'text-sage' },
-  declined: { label: 'Declined', variant: 'secondary' as const, color: 'text-muted-foreground' },
-  tentative: { label: 'Tentative', variant: 'outline' as const, color: 'text-accent' },
-}
+const statusVariants = {
+  pending: 'outline' as const,
+  confirmed: 'default' as const,
+  declined: 'secondary' as const,
+  tentative: 'outline' as const,
+};
 
 export function GuestDetail({ guest }: GuestDetailProps) {
-  const seating = guest.seating_assignments?.[0]
-  const ceremonyAttendance = guest.event_attendance?.find(ea => ea.event_type === 'ceremony')
-  const receptionAttendance = guest.event_attendance?.find(ea => ea.event_type === 'reception')
+  const { t } = useTranslation();
+  const { locale } = useLocale();
+  const dateFnsLocale = locale === 'es' ? esLocale : undefined;
+  const seating = guest.seating_assignments?.[0];
+  const ceremonyAttendance = guest.event_attendance?.find((ea) => ea.event_type === 'ceremony');
+  const receptionAttendance = guest.event_attendance?.find((ea) => ea.event_type === 'reception');
 
   return (
     <div className="space-y-6">
@@ -61,20 +77,24 @@ export function GuestDetail({ guest }: GuestDetailProps) {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard/guests">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Guests
+            {t('guests.backToGuests')}
           </Link>
         </Button>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/guests/${guest.id}/qr`}>
               <QrCode className="mr-2 h-4 w-4" />
-              QR Code
+              {t('guests.qrCode')}
             </Link>
           </Button>
-          <Button size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            size="sm"
+            asChild
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <Link href={`/dashboard/guests/${guest.id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit
+              {t('common.edit')}
             </Link>
           </Button>
         </div>
@@ -91,11 +111,11 @@ export function GuestDetail({ guest }: GuestDetailProps) {
                     {guest.first_name} {guest.last_name}
                   </CardTitle>
                   {guest.is_plus_one && (
-                    <span className="text-sm text-muted-foreground">Plus One</span>
+                    <span className="text-sm text-muted-foreground">{t('guests.plusOne')}</span>
                   )}
                 </div>
-                <Badge variant={statusConfig[guest.status].variant}>
-                  {statusConfig[guest.status].label}
+                <Badge variant={statusVariants[guest.status]}>
+                  {t(`guests.statuses.${guest.status}`)}
                 </Badge>
               </div>
             </CardHeader>
@@ -131,9 +151,7 @@ export function GuestDetail({ guest }: GuestDetailProps) {
               {seating && (
                 <div className="flex items-center gap-3 text-sm">
                   <Armchair className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    Table {seating.tables?.number}
-                  </span>
+                  <span>{t('scanner.tableNumber', { number: seating.tables?.number ?? '' })}</span>
                 </div>
               )}
             </CardContent>
@@ -142,28 +160,28 @@ export function GuestDetail({ guest }: GuestDetailProps) {
           {/* Event Attendance */}
           <Card>
             <CardHeader>
-              <CardTitle>Event Attendance</CardTitle>
+              <CardTitle>{t('guests.eventAttendance')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg border border-border p-4">
-                  <h4 className="font-medium">Ceremony</h4>
+                  <h4 className="font-medium">{t('scanner.ceremony')}</h4>
                   <p className="text-sm text-muted-foreground">
                     {ceremonyAttendance?.attending === true
-                      ? 'Attending'
+                      ? t('guests.attending')
                       : ceremonyAttendance?.attending === false
-                      ? 'Not Attending'
-                      : 'Awaiting Response'}
+                        ? t('guests.notAttending')
+                        : t('guests.awaitingResponse')}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border p-4">
-                  <h4 className="font-medium">Reception</h4>
+                  <h4 className="font-medium">{t('scanner.reception')}</h4>
                   <p className="text-sm text-muted-foreground">
                     {receptionAttendance?.attending === true
-                      ? 'Attending'
+                      ? t('guests.attending')
                       : receptionAttendance?.attending === false
-                      ? 'Not Attending'
-                      : 'Awaiting Response'}
+                        ? t('guests.notAttending')
+                        : t('guests.awaitingResponse')}
                   </p>
                 </div>
               </div>
@@ -173,11 +191,11 @@ export function GuestDetail({ guest }: GuestDetailProps) {
           {/* Scan History */}
           <Card>
             <CardHeader>
-              <CardTitle>Check-in History</CardTitle>
+              <CardTitle>{t('guests.checkInHistory')}</CardTitle>
             </CardHeader>
             <CardContent>
               {guest.scan_logs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No check-ins yet</p>
+                <p className="text-sm text-muted-foreground">{t('guests.noCheckIns')}</p>
               ) : (
                 <div className="space-y-3">
                   {guest.scan_logs.map((scan) => (
@@ -186,20 +204,28 @@ export function GuestDetail({ guest }: GuestDetailProps) {
                       className="flex items-center justify-between rounded-lg border border-border p-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                          scan.is_duplicate ? 'bg-destructive/10' : 'bg-sage/20'
-                        }`}>
-                          <ScanLine className={`h-4 w-4 ${
-                            scan.is_duplicate ? 'text-destructive' : 'text-sage'
-                          }`} />
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                            scan.is_duplicate ? 'bg-destructive/10' : 'bg-sage/20'
+                          }`}
+                        >
+                          <ScanLine
+                            className={`h-4 w-4 ${
+                              scan.is_duplicate ? 'text-destructive' : 'text-sage'
+                            }`}
+                          />
                         </div>
                         <div>
                           <p className="text-sm font-medium">
-                            {scan.event_type === 'ceremony' ? 'Ceremony' : 'Reception'}
-                            {scan.is_duplicate && ' (Duplicate)'}
+                            {scan.event_type === 'ceremony'
+                              ? t('scanner.ceremony')
+                              : t('scanner.reception')}
+                            {scan.is_duplicate && ` (${t('dashboard.duplicate')})`}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            by {scan.users?.display_name || 'Unknown'}
+                            {t('dashboard.scannedBy', {
+                              name: scan.users?.display_name || t('common.unknown'),
+                            })}
                           </p>
                         </div>
                       </div>
@@ -220,11 +246,11 @@ export function GuestDetail({ guest }: GuestDetailProps) {
           {/* Categories */}
           <Card>
             <CardHeader>
-              <CardTitle>Categories</CardTitle>
+              <CardTitle>{t('nav.categories')}</CardTitle>
             </CardHeader>
             <CardContent>
               {guest.guest_categories.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No categories assigned</p>
+                <p className="text-sm text-muted-foreground">{t('guests.noCategoriesAssigned')}</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {guest.guest_categories.map((gc) => (
@@ -247,25 +273,35 @@ export function GuestDetail({ guest }: GuestDetailProps) {
           {/* Metadata */}
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>{t('guests.guestDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Invitation ID</p>
+                <p className="text-muted-foreground">{t('guests.invitationId')}</p>
                 <p className="font-mono text-xs">{guest.invitation_guid}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Added</p>
-                <p>{formatDistanceToNow(new Date(guest.created_at), { addSuffix: true })}</p>
+                <p className="text-muted-foreground">{t('guests.added')}</p>
+                <p>
+                  {formatDistanceToNow(new Date(guest.created_at), {
+                    addSuffix: true,
+                    locale: dateFnsLocale,
+                  })}
+                </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Last Updated</p>
-                <p>{formatDistanceToNow(new Date(guest.updated_at), { addSuffix: true })}</p>
+                <p className="text-muted-foreground">{t('common.lastUpdated')}</p>
+                <p>
+                  {formatDistanceToNow(new Date(guest.updated_at), {
+                    addSuffix: true,
+                    locale: dateFnsLocale,
+                  })}
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }

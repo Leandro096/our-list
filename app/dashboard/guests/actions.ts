@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { validateImportRows } from '@/lib/validations/guest-import'
 import type { ImportRowInput } from '@/lib/validations/guest-import'
-import { deleteGuest } from '@/services'
+import { deleteGuest, bulkDeleteGuests } from '@/services'
 
 const MAX_IMPORT_ROWS = 1000
 
@@ -149,5 +149,11 @@ function buildAttendanceRows(
 export async function deleteGuestAction(id: string): Promise<void> {
   const supabase = await createClient()
   await deleteGuest(supabase, id)
+  revalidatePath('/dashboard/guests')
+}
+
+export async function bulkDeleteGuestsAction(ids: string[]): Promise<void> {
+  const supabase = await createClient()
+  await bulkDeleteGuests(supabase, ids)
   revalidatePath('/dashboard/guests')
 }

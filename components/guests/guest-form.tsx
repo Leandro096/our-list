@@ -23,6 +23,7 @@ import type { Category, Guest } from "@/lib";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createGuest, updateGuest } from "@/services";
+import { useTranslation } from "@/locales/i18n-provider";
 
 interface GuestFormProps {
   categories: Category[];
@@ -37,6 +38,7 @@ export function GuestForm({
 }: GuestFormProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,18 +124,18 @@ export function GuestForm({
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href="/dashboard/guests">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Guests
+          {t('guests.backToGuests')}
         </Link>
       </Button>
 
       <Card>
         <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
+          <CardTitle>{t('guests.personalInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
+              <Label htmlFor="first_name">{t('guests.firstName')} *</Label>
               <Input
                 id="first_name"
                 required
@@ -144,7 +146,7 @@ export function GuestForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name *</Label>
+              <Label htmlFor="last_name">{t('guests.lastName')} *</Label>
               <Input
                 id="last_name"
                 required
@@ -157,7 +159,7 @@ export function GuestForm({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('guests.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -168,7 +170,7 @@ export function GuestForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{t('guests.phone')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -184,11 +186,11 @@ export function GuestForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>RSVP Status</CardTitle>
+          <CardTitle>{t('guests.rsvpStatus')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('guests.status')}</Label>
             <Select
               value={formData.status}
               onValueChange={(value) =>
@@ -199,10 +201,10 @@ export function GuestForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-                <SelectItem value="tentative">Tentative</SelectItem>
+                <SelectItem value="pending">{t('guests.statuses.pending')}</SelectItem>
+                <SelectItem value="confirmed">{t('guests.statuses.confirmed')}</SelectItem>
+                <SelectItem value="declined">{t('guests.statuses.declined')}</SelectItem>
+                <SelectItem value="tentative">{t('guests.statuses.tentative')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -216,13 +218,13 @@ export function GuestForm({
               }
             />
             <Label htmlFor="is_plus_one" className="font-normal">
-              This guest is a plus one
+              {t('guests.isPlusOne')}
             </Label>
           </div>
 
           {mode === "create" && (
             <div className="space-y-3">
-              <Label>Events</Label>
+              <Label>{t('guests.events')}</Label>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -236,7 +238,7 @@ export function GuestForm({
                     }
                   />
                   <Label htmlFor="ceremony" className="font-normal">
-                    Ceremony
+                    {t('scanner.ceremony')}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -251,7 +253,7 @@ export function GuestForm({
                     }
                   />
                   <Label htmlFor="reception" className="font-normal">
-                    Reception
+                    {t('scanner.reception')}
                   </Label>
                 </div>
               </div>
@@ -262,7 +264,7 @@ export function GuestForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Categories</CardTitle>
+          <CardTitle>{t('nav.categories')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
@@ -293,11 +295,11 @@ export function GuestForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
+          <CardTitle>{t('guests.additionalInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dietary_restrictions">Dietary Restrictions</Label>
+            <Label htmlFor="dietary_restrictions">{t('guests.dietaryRestrictions')}</Label>
             <Input
               id="dietary_restrictions"
               value={formData.dietary_restrictions}
@@ -307,18 +309,18 @@ export function GuestForm({
                   dietary_restrictions: e.target.value,
                 })
               }
-              placeholder="e.g., Vegetarian, Gluten-free"
+              placeholder={t('guests.dietaryPlaceholder')}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t('guests.notes')}</Label>
             <Textarea
               id="notes"
               value={formData.notes}
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
-              placeholder="Any additional notes about this guest"
+              placeholder={t('guests.notesPlaceholder')}
               rows={3}
             />
           </div>
@@ -338,10 +340,10 @@ export function GuestForm({
           disabled={isLoading}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === "create" ? "Add Guest" : "Save Changes"}
+          {mode === "create" ? t('guests.addGuest') : t('settings.saveChanges')}
         </Button>
         <Button type="button" variant="outline" asChild>
-          <Link href="/dashboard/guests">Cancel</Link>
+          <Link href="/dashboard/guests">{t('common.cancel')}</Link>
         </Button>
       </div>
     </form>

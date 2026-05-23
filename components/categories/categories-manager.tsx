@@ -19,9 +19,16 @@ import {
   CardContent,
   DialogTitle,
   DialogHeader,
-  DialogTrigger,
   DialogContent,
   DialogDescription,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui";
 import { toast } from "@/hooks";
 import { useState } from "react";
@@ -51,6 +58,8 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
   const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] =
+    useState<CategoryWithCount | null>(null);
+  const [categoryToDelete, setCategoryToDelete] =
     useState<CategoryWithCount | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -86,26 +95,29 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
       toast({ title: t("categories.categorySaved") });
     } catch (error) {
       console.error("Error saving category:", error);
+      const message = error instanceof Error ? error.message : String(error);
       toast({
         title: t("common.error"),
-        description: t("common.error"),
+        description: message,
         variant: "destructive",
       });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
-
+  const handleDelete = async () => {
+    if (!categoryToDelete) return;
+    const id = categoryToDelete.id;
+    setCategoryToDelete(null);
     try {
       await deleteCategory(supabase, id);
       router.refresh();
       toast({ title: t("categories.categoryDeleted") });
     } catch (error) {
       console.error("Error deleting category:", error);
+      const message = error instanceof Error ? error.message : String(error);
       toast({
         title: t("common.error"),
-        description: t("common.error"),
+        description: message,
         variant: "destructive",
       });
     }
@@ -113,40 +125,62 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
 
   return (
     <div className="space-y-6">
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!categoryToDelete}
+        onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('categories.deleteCategory')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('categories.deleteCategoryConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* Add Category Button */}
+      <Button
+        onClick={() => handleOpenDialog()}
+        className="bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        {t('categories.addCategory')}
+      </Button>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            onClick={() => handleOpenDialog()}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Category
-          </Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? "Edit Category" : "Add New Category"}
+              {editingCategory ? t('categories.editCategory') : t('categories.addNewCategory')}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Fill in the details to save the category.
+              {t('categories.descriptionPlaceholder')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t('categories.name')}</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Family - Bride"
+                placeholder={t('categories.namePlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>Color</Label>
+              <Label>{t('categories.color')}</Label>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((color) => (
                   <button
@@ -167,14 +201,14 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description (optional)</Label>
+              <Label htmlFor="description">{t('categories.descriptionOptional')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Brief description of this category"
+                placeholder={t('categories.descriptionPlaceholder')}
                 rows={2}
               />
             </div>
@@ -183,7 +217,7 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
               className="w-full"
               disabled={!formData.name}
             >
-              {editingCategory ? "Save Changes" : "Add Category"}
+              {editingCategory ? t('settings.saveChanges') : t('categories.addCategory')}
             </Button>
           </div>
         </DialogContent>
@@ -194,9 +228,9 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
         <Card>
           <CardContent className="py-12 text-center">
             <Tags className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">No categories yet</p>
+            <p className="mt-4 text-muted-foreground">{t('categories.noCategories')}</p>
             <p className="text-sm text-muted-foreground">
-              Create categories to organize your guests
+              {t('categories.noCategoriesDescription')}
             </p>
           </CardContent>
         </Card>
@@ -215,7 +249,7 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                       {category.name}
                     </CardTitle>
                   </div>
-                  <Badge variant="outline">{category.guestCount} guests</Badge>
+                  <Badge variant="outline">{t('categories.guestCountLabel', { count: category.guestCount })}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -231,16 +265,16 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                     onClick={() => handleOpenDialog(category)}
                   >
                     <Pencil className="mr-1 h-3 w-3" />
-                    Edit
+                    {t('common.edit')}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDelete(category.id)}
+                    onClick={() => setCategoryToDelete(category)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="mr-1 h-3 w-3" />
-                    Delete
+                    {t('common.delete')}
                   </Button>
                 </div>
               </CardContent>

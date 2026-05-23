@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/components/auth-provider'
-import { useTranslation } from '@/locales/i18n-provider'
-import { hasPermission, PERMISSIONS } from '@/lib/permissions'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/auth-provider';
+import { useTranslation } from '@/locales/i18n-provider';
+import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 import {
   Heart,
   LayoutDashboard,
@@ -19,17 +19,18 @@ import {
   History,
   UserCog,
   Shield,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { useSidebar } from './sidebar-context';
 
 type NavItem = {
-  nameKey: string
-  href: string
-  icon: React.ElementType
-  permission: string
-  children?: NavItem[]
-}
+  nameKey: string;
+  href: string;
+  icon: React.ElementType;
+  permission: string;
+  children?: NavItem[];
+};
 
 const navigation: NavItem[] = [
   {
@@ -88,35 +89,33 @@ const navigation: NavItem[] = [
       },
     ],
   },
-]
+];
 
 export function DashboardSidebar() {
-  const pathname = usePathname()
-  const { profile, activePermissions } = useAuth()
-  const { t } = useTranslation()
-  const [collapsed, setCollapsed] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(
-    pathname.startsWith('/dashboard/settings'),
-  )
+  const pathname = usePathname();
+  const { profile, activePermissions } = useAuth();
+  const { t } = useTranslation();
+  const { collapsed, setCollapsed } = useSidebar();
+  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'));
 
-  const userPermissions = activePermissions
-  const isSuperAdmin = profile?.is_super_admin || false
+  const userPermissions = activePermissions;
+  const isSuperAdmin = profile?.is_super_admin || false;
 
   const filteredNavigation = navigation.filter((item) =>
-    hasPermission(userPermissions, item.permission, isSuperAdmin),
-  )
+    hasPermission(userPermissions, item.permission, isSuperAdmin)
+  );
 
   const renderItem = (item: NavItem) => {
-    const hasChildren = !!item.children?.length
-    const isSettingsGroup = hasChildren && item.href === '/dashboard/settings'
+    const hasChildren = !!item.children?.length;
+    const isSettingsGroup = hasChildren && item.href === '/dashboard/settings';
 
     if (isSettingsGroup) {
       const visibleChildren = item.children!.filter((child) =>
-        hasPermission(userPermissions, child.permission, isSuperAdmin),
-      )
-      if (visibleChildren.length === 0) return null
+        hasPermission(userPermissions, child.permission, isSuperAdmin)
+      );
+      if (visibleChildren.length === 0) return null;
 
-      const isGroupActive = pathname.startsWith(item.href)
+      const isGroupActive = pathname.startsWith(item.href);
 
       return (
         <div key={item.nameKey}>
@@ -124,17 +123,17 @@ export function DashboardSidebar() {
           <button
             onClick={() => {
               if (collapsed) {
-                setCollapsed(false)
-                setSettingsOpen(true)
+                setCollapsed(false);
+                setSettingsOpen(true);
               } else {
-                setSettingsOpen((prev) => !prev)
+                setSettingsOpen((prev) => !prev);
               }
             }}
             className={cn(
               'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               isGroupActive
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
             )}
             title={collapsed ? t(item.nameKey) : undefined}
           >
@@ -145,7 +144,7 @@ export function DashboardSidebar() {
                 <ChevronDown
                   className={cn(
                     'h-4 w-4 shrink-0 transition-transform',
-                    settingsOpen && 'rotate-180',
+                    settingsOpen && 'rotate-180'
                   )}
                 />
               </>
@@ -156,7 +155,7 @@ export function DashboardSidebar() {
           {!collapsed && settingsOpen && (
             <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-3">
               {visibleChildren.map((child) => {
-                const isActive = pathname === child.href || pathname.startsWith(child.href)
+                const isActive = pathname === child.href || pathname.startsWith(child.href);
                 return (
                   <Link
                     key={child.nameKey}
@@ -165,24 +164,23 @@ export function DashboardSidebar() {
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                     )}
                   >
                     <child.icon className="h-4 w-4 shrink-0" />
                     <span>{t(child.nameKey)}</span>
                   </Link>
-                )
+                );
               })}
             </div>
           )}
         </div>
-      )
+      );
     }
 
     // Regular item
     const isActive =
-      pathname === item.href ||
-      (item.href !== '/dashboard' && pathname.startsWith(item.href))
+      pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
     return (
       <Link
@@ -192,15 +190,17 @@ export function DashboardSidebar() {
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
         )}
         title={collapsed ? t(item.nameKey) : undefined}
       >
         <item.icon className="h-5 w-5 shrink-0" />
-        {!collapsed && <span>{t(item.nameKey)}</span>}
+        {!collapsed && (
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t(item.nameKey)}</span>
+        )}
       </Link>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -209,7 +209,7 @@ export function DashboardSidebar() {
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300',
           collapsed ? 'w-16' : 'w-64',
-          'hidden lg:flex',
+          'hidden lg:flex'
         )}
       >
         {/* Logo */}
@@ -218,7 +218,11 @@ export function DashboardSidebar() {
             <Heart className="h-5 w-5 text-primary" />
           </div>
           {!collapsed && (
-            <span className="font-serif text-lg font-semibold text-sidebar-foreground">
+            <span
+              className={
+                'font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap'
+              }
+            >
               {t('nav.weddingManager')}
             </span>
           )}
@@ -245,5 +249,5 @@ export function DashboardSidebar() {
         </div>
       </aside>
     </>
-  )
+  );
 }

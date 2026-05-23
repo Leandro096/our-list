@@ -71,9 +71,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<UserWithRoles | null>(null);
+interface AuthProviderProps {
+  children: React.ReactNode;
+  /**
+   * Authenticated user pre-fetched server-side (e.g. from DashboardLayout or
+   * SelectRolePage). When provided, the provider skips the client-side
+   * `getUser()` call on mount, eliminating the risk of a hanging
+   * `_callRefreshToken()` request (the root cause of the 8-second spinner).
+   *
+   * Pass `null` for unauthenticated routes. Omit (`undefined`) only when no
+   * server component is in the tree (should be rare).
+   */
+  initialUser?: SupabaseUser | null;
+  /**
+   * Full user profile (with roles + embedded permissions) pre-fetched
+   * server-side via `getInitialProfile()`. When provided together with
+   * `initialUser`, the client skips EVERY Supabase call on mount —
+   * including `fetchProfile()` and `fetchPermissionsForRole()` — completely
+   * eliminating the Web Lock contention that causes the 8-second spinner.
+   */
+  initialProfile?: UserWithRoles | null;
+}
+
+export function AuthProvider({ children, initialUser, initialProfile }: AuthProviderProps) {
+  // Seed from SSR so the user is available synchronously before any effect runs.
+  const [user, setUser] = useState<SupabaseUser | null>(initialUser ?? null);
+  // Seed profile from SSR to avoid ANY client-side Supabase DB query on mount.
+  const [profile, setProfile] = useState<UserWithRoles | null>(initialProfile ?? null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRole, setActiveRole] = useState<Role | null>(null);
   const [activePermissions, setActivePermissions] = useState<string[]>([]);
@@ -114,7 +138,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (roles.length === 1) {
         // Auto-select the sole role — no UI prompt needed
         const role = roles[0];
-        const permissions = await fetchPermissionsForRole(role.id);
+        // Use permissions embedded in the role (from SSR profile) to avoid a
+        // DB round-trip. Falls back to a live query only when not available
+        // (e.g. old onAuthStateChange path before fetchProfile was updated).
+        const permissions = role.permissions ?? await fetchPermissionsForRole(role.id);
         persistActiveRole(userId, role, permissions);
         setActiveRole(role);
         setActivePermissions(permissions);
@@ -129,8 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setActiveRole(stored);
         setActivePermissions(cached);
 
-        // Re-fetch fresh permissions from DB to keep the cache up-to-date
-        const fresh = await fetchPermissionsForRole(stored.id);
+        // Use embedded permissions when available — avoids a DB query.
+        const storedRoleFull = roles.find((r) => r.id === stored.id);
+        const fresh = storedRoleFull?.permissions ?? await fetchPermissionsForRole(stored.id);
         setActivePermissions(fresh);
         persistActiveRole(userId, stored, fresh);
       } else {
@@ -187,7 +215,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         (data.user_roles as Array<{ roles: RoleRow | null }>)
           ?.map((ur) => ur.roles)
           .filter((r): r is RoleRow => r !== null)
-          .map(({ id, name, description }) => ({ id, name, description })) ??
+          .map((role) => ({
+            id: role.id,
+            name: role.name,
+            description: role.description,
+            // Include permissions so resolveActiveRole() can use them without
+            // a separate fetchPermissionsForRole() DB call.
+            permissions: role.role_permissions
+              .map((rp) => rp.permissions?.scope)
+              .filter((scope): scope is string => Boolean(scope)),
+          })) ??
         [];
 
       const permissions = [
@@ -217,41 +254,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile, resolveActiveRole]);
 
   useEffect(() => {
-    // Last-resort failsafe: if the session never resolves (e.g. a hanging token
-    // refresh), force isLoading=false after 8 s so the UI never stays blocked.
+    // Failsafe: if profile loading hangs (slow DB), unblock the UI after 8 s.
     const failsafeTimer = setTimeout(() => {
-      console.warn("[AuthProvider] Session init timed out — forcing loading state off");
+      console.warn("[AuthProvider] Profile load timed out — forcing loading state off");
       setIsLoading(false);
     }, 8000);
 
-    const getInitialSession = async () => {
+    const loadData = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // When `initialUser` is provided by the parent server component we
+        // already know the auth state — skip any client-side Supabase auth call.
+        // This is the key fix: it avoids `_callRefreshToken()` which can hang
+        // indefinitely on Vercel (or deadlock in React Strict Mode).
+        //
+        // When `initialUser` is `undefined` (e.g. select-role, which has no
+        // server-component wrapper), fall back to a client-side getUser() call.
+        // At that point the user just logged in so the token is always fresh.
+        let currentUser: SupabaseUser | null;
+        if (initialUser !== undefined) {
+          currentUser = initialUser; // already resolved server-side
+        } else {
+          const { data } = await supabase.auth.getUser();
+          currentUser = data.user ?? null;
+          setUser(currentUser);
+        }
 
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
+        if (currentUser) {
+          // Use server-side profile when provided — avoids fetchProfile()'s
+          // internal supabase.from() call which triggers getSession() →
+          // acquires Web Lock → can hang if _callRefreshToken() is in-flight.
+          const profileData =
+            initialProfile !== undefined
+              ? initialProfile
+              : await fetchProfile(currentUser.id);
+          if (profileData !== null) setProfile(profileData);
           if (profileData?.roles) {
-            await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+            await resolveActiveRole(currentUser.id, profileData.roles as Role[]);
           }
         }
       } catch (err) {
-        console.error("[AuthProvider] getInitialSession error:", err);
+        console.error("[AuthProvider] loadData error:", err);
       } finally {
         clearTimeout(failsafeTimer);
         setIsLoading(false);
       }
     };
 
-    getInitialSession();
+    loadData();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // INITIAL_SESSION is handled synchronously above (SSR user or getUser()).
+      if (event === "INITIAL_SESSION") return;
+
       try {
         setUser(session?.user ?? null);
 
@@ -271,9 +327,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error("[AuthProvider] onAuthStateChange error:", err);
-      } finally {
-        clearTimeout(failsafeTimer);
-        setIsLoading(false);
       }
     });
 
@@ -281,13 +334,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(failsafeTimer);
       subscription.unsubscribe();
     };
+    // initialUser is intentionally excluded from deps — it's a stable SSR value
+    // captured at mount. Re-running on reference change would cause double fetches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, fetchProfile, resolveActiveRole]);
 
   // ---- Public: select an active role  ------------------------------------
   const selectRole = useCallback(
     async (role: Role) => {
       if (!user) return;
-      const permissions = await fetchPermissionsForRole(role.id);
+      const permissions = role.permissions ?? await fetchPermissionsForRole(role.id);
       persistActiveRole(user.id, role, permissions);
       setActiveRole(role);
       setActivePermissions(permissions);

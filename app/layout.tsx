@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "@/locales";
+import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
 
@@ -75,7 +76,10 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            {children}
+            <Toaster />
+          </I18nProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
