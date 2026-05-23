@@ -217,11 +217,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile, resolveActiveRole]);
 
   useEffect(() => {
+    // Last-resort failsafe: if the session never resolves (e.g. a hanging token
+    // refresh), force isLoading=false after 8 s so the UI never stays blocked.
+    const failsafeTimer = setTimeout(() => {
+      console.warn("[AuthProvider] Session init timed out — forcing loading state off");
+      setIsLoading(false);
+    }, 8000);
+
     const getInitialSession = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // Race getSession() against a 5 s timeout so a hanging refresh call
+        // (network stall, Supabase lock, etc.) cannot block the UI forever.
+        const { data: { session } } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 5000),
+          ),
+        ]);
+
         setUser(session?.user ?? null);
 
         if (session?.user) {
@@ -234,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("[AuthProvider] getInitialSession error:", err);
       } finally {
+        clearTimeout(failsafeTimer);
         setIsLoading(false);
       }
     };
@@ -263,11 +277,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("[AuthProvider] onAuthStateChange error:", err);
       } finally {
+        clearTimeout(failsafeTimer);
         setIsLoading(false);
       }
     });
 
     return () => {
+      clearTimeout(failsafeTimer);
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile, resolveActiveRole]);
