@@ -26,12 +26,14 @@ import { Html5Qrcode } from "html5-qrcode";
 import { useTranslation } from "@/locales";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { type ScannerGuest, getTodayStats, processGuestScan } from "@/services";
+import { type ScannerGuest, type GroupScanMember, getTodayStats, processGuestScanByFamily } from "@/services";
 
 type ScanResult = {
   success: boolean;
   guest?: ScannerGuest;
+  members?: GroupScanMember[];
   isDuplicate?: boolean;
+  allDuplicate?: boolean;
   message: string;
 };
 
@@ -93,7 +95,7 @@ export default function ScannerPage() {
 
   const handleScan = async (invitationGuid: string) => {
     try {
-      const result = await processGuestScan(
+      const result = await processGuestScanByFamily(
         supabase,
         invitationGuid,
         eventType,
@@ -112,11 +114,13 @@ export default function ScannerPage() {
 
       setScanResult({
         success: true,
-        isDuplicate: result.is_duplicate,
-        guest: result.guest,
-        message: result.is_duplicate
-          ? t("scanner.alreadyCheckedIn")
-          : t("scanner.checkInSuccess"),
+        isDuplicate: result.any_duplicate,
+        allDuplicate: result.all_duplicate,
+        guest: result.group_root,
+        members: result.members,
+        message: result.all_duplicate
+          ? t("scanner.groupAlreadyCheckedIn")
+          : t("scanner.groupCheckInSuccess"),
       });
     } catch (error) {
       console.error("Error processing scan:", error);
@@ -236,9 +240,9 @@ export default function ScannerPage() {
           {scanResult && (
             <div
               className={`rounded-lg border p-6 ${
-                scanResult.success && !scanResult.isDuplicate
+                scanResult.success && !scanResult.allDuplicate
                   ? "border-sage/50 bg-sage/10"
-                  : scanResult.isDuplicate
+                  : scanResult.allDuplicate
                     ? "border-primary/50 bg-primary/10"
                     : "border-destructive/50 bg-destructive/10"
               }`}
@@ -246,16 +250,16 @@ export default function ScannerPage() {
               <div className="flex items-start gap-4">
                 <div
                   className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                    scanResult.success && !scanResult.isDuplicate
+                    scanResult.success && !scanResult.allDuplicate
                       ? "bg-sage/20"
-                      : scanResult.isDuplicate
+                      : scanResult.allDuplicate
                         ? "bg-primary/20"
                         : "bg-destructive/20"
                   }`}
                 >
-                  {scanResult.success && !scanResult.isDuplicate ? (
+                  {scanResult.success && !scanResult.allDuplicate ? (
                     <CheckCircle className="h-6 w-6 text-sage" />
-                  ) : scanResult.isDuplicate ? (
+                  ) : scanResult.allDuplicate ? (
                     <AlertTriangle className="h-6 w-6 text-primary" />
                   ) : (
                     <XCircle className="h-6 w-6 text-destructive" />
@@ -270,11 +274,32 @@ export default function ScannerPage() {
                       </h3>
                       <p
                         className={`text-sm ${
-                          scanResult.isDuplicate ? "text-primary" : "text-sage"
+                          scanResult.allDuplicate ? "text-primary" : "text-sage"
                         }`}
                       >
                         {scanResult.message}
                       </p>
+
+                      {/* Family members */}
+                      {scanResult.members && scanResult.members.length > 1 && (
+                        <div className="mt-3 space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t("scanner.familyGroup")} — {t("scanner.groupMembers", { count: scanResult.members.length })}
+                          </p>
+                          {scanResult.members.map((member) => (
+                            <div key={member.id} className="flex items-center gap-2 text-sm">
+                              {member.is_duplicate ? (
+                                <AlertTriangle className="h-3.5 w-3.5 text-primary shrink-0" />
+                              ) : (
+                                <CheckCircle className="h-3.5 w-3.5 text-sage shrink-0" />
+                              )}
+                              <span>
+                                {member.first_name} {member.last_name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Categories */}
                       {scanResult.guest.categories.length > 0 && (

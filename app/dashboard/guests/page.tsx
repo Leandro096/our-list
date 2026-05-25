@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/page-header';
 import { GuestList } from '@/components/guests/guest-list';
-import { getGuestsPaginated, getCategories } from '@/services';
+import { getGuestsPaginatedWithFamily, getCategories } from '@/services';
 
 const VALID_SORT = ['first_name', 'last_name', 'status', 'created_at'] as const;
 type SortBy = (typeof VALID_SORT)[number];
@@ -26,7 +26,7 @@ export default async function GuestsPage({
 
   const supabase = await createClient();
   const [{ data: guests, count }, categories] = await Promise.all([
-    getGuestsPaginated(supabase, {
+    getGuestsPaginatedWithFamily(supabase, {
       search: params.q,
       status: params.status,
       categoryIds,

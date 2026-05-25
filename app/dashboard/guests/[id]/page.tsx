@@ -1,4 +1,4 @@
-import { getGuestById } from '@/services';
+import { getGuestByIdWithFamily } from '@/services';
 import { GuestDetail } from '@/components/guests/guest-detail';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 export default async function GuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const guest = await getGuestById(supabase, id);
+  const guest = await getGuestByIdWithFamily(supabase, id);
 
   if (!guest) {
     notFound();

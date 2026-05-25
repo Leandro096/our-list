@@ -17,6 +17,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Users,
+  Link2,
 } from 'lucide-react';
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -43,7 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Category } from '@/lib';
-import type { GuestListItem } from '@/services';
+import type { GuestListItem, GuestListItemWithFamily } from '@/services';
 import { ExportDialog } from './export-dialog';
 import { ImportDialog } from './import-dialog';
 import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
@@ -62,7 +64,7 @@ export interface GuestFilters {
 }
 
 interface GuestListProps {
-  guests: GuestListItem[];
+  guests: GuestListItemWithFamily[];
   categories: Category[];
   totalCount: number;
   currentParams: GuestFilters;
@@ -552,6 +554,20 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   {/* Name + email stacked */}
                   <TableCell className="min-w-0 py-3">
                     <p className="truncate font-medium leading-tight">
+                      {!guest.parent_guest_id && guest.has_children && (
+                        <span title={t('guests.isParent')}>
+                          <Users
+                            className="inline h-3.5 w-3.5 mr-1 shrink-0 text-primary"
+                          />
+                        </span>
+                      )}
+                      {guest.parent_guest_id && (
+                        <span title={t('guests.isChild')}>
+                          <Link2
+                            className="inline h-3.5 w-3.5 mr-1 shrink-0 text-muted-foreground"
+                          />
+                        </span>
+                      )}
                       {guest.first_name} {guest.last_name}
                       {guest.is_plus_one && (
                         <span className="ml-2 text-xs font-normal text-muted-foreground">+1</span>

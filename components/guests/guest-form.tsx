@@ -15,31 +15,135 @@ import {
   SelectValue,
   SelectContent,
   SelectTrigger,
+  Switch,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
 } from '@/components/ui';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Category, Guest } from '@/lib';
-import { ArrowLeft, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, X, UserPlus, ChevronsUpDown, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { createGuest, updateGuest } from '@/services';
+import {
+  createGuest,
+  updateGuest,
+  linkGuestToParent,
+  unlinkGuestFromParent,
+  getAvailableParentGuests,
+} from '@/services';
+import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/locales/i18n-provider';
 import { CategoriesDialog } from '@/components/categories';
 
+type PendingChild = {
+  tempId: string;
+  type: 'new' | 'existing';
+  first_name: string;
+  last_name: string;
+  is_plus_one: boolean;
+  existing_guest_id?: string;
+};
+
 interface GuestFormProps {
   categories: Category[];
-  guest?: Guest & { guest_categories?: { category_id: string }[] };
+  guest?: Guest & { guest_categories?: { category_id: string }[]; parent_guest_id?: string | null };
   mode?: 'create' | 'edit';
+  existingChildren?: Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    is_plus_one: boolean;
+  }>;
 }
 
-export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
+export function GuestForm({
+  categories,
+  guest,
+  mode = 'create',
+  existingChildren,
+}: GuestFormProps) {
   const router = useRouter();
   const supabase = createClient();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoriesState, setCategoriesState] = useState(categories);
+
+  // Family management state
+  const [showNewChildForm, setShowNewChildForm] = useState(false);
+  const [childMode, setChildMode] = useState<'new' | 'existing'>('new');
+  const [newChildFirst, setNewChildFirst] = useState('');
+  const [newChildLast, setNewChildLast] = useState('');
+  const [newChildIsPlusOne, setNewChildIsPlusOne] = useState(false);
+  const [relatedComboOpen, setRelatedComboOpen] = useState(false);
+
+  // Multi-select: IDs de invitados que forman parte del grupo (el invitado actual es el padre)
+  const [familyMemberIds, setFamilyMemberIds] = useState<string[]>(
+    existingChildren?.map((c) => c.id) ?? []
+  );
+  const [familyComboOpen, setFamilyComboOpen] = useState(false);
+
+  // Lazy-loaded available guests para el combobox familiar
+  const [availableGuests, setAvailableGuests] = useState<
+    Array<{ id: string; first_name: string; last_name: string }>
+  >([]);
+  const [isLoadingGuests, setIsLoadingGuests] = useState(false);
+  const [guestsFetched, setGuestsFetched] = useState(false);
+  const isFetchingRef = useRef(false);
+
+  const fetchAvailableGuests = async () => {
+    if (guestsFetched || isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    setIsLoadingGuests(true);
+    try {
+      const client = createClient();
+      let query = client
+        .from('guests')
+        .select('id, first_name, last_name')
+        .is('parent_guest_id', null)
+        .order('first_name');
+      if (guest?.id) {
+        query = query.neq('id', guest.id);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      setAvailableGuests(data ?? []);
+      setGuestsFetched(true);
+    } catch (err) {
+      console.error('Error fetching available guests:', err);
+      toast({
+        title: t('common.error'),
+        description: 'No se pudieron cargar los invitados. Intenta de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      isFetchingRef.current = false;
+      setIsLoadingGuests(false);
+    }
+  };
+
+  const handleFamilyComboOpen = async (open: boolean) => {
+    setFamilyComboOpen(open);
+    if (open) await fetchAvailableGuests();
+  };
+
+  const getMemberName = (id: string): string => {
+    const existing = existingChildren?.find((c) => c.id === id);
+    if (existing) return `${existing.first_name} ${existing.last_name}`;
+    const avail = availableGuests.find((g) => g.id === id);
+    if (avail) return `${avail.first_name} ${avail.last_name}`;
+    return id;
+  };
 
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
@@ -65,6 +169,8 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
     selectedCategories: guest?.guest_categories?.map((gc) => gc.category_id) || [],
     ceremony_attending: true,
     reception_attending: true,
+    pendingChildren: [] as PendingChild[],
+    parent_guest_id: guest?.parent_guest_id || null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +181,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
 
     try {
       if (mode === 'create') {
-        await createGuest(supabase, {
+        const createdGuest = await createGuest(supabase, {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
@@ -88,6 +194,33 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           ceremony_attending: formData.ceremony_attending,
           reception_attending: formData.reception_attending,
         });
+
+        // Vincular invitados seleccionados como miembros del grupo
+        for (const memberId of familyMemberIds) {
+          await linkGuestToParent(supabase, memberId, createdGuest.id);
+        }
+
+        // Crear el nuevo relacionado (plus one)
+        for (const child of formData.pendingChildren) {
+          if (child.type === 'new') {
+            await createGuest(supabase, {
+              first_name: child.first_name,
+              last_name: child.last_name,
+              email: '',
+              phone: '',
+              status: 'pending',
+              dietary_restrictions: '',
+              notes: '',
+              is_plus_one: child.is_plus_one,
+              selectedCategories: [],
+              ceremony_attending: true,
+              reception_attending: true,
+              parent_guest_id: createdGuest.id,
+            });
+          } else if (child.existing_guest_id) {
+            await linkGuestToParent(supabase, child.existing_guest_id, createdGuest.id);
+          }
+        }
 
         router.push('/dashboard/guests');
         router.refresh();
@@ -103,6 +236,41 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           is_plus_one: formData.is_plus_one,
           selectedCategories: formData.selectedCategories,
         });
+
+        // Sincronizar miembros del grupo familiar
+        const originalChildIds = existingChildren?.map((c) => c.id) ?? [];
+        for (const id of originalChildIds) {
+          if (!familyMemberIds.includes(id)) {
+            await unlinkGuestFromParent(supabase, id);
+          }
+        }
+        for (const id of familyMemberIds) {
+          if (!originalChildIds.includes(id)) {
+            await linkGuestToParent(supabase, id, guest!.id);
+          }
+        }
+
+        // Crear el nuevo relacionado (plus one)
+        for (const child of formData.pendingChildren) {
+          if (child.type === 'new') {
+            await createGuest(supabase, {
+              first_name: child.first_name,
+              last_name: child.last_name,
+              email: '',
+              phone: '',
+              status: 'pending',
+              dietary_restrictions: '',
+              notes: '',
+              is_plus_one: child.is_plus_one,
+              selectedCategories: [],
+              ceremony_attending: true,
+              reception_attending: true,
+              parent_guest_id: guest!.id,
+            });
+          } else if (child.existing_guest_id) {
+            await linkGuestToParent(supabase, child.existing_guest_id, guest!.id);
+          }
+        }
 
         router.push(`/dashboard/guests/${guest!.id}`);
         router.refresh();
@@ -122,6 +290,29 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
         ? prev.selectedCategories.filter((id) => id !== categoryId)
         : [...prev.selectedCategories, categoryId],
     }));
+  };
+
+  const addPendingChild = () => {
+    if (formData.pendingChildren.length >= 1) return;
+    if (childMode === 'new') {
+      if (!newChildFirst.trim() || !newChildLast.trim()) return;
+      setFormData((prev) => ({
+        ...prev,
+        pendingChildren: [
+          {
+            tempId: crypto.randomUUID(),
+            type: 'new' as const,
+            first_name: newChildFirst.trim(),
+            last_name: newChildLast.trim(),
+            is_plus_one: newChildIsPlusOne,
+          },
+        ],
+      }));
+      setNewChildFirst('');
+      setNewChildLast('');
+      setNewChildIsPlusOne(false);
+    }
+    setShowNewChildForm(false);
   };
 
   return (
@@ -288,7 +479,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
             <button
               type="button"
               onClick={() => handleOpenDialog()}
-              className={'rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center'}
+              className={
+                'rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center'
+              }
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -301,6 +494,340 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           </div>
         </CardContent>
       </Card>
+
+      {/* Grupo Familiar */}
+      {(!formData.is_plus_one || guest.parent_guest_id == null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('guests.family')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Sección 1: Miembros del grupo (multi-select de existentes) */}
+            <div className="space-y-3">
+              <div>
+                <Label>{t('guests.partOfGroup')}</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('guests.addFamilyMember')}
+                </p>
+              </div>
+
+              {/* Badges de miembros seleccionados */}
+              {familyMemberIds.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {familyMemberIds.map((id) => (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
+                    >
+                      {getMemberName(id)}
+                      <button
+                        type="button"
+                        className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                        onClick={() =>
+                          setFamilyMemberIds((prev) => prev.filter((mid) => mid !== id))
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Combobox con búsqueda para agregar miembros */}
+              <Popover open={familyComboOpen} onOpenChange={handleFamilyComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={familyComboOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <UserPlus className="h-4 w-4" />
+                      {t('guests.addFamilyMember')}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
+                    <CommandList>
+                      {isLoadingGuests ? (
+                        <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t('common.loading')}
+                        </div>
+                      ) : (
+                        <>
+                          <CommandEmpty>{t('guests.noResults') ?? 'Sin resultados.'}</CommandEmpty>
+                          <CommandGroup>
+                            {availableGuests
+                              .filter((g) => !familyMemberIds.includes(g.id))
+                              .map((g) => (
+                                <CommandItem
+                                  key={g.id}
+                                  value={`${g.first_name} ${g.last_name}`}
+                                  onSelect={() => {
+                                    setFamilyMemberIds((prev) => [...prev, g.id]);
+                                    setFamilyComboOpen(false);
+                                  }}
+                                >
+                                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                                  {g.first_name} {g.last_name}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Sección 2: Agregar relacionado nuevo o existente (máx. 1) */}
+            <div className="space-y-3">
+              <div>
+                <Label>{t('guests.addRelated')}</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('guests.relationPlusOne')}
+                </p>
+              </div>
+
+              {/* Relacionado pendiente */}
+              {formData.pendingChildren.map((child) => (
+                <div
+                  key={child.tempId}
+                  className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2"
+                >
+                  <span className="text-sm">
+                    {child.type === 'new' ? (
+                      <>
+                        {child.first_name} {child.last_name}
+                        {child.is_plus_one && (
+                          <span className="ml-1 text-xs text-muted-foreground">+1</span>
+                        )}
+                      </>
+                    ) : (
+                      (() => {
+                        const g = availableGuests.find((g) => g.id === child.existing_guest_id);
+                        return g ? `${g.first_name} ${g.last_name}` : t('guests.existingGuest');
+                      })()
+                    )}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        pendingChildren: prev.pendingChildren.filter(
+                          (c) => c.tempId !== child.tempId
+                        ),
+                      }))
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {/* Formulario para nuevo o existente */}
+              {showNewChildForm ? (
+                <div className="rounded-md border p-3 space-y-3">
+                  {/* Tabs nuevo / existente */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={childMode === 'new' ? 'default' : 'outline'}
+                      onClick={() => setChildMode('new')}
+                    >
+                      {t('guests.newRelatedGuest')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={childMode === 'existing' ? 'default' : 'outline'}
+                      onClick={async () => {
+                        setChildMode('existing');
+                        await fetchAvailableGuests();
+                      }}
+                    >
+                      {t('guests.linkExisting')}
+                    </Button>
+                  </div>
+
+                  {childMode === 'new' ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="new_child_first">{t('guests.firstName')}</Label>
+                        <Input
+                          id="new_child_first"
+                          value={newChildFirst}
+                          onChange={(e) => setNewChildFirst(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="new_child_last">{t('guests.lastName')}</Label>
+                        <Input
+                          id="new_child_last"
+                          value={newChildLast}
+                          onChange={(e) => setNewChildLast(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2 col-span-full">
+                        <Checkbox
+                          id="new_child_plus_one"
+                          checked={newChildIsPlusOne}
+                          onCheckedChange={(v) => setNewChildIsPlusOne(!!v)}
+                        />
+                        <Label htmlFor="new_child_plus_one" className="font-normal text-sm">
+                          {t('guests.relationPlusOne')}
+                        </Label>
+                      </div>
+                    </div>
+                  ) : (
+                    <Popover open={relatedComboOpen} onOpenChange={setRelatedComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          {formData.pendingChildren[0]?.existing_guest_id
+                            ? (() => {
+                                const g = availableGuests.find(
+                                  (g) => g.id === formData.pendingChildren[0]?.existing_guest_id
+                                );
+                                return g
+                                  ? `${g.first_name} ${g.last_name}`
+                                  : t('guests.selectExistingGuest');
+                              })()
+                            : t('guests.selectExistingGuest')}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
+                          <CommandList>
+                            {isLoadingGuests ? (
+                              <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('common.loading')}
+                              </div>
+                            ) : (
+                              <>
+                                <CommandEmpty>
+                                  {t('guests.noResults') ?? 'Sin resultados.'}
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {availableGuests
+                                    .filter((g) => !familyMemberIds.includes(g.id))
+                                    .map((g) => (
+                                      <CommandItem
+                                        key={g.id}
+                                        value={`${g.first_name} ${g.last_name}`}
+                                        onSelect={() => {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            pendingChildren: [
+                                              {
+                                                tempId: crypto.randomUUID(),
+                                                type: 'existing' as const,
+                                                first_name: g.first_name,
+                                                last_name: g.last_name,
+                                                is_plus_one: false,
+                                                existing_guest_id: g.id,
+                                              },
+                                            ],
+                                          }));
+                                          setRelatedComboOpen(false);
+                                          setShowNewChildForm(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={`mr-2 h-4 w-4 ${
+                                            formData.pendingChildren[0]?.existing_guest_id === g.id
+                                              ? 'opacity-100'
+                                              : 'opacity-0'
+                                          }`}
+                                        />
+                                        {g.first_name} {g.last_name}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  {childMode === 'new' && (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={addPendingChild}
+                        disabled={!newChildFirst.trim() || !newChildLast.trim()}
+                      >
+                        {t('common.confirm')}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowNewChildForm(false);
+                          setNewChildFirst('');
+                          setNewChildLast('');
+                          setNewChildIsPlusOne(false);
+                        }}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                    </div>
+                  )}
+                  {childMode === 'existing' && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setShowNewChildForm(false);
+                        setChildMode('new');
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                formData.pendingChildren.length === 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewChildForm(true)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    {t('guests.addRelated')}
+                  </Button>
+                )
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional Information */}
       <Card>

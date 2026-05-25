@@ -13,6 +13,8 @@ import {
   StickyNote,
   Armchair,
   ScanLine,
+  Users,
+  Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -52,6 +54,28 @@ interface GuestDetailProps {
       event_type: string;
       is_duplicate: boolean;
       users: { display_name: string };
+    }>;
+    family_role?: 'parent' | 'child';
+    children?: Array<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      status: 'pending' | 'confirmed' | 'declined' | 'tentative';
+      is_plus_one: boolean;
+    }>;
+    parent?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      status: 'pending' | 'confirmed' | 'declined' | 'tentative';
+      is_plus_one: boolean;
+    } | null;
+    siblings?: Array<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      status: 'pending' | 'confirmed' | 'declined' | 'tentative';
+      is_plus_one: boolean;
     }>;
   };
 }
@@ -300,6 +324,103 @@ export function GuestDetail({ guest }: GuestDetailProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Family / Related Guests */}
+          {guest.family_role && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {t('guests.related')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {/* Parent (if this guest is a child) */}
+                {guest.family_role === 'child' && guest.parent && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {t('guests.parentLabel')}
+                    </p>
+                    <Link
+                      href={`/dashboard/guests/${guest.parent.id}`}
+                      className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors"
+                    >
+                      <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="font-medium">
+                        {guest.parent.first_name} {guest.parent.last_name}
+                      </span>
+                      <Badge variant={statusVariants[guest.parent.status]} className="ml-auto text-xs">
+                        {t(`guests.statuses.${guest.parent.status}`)}
+                      </Badge>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Children (if this guest is a parent) */}
+                {guest.family_role === 'parent' && (guest.children?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {t('guests.memberCount', { count: guest.children!.length })}
+                    </p>
+                    <div className="space-y-1">
+                      {guest.children!.map((child) => (
+                        <Link
+                          key={child.id}
+                          href={`/dashboard/guests/${child.id}`}
+                          className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors"
+                        >
+                          <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span>
+                            {child.first_name} {child.last_name}
+                            {child.is_plus_one && (
+                              <span className="ml-1 text-xs text-muted-foreground">+1</span>
+                            )}
+                          </span>
+                          <Badge variant={statusVariants[child.status]} className="ml-auto text-xs">
+                            {t(`guests.statuses.${child.status}`)}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Siblings (if this guest is a child) */}
+                {guest.family_role === 'child' && (guest.siblings?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {t('guests.siblings')}
+                    </p>
+                    <div className="space-y-1">
+                      {guest.siblings!.map((sibling) => (
+                        <Link
+                          key={sibling.id}
+                          href={`/dashboard/guests/${sibling.id}`}
+                          className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors"
+                        >
+                          <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span>
+                            {sibling.first_name} {sibling.last_name}
+                            {sibling.is_plus_one && (
+                              <span className="ml-1 text-xs text-muted-foreground">+1</span>
+                            )}
+                          </span>
+                          <Badge variant={statusVariants[sibling.status]} className="ml-auto text-xs">
+                            {t(`guests.statuses.${sibling.status}`)}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No family data */}
+                {guest.family_role === 'parent' && (guest.children?.length ?? 0) === 0 && (
+                  <p className="text-muted-foreground">{t('guests.noRelated')}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

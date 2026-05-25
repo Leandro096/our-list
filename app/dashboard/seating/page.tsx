@@ -1,11 +1,11 @@
-import { getSeatingData } from "@/services";
+import { getSeatingDataWithFamily } from "@/services";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { SeatingManager } from "@/components/seating/seating-manager";
 
 export default async function SeatingPage() {
   const supabase = await createClient();
-  const { guests, assignments, tables } = await getSeatingData(supabase);
+  const { guests, assignments, tables } = await getSeatingDataWithFamily(supabase);
 
   return (
     <div className="space-y-6">
