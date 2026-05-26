@@ -125,14 +125,33 @@ export async function getGuestsPaginated(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // Pre-filter by category via a separate query (PostgREST join filtering)
+  // Pre-filter by category with subset matching:
+  // guests must contain all selected categories (extras are allowed)
   let guestIds: string[] | null = null;
   if (categoryIds && categoryIds.length > 0) {
+    const selected = Array.from(new Set(categoryIds));
+
+    // Pull category rows for selected categories only, then keep guests
+    // that match every selected category at least once.
     const { data: catRows } = await supabase
       .from('guest_categories')
-      .select('guest_id')
-      .in('category_id', categoryIds);
-    guestIds = Array.from(new Set((catRows ?? []).map((r: { guest_id: string }) => r.guest_id)));
+      .select('guest_id, category_id')
+      .in('category_id', selected);
+
+    const matchedByGuest = new Map<string, Set<string>>();
+    for (const row of catRows ?? []) {
+      const item = row as { guest_id: string; category_id: string };
+      if (!matchedByGuest.has(item.guest_id)) matchedByGuest.set(item.guest_id, new Set());
+      matchedByGuest.get(item.guest_id)!.add(item.category_id);
+    }
+
+    guestIds = [];
+    for (const [guestId, matchedSet] of matchedByGuest) {
+      if (matchedSet.size === selected.length) {
+        guestIds.push(guestId);
+      }
+    }
+
     if (guestIds.length === 0) return { data: [], count: 0 };
   }
 
@@ -476,7 +495,7 @@ export async function linkGuestToParent(
 ): Promise<void> {
   const { error } = await supabase
     .from('guests')
-    .update({ parent_guest_id: parentId, is_plus_one: true, updated_at: new Date().toISOString() })
+    .update({ parent_guest_id: parentId, updated_at: new Date().toISOString() })
     .eq('id', childId);
   if (error) throw error;
 }

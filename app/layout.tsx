@@ -76,7 +76,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <I18nProvider>
+          <I18nProvider initialLocale={locale}>
             {children}
             <Toaster />
           </I18nProvider>

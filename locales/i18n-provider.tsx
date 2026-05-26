@@ -35,8 +35,35 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : `{${k}}`))
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = React.useState<Locale>(DEFAULT_LOCALE)
+function asLocale(value?: string | null): Locale | null {
+  if (!value) return null
+  const lower = value.toLowerCase()
+  if (lower.startsWith('es')) return 'es'
+  if (lower.startsWith('en')) return 'en'
+  return null
+}
+
+function getBrowserPreferredLocale(): Locale | null {
+  if (typeof navigator === 'undefined') return null
+  const candidates = Array.isArray(navigator.languages) && navigator.languages.length > 0
+    ? navigator.languages
+    : [navigator.language]
+
+  for (const candidate of candidates) {
+    const parsed = asLocale(candidate)
+    if (parsed) return parsed
+  }
+  return null
+}
+
+export function I18nProvider({
+  children,
+  initialLocale = DEFAULT_LOCALE,
+}: {
+  children: React.ReactNode
+  initialLocale?: Locale
+}) {
+  const [locale, setLocaleState] = React.useState<Locale>(initialLocale)
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -45,6 +72,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       if (stored === "en" || stored === "es") {
         setLocaleState(stored)
         document.cookie = `${LOCALE_STORAGE_KEY}=${stored}; path=/; max-age=31536000; SameSite=Lax`
+      } else {
+        const browserLocale = getBrowserPreferredLocale()
+        if (browserLocale) {
+          setLocaleState(browserLocale)
+          localStorage.setItem(LOCALE_STORAGE_KEY, browserLocale)
+          document.cookie = `${LOCALE_STORAGE_KEY}=${browserLocale}; path=/; max-age=31536000; SameSite=Lax`
+        }
       }
     } catch {}
     setMounted(true)

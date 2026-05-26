@@ -410,6 +410,247 @@ export function GuestForm({
             </Label>
           </div>
 
+            {/* Agregar relacionado nuevo o existente (máx. 1) */}
+            {formData.is_plus_one && (
+              <div className="space-y-3">
+                <div>
+                  <Label>{t('guests.addRelated')}</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t('guests.relationPlusOne')}
+                  </p>
+                </div>
+
+                {/* Relacionado pendiente */}
+                {formData.pendingChildren.map((child) => (
+                  <div
+                    key={child.tempId}
+                    className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2"
+                  >
+                    <span className="text-sm">
+                      {child.type === 'new' ? (
+                        <>
+                          {child.first_name} {child.last_name}
+                          {child.is_plus_one && (
+                            <span className="ml-1 text-xs text-muted-foreground">+1</span>
+                          )}
+                        </>
+                      ) : (
+                        (() => {
+                          const g = availableGuests.find((g) => g.id === child.existing_guest_id);
+                          return g ? `${g.first_name} ${g.last_name}` : t('guests.existingGuest');
+                        })()
+                      )}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          pendingChildren: prev.pendingChildren.filter(
+                            (c) => c.tempId !== child.tempId
+                          ),
+                        }))
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Formulario para nuevo o existente */}
+                {showNewChildForm ? (
+                  <div className="rounded-md border p-3 space-y-3">
+                    {/* Tabs nuevo / existente */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={childMode === 'new' ? 'default' : 'outline'}
+                        onClick={() => setChildMode('new')}
+                      >
+                        {t('guests.newRelatedGuest')}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={childMode === 'existing' ? 'default' : 'outline'}
+                        onClick={async () => {
+                          setChildMode('existing');
+                          await fetchAvailableGuests();
+                        }}
+                      >
+                        {t('guests.linkExisting')}
+                      </Button>
+                    </div>
+
+                    {childMode === 'new' ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="new_child_first">{t('guests.firstName')}</Label>
+                          <Input
+                            id="new_child_first"
+                            value={newChildFirst}
+                            onChange={(e) => setNewChildFirst(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="new_child_last">{t('guests.lastName')}</Label>
+                          <Input
+                            id="new_child_last"
+                            value={newChildLast}
+                            onChange={(e) => setNewChildLast(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2 col-span-full">
+                          <Checkbox
+                            id="new_child_plus_one"
+                            checked={newChildIsPlusOne}
+                            onCheckedChange={(v) => setNewChildIsPlusOne(!!v)}
+                          />
+                          <Label htmlFor="new_child_plus_one" className="font-normal text-sm">
+                            {t('guests.relationPlusOne')}
+                          </Label>
+                        </div>
+                      </div>
+                    ) : (
+                      <Popover open={relatedComboOpen} onOpenChange={setRelatedComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between font-normal"
+                          >
+                            {formData.pendingChildren[0]?.existing_guest_id
+                              ? (() => {
+                                  const g = availableGuests.find(
+                                    (g) => g.id === formData.pendingChildren[0]?.existing_guest_id
+                                  );
+                                  return g
+                                    ? `${g.first_name} ${g.last_name}`
+                                    : t('guests.selectExistingGuest');
+                                })()
+                              : t('guests.selectExistingGuest')}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
+                            <CommandList>
+                              {isLoadingGuests ? (
+                                <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  {t('common.loading')}
+                                </div>
+                              ) : (
+                                <>
+                                  <CommandEmpty>
+                                    {t('guests.noResults') ?? 'Sin resultados.'}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {availableGuests
+                                      .filter((g) => !familyMemberIds.includes(g.id))
+                                      .map((g) => (
+                                        <CommandItem
+                                          key={g.id}
+                                          value={`${g.first_name} ${g.last_name}`}
+                                          onSelect={() => {
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              pendingChildren: [
+                                                {
+                                                  tempId: crypto.randomUUID(),
+                                                  type: 'existing' as const,
+                                                  first_name: g.first_name,
+                                                  last_name: g.last_name,
+                                                  is_plus_one: false,
+                                                  existing_guest_id: g.id,
+                                                },
+                                              ],
+                                            }));
+                                            setRelatedComboOpen(false);
+                                            setShowNewChildForm(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={`mr-2 h-4 w-4 ${
+                                              formData.pendingChildren[0]?.existing_guest_id ===
+                                              g.id
+                                                ? 'opacity-100'
+                                                : 'opacity-0'
+                                            }`}
+                                          />
+                                          {g.first_name} {g.last_name}
+                                        </CommandItem>
+                                      ))}
+                                  </CommandGroup>
+                                </>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+
+                    {childMode === 'new' && (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={addPendingChild}
+                          disabled={!newChildFirst.trim() || !newChildLast.trim()}
+                        >
+                          {t('common.confirm')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowNewChildForm(false);
+                            setNewChildFirst('');
+                            setNewChildLast('');
+                            setNewChildIsPlusOne(false);
+                          }}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                      </div>
+                    )}
+                    {childMode === 'existing' && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowNewChildForm(false);
+                          setChildMode('new');
+                        }}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  formData.pendingChildren.length === 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowNewChildForm(true)}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {t('guests.addRelated')}
+                    </Button>
+                  )
+                )}
+              </div>
+            )}
+
           {mode === 'create' && (
             <div className="space-y-3">
               <Label>{t('guests.events')}</Label>
@@ -496,7 +737,7 @@ export function GuestForm({
       </Card>
 
       {/* Grupo Familiar */}
-      {(!formData.is_plus_one || guest.parent_guest_id == null) && (
+      {guest.parent_guest_id == null && (
         <Card>
           <CardHeader>
             <CardTitle>{t('guests.family')}</CardTitle>
@@ -586,244 +827,6 @@ export function GuestForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-            </div>
-
-            {/* Sección 2: Agregar relacionado nuevo o existente (máx. 1) */}
-            <div className="space-y-3">
-              <div>
-                <Label>{t('guests.addRelated')}</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('guests.relationPlusOne')}
-                </p>
-              </div>
-
-              {/* Relacionado pendiente */}
-              {formData.pendingChildren.map((child) => (
-                <div
-                  key={child.tempId}
-                  className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2"
-                >
-                  <span className="text-sm">
-                    {child.type === 'new' ? (
-                      <>
-                        {child.first_name} {child.last_name}
-                        {child.is_plus_one && (
-                          <span className="ml-1 text-xs text-muted-foreground">+1</span>
-                        )}
-                      </>
-                    ) : (
-                      (() => {
-                        const g = availableGuests.find((g) => g.id === child.existing_guest_id);
-                        return g ? `${g.first_name} ${g.last_name}` : t('guests.existingGuest');
-                      })()
-                    )}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        pendingChildren: prev.pendingChildren.filter(
-                          (c) => c.tempId !== child.tempId
-                        ),
-                      }))
-                    }
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-
-              {/* Formulario para nuevo o existente */}
-              {showNewChildForm ? (
-                <div className="rounded-md border p-3 space-y-3">
-                  {/* Tabs nuevo / existente */}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={childMode === 'new' ? 'default' : 'outline'}
-                      onClick={() => setChildMode('new')}
-                    >
-                      {t('guests.newRelatedGuest')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={childMode === 'existing' ? 'default' : 'outline'}
-                      onClick={async () => {
-                        setChildMode('existing');
-                        await fetchAvailableGuests();
-                      }}
-                    >
-                      {t('guests.linkExisting')}
-                    </Button>
-                  </div>
-
-                  {childMode === 'new' ? (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label htmlFor="new_child_first">{t('guests.firstName')}</Label>
-                        <Input
-                          id="new_child_first"
-                          value={newChildFirst}
-                          onChange={(e) => setNewChildFirst(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="new_child_last">{t('guests.lastName')}</Label>
-                        <Input
-                          id="new_child_last"
-                          value={newChildLast}
-                          onChange={(e) => setNewChildLast(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2 col-span-full">
-                        <Checkbox
-                          id="new_child_plus_one"
-                          checked={newChildIsPlusOne}
-                          onCheckedChange={(v) => setNewChildIsPlusOne(!!v)}
-                        />
-                        <Label htmlFor="new_child_plus_one" className="font-normal text-sm">
-                          {t('guests.relationPlusOne')}
-                        </Label>
-                      </div>
-                    </div>
-                  ) : (
-                    <Popover open={relatedComboOpen} onOpenChange={setRelatedComboOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          className="w-full justify-between font-normal"
-                        >
-                          {formData.pendingChildren[0]?.existing_guest_id
-                            ? (() => {
-                                const g = availableGuests.find(
-                                  (g) => g.id === formData.pendingChildren[0]?.existing_guest_id
-                                );
-                                return g
-                                  ? `${g.first_name} ${g.last_name}`
-                                  : t('guests.selectExistingGuest');
-                              })()
-                            : t('guests.selectExistingGuest')}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
-                          <CommandList>
-                            {isLoadingGuests ? (
-                              <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                {t('common.loading')}
-                              </div>
-                            ) : (
-                              <>
-                                <CommandEmpty>
-                                  {t('guests.noResults') ?? 'Sin resultados.'}
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {availableGuests
-                                    .filter((g) => !familyMemberIds.includes(g.id))
-                                    .map((g) => (
-                                      <CommandItem
-                                        key={g.id}
-                                        value={`${g.first_name} ${g.last_name}`}
-                                        onSelect={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            pendingChildren: [
-                                              {
-                                                tempId: crypto.randomUUID(),
-                                                type: 'existing' as const,
-                                                first_name: g.first_name,
-                                                last_name: g.last_name,
-                                                is_plus_one: false,
-                                                existing_guest_id: g.id,
-                                              },
-                                            ],
-                                          }));
-                                          setRelatedComboOpen(false);
-                                          setShowNewChildForm(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={`mr-2 h-4 w-4 ${
-                                            formData.pendingChildren[0]?.existing_guest_id === g.id
-                                              ? 'opacity-100'
-                                              : 'opacity-0'
-                                          }`}
-                                        />
-                                        {g.first_name} {g.last_name}
-                                      </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                              </>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-
-                  {childMode === 'new' && (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addPendingChild}
-                        disabled={!newChildFirst.trim() || !newChildLast.trim()}
-                      >
-                        {t('common.confirm')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setShowNewChildForm(false);
-                          setNewChildFirst('');
-                          setNewChildLast('');
-                          setNewChildIsPlusOne(false);
-                        }}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                    </div>
-                  )}
-                  {childMode === 'existing' && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setShowNewChildForm(false);
-                        setChildMode('new');
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                formData.pendingChildren.length === 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowNewChildForm(true)}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {t('guests.addRelated')}
-                  </Button>
-                )
-              )}
             </div>
           </CardContent>
         </Card>
