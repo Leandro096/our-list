@@ -574,7 +574,7 @@ export const en = {
     },
   },
   home: {
-    appName: "Wedding Guest Manager",
+    appName: "Guests List App",
     signIn: "Sign In",
     getStarted: "Get Started",
     badge: "Elegant Wedding Management",

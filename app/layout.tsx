@@ -20,7 +20,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Wedding Guest Manager",
+  title: "Guests List App",
   description:
     "Elegant wedding guest management platform with QR check-in, seating assignments, and comprehensive guest tracking.",
   icons: {
