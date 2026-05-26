@@ -37,6 +37,7 @@ import { usePathname } from "next/navigation";
 import { cn, hasPermission, PERMISSIONS } from "@/lib";
 import { LanguageSwitcher } from "../language-switcher";
 import { LogOut, User, Moon, Sun, Monitor, Menu, Heart, Check } from "lucide-react";
+import { toast } from "@/hooks";
 
 const navigationItems = [
   {
@@ -118,8 +119,12 @@ export function DashboardHeader() {
   const handleSignOut = async () => {
     try {
       await signOut();
-    } catch (error) {
-      console.error("Error during sign out:", error);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'No se pudo cerrar la sesión. Inténtalo de nuevo.',
+        variant: 'destructive',
+      });
     } finally {
       router.push("/auth/login");
     }
@@ -301,9 +306,9 @@ export function DashboardHeader() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/settings/profile">
+            <Link href="/dashboard/profile">
               <User className="mr-2 h-4 w-4" />
-              {t("settings.account")}
+              {t("nav.profile")}
             </Link>
           </DropdownMenuItem>
 

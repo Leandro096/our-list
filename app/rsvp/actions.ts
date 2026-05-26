@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { readLimiter } from '@/lib/rate-limit'
 
 type PublicGuestResult = {
   invitation_guid: string
@@ -60,6 +61,12 @@ function extractInvitedEvents(
 export async function searchGuestsForPublicRsvp(term: string): Promise<PublicGuestResult[]> {
   const cleaned = sanitizeTerm(term)
   if (cleaned.length < MIN_SEARCH_CHARS) return []
+
+  // Rate limit by a stable per-IP key (anonymous public route).
+  // We use the term as a rough per-session key; upgrade to header-based IP
+  // if more precision is needed.
+  const rateCheck = readLimiter.check('public_rsvp_search')
+  if (!rateCheck.allowed) return []
 
   const supabase = await createClient()
   const { data } = await supabase

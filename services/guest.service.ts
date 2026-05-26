@@ -32,6 +32,13 @@ export type GuestDetail = Guest & {
 
 export type GuestForEdit = Guest & {
   guest_categories: Array<{ category_id: string }>;
+  event_attendance: Array<{ event_type: string; attending: boolean | null }>;
+  children: Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    is_plus_one: boolean;
+  }>;
 };
 
 // ---- Input types ----
@@ -225,13 +232,25 @@ export async function getGuestForEdit(
     .select(
       `
       *,
-      guest_categories(category_id)
+      guest_categories(category_id),
+      event_attendance(event_type, attending)
     `
     )
     .eq('id', id)
     .single();
 
-  return data ?? null;
+  if (!data) return null;
+
+  const { data: childrenData } = await supabase
+    .from('guests')
+    .select('id, first_name, last_name, is_plus_one')
+    .eq('parent_guest_id', id)
+    .order('first_name');
+
+  return {
+    ...(data as Omit<GuestForEdit, 'children'>),
+    children: childrenData ?? [],
+  };
 }
 
 // ---- Mutations ----

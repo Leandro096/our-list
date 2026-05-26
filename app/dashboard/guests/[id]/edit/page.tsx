@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { GuestForm } from "@/components/guests/guest-form";
-import { getGuestForEdit, getCategories, getGuestChildren } from "@/services";
+import { getGuestForEdit, getCategories } from "@/services";
 
 export default async function EditGuestPage({
   params,
@@ -11,10 +11,9 @@ export default async function EditGuestPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [guest, categories, existingChildren] = await Promise.all([
+  const [guest, categories] = await Promise.all([
     getGuestForEdit(supabase, id),
     getCategories(supabase),
-    getGuestChildren(supabase, id),
   ]);
 
   if (!guest) {
@@ -31,7 +30,6 @@ export default async function EditGuestPage({
         categories={categories}
         guest={guest}
         mode="edit"
-        existingChildren={existingChildren}
       />
     </div>
   );

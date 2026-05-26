@@ -7,18 +7,18 @@ import { useAuth } from '@/components/auth-provider';
 import { useTranslation } from '@/locales/i18n-provider';
 import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 import {
+  Tags,
   Heart,
-  LayoutDashboard,
   Users,
+  Shield,
+  History,
+  UserCog,
   ScanLine,
   Armchair,
-  Tags,
   Settings,
   ChevronLeft,
   ChevronDown,
-  History,
-  UserCog,
-  Shield,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -95,7 +95,7 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const { profile, activePermissions } = useAuth();
   const { t } = useTranslation();
-  const { collapsed, setCollapsed } = useSidebar();
+  const { collapsed, setCollapsed, setPageLoading } = useSidebar();
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'));
 
   const userPermissions = activePermissions;
@@ -160,6 +160,7 @@ export function DashboardSidebar() {
                   <Link
                     key={child.nameKey}
                     href={child.href}
+                    onClick={() => { if (!isActive) setPageLoading(true); }}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
@@ -186,6 +187,7 @@ export function DashboardSidebar() {
       <Link
         key={item.nameKey}
         href={item.href}
+        onClick={() => { if (!isActive) setPageLoading(true); }}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive

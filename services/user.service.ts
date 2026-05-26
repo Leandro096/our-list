@@ -98,6 +98,21 @@ export async function updateUserRoles(
   }
 }
 
+// ---- Profile ----
+
+export async function updateUserProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  payload: { display_name?: string; theme_preference?: 'light' | 'dark' | 'system' },
+): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
 // ---- Role management ----
 
 export type RoleWithPermissions = Role & {

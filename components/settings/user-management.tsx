@@ -35,7 +35,9 @@ import { formatDistanceToNow } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation, useLocale } from "@/locales";
-import { Pencil, Shield, User, Crown } from "lucide-react";
+import { Pencil, Shield, User, Crown, UserPlus } from "lucide-react";
+import { toast } from "@/hooks";
+import { InviteUserDialog } from "./invite-user-dialog";
 
 interface UserManagementProps {
   users: UserWithRoleAssignments[];
@@ -54,6 +56,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false);
   const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const openEdit = (user: UserWithRoleAssignments) => {
     setEditingUser(user);
@@ -86,7 +89,12 @@ export function UserManagement({ users, roles }: UserManagementProps) {
       router.refresh();
       closeEdit();
     } catch (error) {
-      console.error("Error updating user:", error);
+      const message = error instanceof Error ? error.message : 'Error al actualizar el usuario.';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -104,9 +112,19 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   return (
     <div className="space-y-6">
       {/* Users Table */}
+      <InviteUserDialog
+        roles={roles}
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+      />
+
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t("settings.users_section.staffMembers")}</CardTitle>
+          <Button size="sm" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            {t("settings.users_section.inviteUser")}
+          </Button>
         </CardHeader>
         <CardContent>
           {/* Mobile grid */}

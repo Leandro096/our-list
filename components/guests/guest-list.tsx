@@ -50,6 +50,7 @@ import { ExportDialog } from './export-dialog';
 import { ImportDialog } from './import-dialog';
 import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
 import { useTranslation } from '@/locales/i18n-provider';
+import { toast } from '@/hooks';
 
 // ---- Types ----
 
@@ -173,14 +174,22 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   function handleDelete() {
     if (!deleteTargetId) return;
     startDeleteTransition(async () => {
-      await deleteGuestAction(deleteTargetId);
+      const result = await deleteGuestAction(deleteTargetId);
+      if (result.error) {
+        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        return;
+      }
       setDeleteTargetId(null);
     });
   }
 
   function handleBulkDelete() {
     startDeleteTransition(async () => {
-      await bulkDeleteGuestsAction([...selectedIds]);
+      const result = await bulkDeleteGuestsAction([...selectedIds]);
+      if (result.error) {
+        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        return;
+      }
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
     });
@@ -472,7 +481,12 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       </p>
 
       {/* ---- Table ---- */}
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div className="relative overflow-hidden rounded-lg border border-border">
+        {isPending && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
         <Table className="w-full table-fixed">
           <colgroup>
             <col className="w-10" />

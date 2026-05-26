@@ -129,7 +129,6 @@ export function SeatingManager({
         description: t("seating.tableCreated", { name: created.name }),
       });
     } catch (error) {
-      console.error("Error creating table:", error);
       toast({
         title: t("common.error"),
         description: t("seating.tableCreationError"),
@@ -147,7 +146,6 @@ export function SeatingManager({
       router.refresh();
       toast({ title: t("seating.tableDeleted") });
     } catch (error) {
-      console.error("Error deleting table:", error);
       toast({
         title: t("common.error"),
         description: t("seating.tableDeleteError"),
@@ -204,7 +202,6 @@ export function SeatingManager({
         description: t("seating.groupAssignedDesc", { count: totalCount }),
       });
     } catch (error) {
-      console.error("Error assigning guests:", error);
       toast({
         title: t("common.error"),
         description: t("seating.guestAssignError"),
@@ -222,7 +219,6 @@ export function SeatingManager({
       router.refresh();
       toast({ title: t("seating.guestUnassigned") });
     } catch (error) {
-      console.error("Error removing assignment:", error);
       toast({
         title: t("common.error"),
         description: t("seating.guestUnassignError"),
@@ -261,7 +257,6 @@ export function SeatingManager({
       setEditingTable(null);
       router.refresh();
     } catch (error) {
-      console.error("Error updating table:", error);
       toast({
         title: t("common.error"),
         description: t("seating.tableUpdateError"),
@@ -307,7 +302,6 @@ export function SeatingManager({
         description: t("seating.groupAssignedDesc", { count: totalCount }),
       });
     } catch (error) {
-      console.error("Error assigning guests from edit dialog:", error);
       toast({
         title: t("common.error"),
         description: t("seating.guestAssignError"),

@@ -58,7 +58,6 @@ export function CategoriesManager({ categories: initialCategories }: CategoriesM
       setCategories((prev) => prev.filter((c) => c.id !== id));
       toast({ title: t('categories.categoryDeleted') });
     } catch (error) {
-      console.error('Error deleting category:', error);
       const message = error instanceof Error ? error.message : String(error);
       toast({
         title: t('common.error'),

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { validateImportRows } from '@/lib/validations/guest-import'
 import type { ImportRowInput } from '@/lib/validations/guest-import'
 import { deleteGuest, bulkDeleteGuests } from '@/services'
+import { heavyActionLimiter, mutationLimiter } from '@/lib/rate-limit'
 
 const MAX_IMPORT_ROWS = 1000
 
@@ -27,6 +28,18 @@ export interface ImportGuestsResult {
 export async function importGuestsAction(
   rawRows: Record<string, string>[],
 ): Promise<ImportGuestsResult> {
+  const supabaseForUser = await createClient()
+  const { data: { user } } = await supabaseForUser.auth.getUser()
+  const userId = user?.id ?? 'anonymous'
+
+  const rateCheck = heavyActionLimiter.check(userId)
+  if (!rateCheck.allowed) {
+    return {
+      created: 0,
+      errors: [{ row: 0, error: rateCheck.message }],
+    }
+  }
+
   if (rawRows.length > MAX_IMPORT_ROWS) {
     return {
       created: 0,
@@ -146,14 +159,28 @@ function buildAttendanceRows(
   return rows
 }
 
-export async function deleteGuestAction(id: string): Promise<void> {
+export async function deleteGuestAction(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? 'anonymous'
+
+  const rateCheck = mutationLimiter.check(userId)
+  if (!rateCheck.allowed) return { error: rateCheck.message }
+
   await deleteGuest(supabase, id)
   revalidatePath('/dashboard/guests')
+  return {}
 }
 
-export async function bulkDeleteGuestsAction(ids: string[]): Promise<void> {
+export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? 'anonymous'
+
+  const rateCheck = mutationLimiter.check(userId)
+  if (!rateCheck.allowed) return { error: rateCheck.message }
+
   await bulkDeleteGuests(supabase, ids)
   revalidatePath('/dashboard/guests')
+  return {}
 }

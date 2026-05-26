@@ -147,7 +147,6 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
       closeEdit();
       toast({ title: t("settings.roles_section.roleSaved") });
     } catch (error) {
-      console.error("Error saving role:", error);
       toast({
         title: t("common.error"),
         description: t("settings.roles_section.roleSaveError"),
@@ -165,7 +164,6 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
       router.refresh();
       toast({ title: t("settings.roles_section.roleDeleted") });
     } catch (error) {
-      console.error("Error deleting role:", error);
       toast({
         title: t("common.error"),
         description: t("settings.roles_section.roleDeleteError"),

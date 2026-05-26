@@ -1,12 +1,6 @@
-"use client";
+'use client';
 
-import {
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  ScanLine,
-  Users,
-} from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, ScanLine, Users } from 'lucide-react';
 
 import {
   Badge,
@@ -20,13 +14,19 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui";
-import { useAuth } from "@/components/auth-provider";
-import { Html5Qrcode } from "html5-qrcode";
-import { useTranslation } from "@/locales";
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { type ScannerGuest, type GroupScanMember, getTodayStats, processGuestScanByFamily } from "@/services";
+} from '@/components/ui';
+import { useAuth } from '@/components/auth-provider';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useTranslation } from '@/locales';
+import { useState, useEffect, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from '@/hooks';
+import {
+  type ScannerGuest,
+  type GroupScanMember,
+  getTodayStats,
+  processGuestScanByFamily,
+} from '@/services';
 
 type ScanResult = {
   success: boolean;
@@ -41,9 +41,7 @@ export default function ScannerPage() {
   const { profile } = useAuth();
   const { t } = useTranslation();
   const supabase = createClient();
-  const [eventType, setEventType] = useState<"ceremony" | "reception">(
-    "ceremony",
-  );
+  const [eventType, setEventType] = useState<'ceremony' | 'reception'>('ceremony');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [todayStats, setTodayStats] = useState({ ceremony: 0, reception: 0 });
@@ -57,29 +55,37 @@ export default function ScannerPage() {
     try {
       const stats = await getTodayStats(supabase);
       setTodayStats(stats);
-    } catch (error) {
-      console.error("Error fetching today stats:", error);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las estadísticas de hoy.',
+        variant: 'destructive',
+      });
     }
   };
 
   useEffect(() => {
     if (!isScanning) return;
 
-    const scanner = new Html5Qrcode("qr-reader");
+    const scanner = new Html5Qrcode('qr-reader');
     scannerRef.current = scanner;
 
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText) => {
-          await scanner.stop().catch(() => {});
-          scannerRef.current = null;
-          setIsScanning(false);
-          await handleScan(decodedText);
-        },
-        undefined,
-      )
+    Html5Qrcode.getCameras()
+      .then((cameras) => {
+        const cameraId = cameras.length > 0 ? cameras[0].id : { facingMode: 'environment' };
+
+        return scanner.start(
+          cameraId,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText) => {
+            await scanner.stop().catch(() => {});
+            scannerRef.current = null;
+            setIsScanning(false);
+            await handleScan(decodedText);
+          },
+          undefined
+        );
+      })
       .catch(() => {
         scannerRef.current = null;
         setIsScanning(false);
@@ -99,13 +105,13 @@ export default function ScannerPage() {
         supabase,
         invitationGuid,
         eventType,
-        profile?.id,
+        profile?.id
       );
 
       if (!result.found) {
         setScanResult({
           success: false,
-          message: t("scanner.guestNotFound"),
+          message: t('scanner.guestNotFound'),
         });
         return;
       }
@@ -119,14 +125,13 @@ export default function ScannerPage() {
         guest: result.group_root,
         members: result.members,
         message: result.all_duplicate
-          ? t("scanner.groupAlreadyCheckedIn")
-          : t("scanner.groupCheckInSuccess"),
+          ? t('scanner.groupAlreadyCheckedIn')
+          : t('scanner.groupCheckInSuccess'),
       });
-    } catch (error) {
-      console.error("Error processing scan:", error);
+    } catch {
       setScanResult({
         success: false,
-        message: t("scanner.checkInError"),
+        message: t('scanner.checkInError'),
       });
     }
   };
@@ -139,10 +144,8 @@ export default function ScannerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight">
-          {t("scanner.title")}
-        </h1>
-        <p className="mt-1 text-muted-foreground">{t("scanner.description")}</p>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight">{t('scanner.title')}</h1>
+        <p className="mt-1 text-muted-foreground">{t('scanner.description')}</p>
       </div>
 
       {/* Stats */}
@@ -154,9 +157,7 @@ export default function ScannerPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{todayStats.ceremony}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("scanner.ceremonyCheckIns")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('scanner.ceremonyCheckIns')}</p>
             </div>
           </CardContent>
         </Card>
@@ -167,9 +168,7 @@ export default function ScannerPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{todayStats.reception}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("scanner.receptionCheckIns")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('scanner.receptionCheckIns')}</p>
             </div>
           </CardContent>
         </Card>
@@ -180,25 +179,21 @@ export default function ScannerPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5" />
-            {t("scanner.qrScanner")}
+            {t('scanner.qrScanner')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <Select
               value={eventType}
-              onValueChange={(v) => setEventType(v as "ceremony" | "reception")}
+              onValueChange={(v) => setEventType(v as 'ceremony' | 'reception')}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ceremony">
-                  {t("scanner.ceremony")}
-                </SelectItem>
-                <SelectItem value="reception">
-                  {t("scanner.reception")}
-                </SelectItem>
+                <SelectItem value="ceremony">{t('scanner.ceremony')}</SelectItem>
+                <SelectItem value="reception">{t('scanner.reception')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -208,7 +203,7 @@ export default function ScannerPage() {
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <ScanLine className="mr-2 h-4 w-4" />
-                {t("scanner.startScanning")}
+                {t('scanner.startScanning')}
               </Button>
             )}
           </div>
@@ -216,10 +211,7 @@ export default function ScannerPage() {
           {/* QR Reader */}
           {isScanning && (
             <div className="space-y-4">
-              <div
-                id="qr-reader"
-                className="mx-auto max-w-md overflow-hidden rounded-lg"
-              />
+              <div id="qr-reader" className="mx-auto max-w-md overflow-hidden rounded-lg" />
               <Button
                 variant="outline"
                 onClick={async () => {
@@ -231,7 +223,7 @@ export default function ScannerPage() {
                 }}
                 className="w-full"
               >
-                {t("scanner.stopScanning")}
+                {t('scanner.stopScanning')}
               </Button>
             </div>
           )}
@@ -241,20 +233,20 @@ export default function ScannerPage() {
             <div
               className={`rounded-lg border p-6 ${
                 scanResult.success && !scanResult.allDuplicate
-                  ? "border-sage/50 bg-sage/10"
+                  ? 'border-sage/50 bg-sage/10'
                   : scanResult.allDuplicate
-                    ? "border-primary/50 bg-primary/10"
-                    : "border-destructive/50 bg-destructive/10"
+                    ? 'border-primary/50 bg-primary/10'
+                    : 'border-destructive/50 bg-destructive/10'
               }`}
             >
               <div className="flex items-start gap-4">
                 <div
                   className={`flex h-12 w-12 items-center justify-center rounded-full ${
                     scanResult.success && !scanResult.allDuplicate
-                      ? "bg-sage/20"
+                      ? 'bg-sage/20'
                       : scanResult.allDuplicate
-                        ? "bg-primary/20"
-                        : "bg-destructive/20"
+                        ? 'bg-primary/20'
+                        : 'bg-destructive/20'
                   }`}
                 >
                   {scanResult.success && !scanResult.allDuplicate ? (
@@ -269,12 +261,11 @@ export default function ScannerPage() {
                   {scanResult.guest ? (
                     <>
                       <h3 className="font-serif text-xl font-semibold">
-                        {scanResult.guest.first_name}{" "}
-                        {scanResult.guest.last_name}
+                        {scanResult.guest.first_name} {scanResult.guest.last_name}
                       </h3>
                       <p
                         className={`text-sm ${
-                          scanResult.allDuplicate ? "text-primary" : "text-sage"
+                          scanResult.allDuplicate ? 'text-primary' : 'text-sage'
                         }`}
                       >
                         {scanResult.message}
@@ -284,7 +275,8 @@ export default function ScannerPage() {
                       {scanResult.members && scanResult.members.length > 1 && (
                         <div className="mt-3 space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">
-                            {t("scanner.familyGroup")} — {t("scanner.groupMembers", { count: scanResult.members.length })}
+                            {t('scanner.familyGroup')} —{' '}
+                            {t('scanner.groupMembers', { count: scanResult.members.length })}
                           </p>
                           {scanResult.members.map((member) => (
                             <div key={member.id} className="flex items-center gap-2 text-sm">
@@ -322,22 +314,16 @@ export default function ScannerPage() {
                       {/* Seating */}
                       {scanResult.guest.seating && (
                         <div className="mt-3 rounded-md bg-background/50 p-3">
-                          <p className="text-sm font-medium">
-                            {t("scanner.seatingAssignment")}
-                          </p>
+                          <p className="text-sm font-medium">{t('scanner.seatingAssignment')}</p>
                           <p className="text-lg font-semibold">
-                            {t("scanner.tableNumber", {
-                              number: String(
-                                scanResult.guest.seating.table_number,
-                              ),
+                            {t('scanner.tableNumber', {
+                              number: String(scanResult.guest.seating.table_number),
                             })}
                             {scanResult.guest.seating.seat_number && (
                               <>
-                                ,{" "}
-                                {t("scanner.seatNumber", {
-                                  number: String(
-                                    scanResult.guest.seating.seat_number,
-                                  ),
+                                ,{' '}
+                                {t('scanner.seatNumber', {
+                                  number: String(scanResult.guest.seating.seat_number),
                                 })}
                               </>
                             )}
@@ -355,7 +341,7 @@ export default function ScannerPage() {
                 onClick={startScanning}
                 className="mt-4 w-full bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {t("scanner.scanNextGuest")}
+                {t('scanner.scanNextGuest')}
               </Button>
             </div>
           )}
