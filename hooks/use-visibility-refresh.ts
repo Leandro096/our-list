@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
 import { createClient } from '@/lib/supabase/client';
 
 /**
@@ -27,8 +28,7 @@ export function useVisibilityRefresh(thresholdMs = 60_000) {
       }
 
       // Tab became visible again
-      const hiddenDuration =
-        hiddenAtRef.current !== null ? Date.now() - hiddenAtRef.current : 0;
+      const hiddenDuration = hiddenAtRef.current !== null ? Date.now() - hiddenAtRef.current : 0;
       hiddenAtRef.current = null;
 
       if (hiddenDuration < thresholdMs) return;

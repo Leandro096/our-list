@@ -1,6 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+import { Plus, Tags, Pencil, Trash2 } from 'lucide-react';
+
+import { createClient } from '@/lib/supabase/client';
+
+import { toast } from '@/hooks';
+import { useTranslation } from '@/locales';
 import { deleteCategory, type CategoryWithCount } from '@/services';
+
 import {
   Card,
   Badge,
@@ -17,11 +25,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
 } from '@/components/ui';
-import { toast } from '@/hooks';
-import { useState } from 'react';
-import { useTranslation } from '@/locales';
-import { createClient } from '@/lib/supabase/client';
-import { Plus, Pencil, Trash2, Tags } from 'lucide-react';
+
 import { CategoriesDialog } from './categories-dialog';
 
 interface CategoriesManagerProps {

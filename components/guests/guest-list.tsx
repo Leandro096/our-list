@@ -1,56 +1,69 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { useRef, useState, useEffect, useTransition } from 'react';
 import {
-  Search,
-  MoreHorizontal,
   Eye,
+  Users,
+  Link2,
+  Search,
   Pencil,
   Trash2,
   QrCode,
-  Download,
   Upload,
   ArrowUp,
+  Download,
   ArrowDown,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Users,
-  Link2,
+  MoreHorizontal,
 } from 'lucide-react';
-import { Input } from '@/components/ui';
-import { Button } from '@/components/ui';
-import { Badge } from '@/components/ui';
+
+import { toast } from '@/hooks';
+import type { Category } from '@/lib';
+import type { GuestListItemWithFamily } from '@/services';
+import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
+
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui';
 import {
   AlertDialog,
+  AlertDialogTitle,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogContent,
+  AlertDialogDescription,
 } from '@/components/ui/alert-dialog';
-import type { Category } from '@/lib';
-import type { GuestListItem, GuestListItemWithFamily } from '@/services';
+import {
+  Input,
+  Badge,
+  Table,
+  Button,
+  Select,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
+  SelectItem,
+  SelectValue,
+  TableHeader,
+  DropdownMenu,
+  SelectContent,
+  SelectTrigger,
+  DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui';
+
+import { useTranslation } from '@/locales/i18n-provider';
+
 import { ExportDialog } from './export-dialog';
 import { ImportDialog } from './import-dialog';
-import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
-import { useTranslation } from '@/locales/i18n-provider';
-import { toast } from '@/hooks';
 
 // ---- Types ----
 
@@ -164,6 +177,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   function toggleRow(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
@@ -570,16 +584,12 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                     <p className="truncate font-medium leading-tight">
                       {!guest.parent_guest_id && guest.has_children && (
                         <span title={t('guests.isParent')}>
-                          <Users
-                            className="inline h-3.5 w-3.5 mr-1 shrink-0 text-primary"
-                          />
+                          <Users className="inline h-3.5 w-3.5 mr-1 shrink-0 text-primary" />
                         </span>
                       )}
                       {guest.parent_guest_id && (
                         <span title={t('guests.isChild')}>
-                          <Link2
-                            className="inline h-3.5 w-3.5 mr-1 shrink-0 text-muted-foreground"
-                          />
+                          <Link2 className="inline h-3.5 w-3.5 mr-1 shrink-0 text-muted-foreground" />
                         </span>
                       )}
                       {guest.first_name} {guest.last_name}

@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useRef, useState, useEffect, useContext, createContext } from 'react';
 
 type SidebarContextType = {
   collapsed: boolean;

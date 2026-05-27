@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
+
+import { getCategories, getGuestsPaginatedWithFamily } from '@/services';
+
 import { PageHeader } from '@/components/page-header';
 import { GuestList } from '@/components/guests/guest-list';
-import { getGuestsPaginatedWithFamily, getCategories } from '@/services';
 
 const VALID_SORT = ['first_name', 'last_name', 'status', 'created_at'] as const;
 type SortBy = (typeof VALID_SORT)[number];

@@ -1,13 +1,11 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useMemo } from "react";
-import { useAuth } from "@/components/auth-provider";
-import {
-  hasPermission,
-  hasAnyPermission,
-  hasAllPermissions,
-} from "@/lib/permissions";
-import { UnauthorizedPage } from "@/components/unauthorized-page";
+import { useMemo, useContext, createContext } from 'react';
+
+import { hasPermission, hasAnyPermission, hasAllPermissions } from '@/lib/permissions';
+
+import { useAuth } from '@/components/auth-provider';
+import { UnauthorizedPage } from '@/components/unauthorized-page';
 
 // ---- Types ------------------------------------------------------------------
 
@@ -26,9 +24,7 @@ export interface PermissionContextType {
 
 // ---- Context ----------------------------------------------------------------
 
-const PermissionContext = createContext<PermissionContextType | undefined>(
-  undefined,
-);
+const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
 
 // ---- Global hook ------------------------------------------------------------
 
@@ -57,12 +53,9 @@ export function usePermissions(): PermissionContextType {
   return {
     permissions: activePermissions,
     isSuperAdmin,
-    can: (permission: string) =>
-      hasPermission(activePermissions, permission, isSuperAdmin),
-    canAny: (perms: string[]) =>
-      hasAnyPermission(activePermissions, perms, isSuperAdmin),
-    canAll: (perms: string[]) =>
-      hasAllPermissions(activePermissions, perms, isSuperAdmin),
+    can: (permission: string) => hasPermission(activePermissions, permission, isSuperAdmin),
+    canAny: (perms: string[]) => hasAnyPermission(activePermissions, perms, isSuperAdmin),
+    canAll: (perms: string[]) => hasAllPermissions(activePermissions, perms, isSuperAdmin),
   };
 }
 
@@ -144,15 +137,12 @@ export function PermissionGuard({
     () => ({
       permissions,
       isSuperAdmin,
-      can: (permission: string) =>
-        hasPermission(permissions, permission, isSuperAdmin),
-      canAny: (perms: string[]) =>
-        hasAnyPermission(permissions, perms, isSuperAdmin),
-      canAll: (perms: string[]) =>
-        hasAllPermissions(permissions, perms, isSuperAdmin),
+      can: (givenPermission: string) => hasPermission(permissions, givenPermission, isSuperAdmin),
+      canAny: (perms: string[]) => hasAnyPermission(permissions, perms, isSuperAdmin),
+      canAll: (perms: string[]) => hasAllPermissions(permissions, perms, isSuperAdmin),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [permissions.join(","), isSuperAdmin],
+    [permissions.join(','), isSuperAdmin]
   );
 
   const hasAccess = useMemo(() => {
@@ -173,10 +163,8 @@ export function PermissionGuard({
         : [allPermission]
       : null;
 
-    if (anyPerms && !hasAnyPermission(permissions, anyPerms, isSuperAdmin))
-      return false;
-    if (allPerms && !hasAllPermissions(permissions, allPerms, isSuperAdmin))
-      return false;
+    if (anyPerms && !hasAnyPermission(permissions, anyPerms, isSuperAdmin)) return false;
+    if (allPerms && !hasAllPermissions(permissions, allPerms, isSuperAdmin)) return false;
 
     return true;
   }, [permissions, isSuperAdmin, permission, anyPermission, allPermission]);

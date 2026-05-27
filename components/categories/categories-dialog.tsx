@@ -1,5 +1,14 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+import { createClient } from '@/lib/supabase/client';
+
+import { toast } from '@/hooks';
+import { useTranslation } from '@/locales';
+import { createCategory, updateCategory, type CategoryWithCount } from '@/services';
+
 import {
   Input,
   Label,
@@ -11,12 +20,6 @@ import {
   DialogContent,
   DialogDescription,
 } from '../ui';
-import { toast } from '@/hooks';
-import { useTranslation } from '@/locales';
-import { Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { createCategory, updateCategory, type CategoryWithCount } from '@/services';
 
 interface CategoriesDialogProps {
   isOpen: boolean;
@@ -55,6 +58,7 @@ export function CategoriesDialog(props: CategoriesDialogProps) {
       color: categoryData?.color || '#C9A84C',
       description: categoryData?.description || '',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryData?.id, isOpen]);
 
   const handleSave = async () => {

@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
+
 import { createClient } from '@/lib/supabase/server';
+
 import { QRCodeDisplay } from '@/components/guests/qr-code-display';
 
 async function getGuest(id: string) {

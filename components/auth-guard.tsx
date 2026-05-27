@@ -1,11 +1,14 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
-import type { UserWithRoles } from "@/lib";
-import { useAuth } from "@/components/auth-provider";
-import { Spinner } from "@/components/ui/spinner";
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useContext, createContext } from 'react';
+
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+import type { UserWithRoles } from '@/lib';
+
+import { Spinner } from '@/components/ui/spinner';
+import { useAuth } from '@/components/auth-provider';
 
 // ---- Context ----------------------------------------------------------------
 
@@ -18,9 +21,7 @@ interface AuthGuardContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthGuardContext = createContext<AuthGuardContextType | undefined>(
-  undefined,
-);
+const AuthGuardContext = createContext<AuthGuardContextType | undefined>(undefined);
 
 // ---- Component --------------------------------------------------------------
 
@@ -44,12 +45,8 @@ interface AuthGuardProps {
  *
  * Must be rendered inside `<AuthProvider>`.
  */
-export function AuthGuard({
-  children,
-  redirectTo = "/auth/login",
-}: AuthGuardProps) {
-  const { user, profile, isLoading, activeRole, signOut, refreshProfile } =
-    useAuth();
+export function AuthGuard({ children, redirectTo = '/auth/login' }: AuthGuardProps) {
+  const { user, profile, isLoading, activeRole, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -62,7 +59,7 @@ export function AuthGuard({
     }
 
     // Already on the selector — don't loop
-    if (pathname === "/select-role") return;
+    if (pathname === '/select-role') return;
 
     // Multiple roles with no active selection → send to role selector
     const roleCount = profile?.roles?.length ?? 0;
@@ -85,9 +82,7 @@ export function AuthGuard({
   }
 
   return (
-    <AuthGuardContext.Provider
-      value={{ user, profile, signOut, refreshProfile }}
-    >
+    <AuthGuardContext.Provider value={{ user, profile, signOut, refreshProfile }}>
       {children}
     </AuthGuardContext.Provider>
   );
@@ -106,7 +101,7 @@ export function AuthGuard({
 export function useAuthGuard(): AuthGuardContextType {
   const context = useContext(AuthGuardContext);
   if (context === undefined) {
-    throw new Error("useAuthGuard must be used within an <AuthGuard>");
+    throw new Error('useAuthGuard must be used within an <AuthGuard>');
   }
   return context;
 }

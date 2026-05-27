@@ -1,4 +1,18 @@
-"use client";
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
+import { User, Crown, Pencil, Shield, UserPlus } from 'lucide-react';
+
+import { createClient } from '@/lib/supabase/client';
+
+import { toast } from '@/hooks';
+import type { Role } from '@/lib';
+import { useLocale, useTranslation } from '@/locales';
+import type { UserWithRoleAssignments } from '@/services';
+import { updateUserRoles, updateUserSuperAdmin } from '@/services';
 
 import {
   Card,
@@ -22,22 +36,9 @@ import {
   DialogHeader,
   DialogContent,
   DialogDescription,
-} from "@/components/ui";
-import {
-  updateUserSuperAdmin,
-  updateUserRoles,
-  UserWithRoleAssignments,
-} from "@/services";
-import { useState } from "react";
-import type { Role } from "@/lib";
-import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from "date-fns";
-import { es as esLocale } from "date-fns/locale";
-import { createClient } from "@/lib/supabase/client";
-import { useTranslation, useLocale } from "@/locales";
-import { Pencil, Shield, User, Crown, UserPlus } from "lucide-react";
-import { toast } from "@/hooks";
-import { InviteUserDialog } from "./invite-user-dialog";
+} from '@/components/ui';
+
+import { InviteUserDialog } from './invite-user-dialog';
 
 interface UserManagementProps {
   users: UserWithRoleAssignments[];
@@ -49,10 +50,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const { locale } = useLocale();
-  const dateFnsLocale = locale === "es" ? esLocale : undefined;
+  const dateFnsLocale = locale === 'es' ? esLocale : undefined;
 
-  const [editingUser, setEditingUser] =
-    useState<UserWithRoleAssignments | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithRoleAssignments | null>(null);
   const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false);
   const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,9 +72,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
 
   const toggleRole = (roleId: string) => {
     setEditRoleIds((prev) =>
-      prev.includes(roleId)
-        ? prev.filter((id) => id !== roleId)
-        : [...prev, roleId],
+      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
     );
   };
 
@@ -102,7 +100,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
 
   const getRoleIcon = (roleName: string) => {
     switch (roleName.toLowerCase()) {
-      case "admin":
+      case 'admin':
         return <Shield className="h-3 w-3" />;
       default:
         return <User className="h-3 w-3" />;
@@ -112,38 +110,31 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   return (
     <div className="space-y-6">
       {/* Users Table */}
-      <InviteUserDialog
-        roles={roles}
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-      />
+      <InviteUserDialog roles={roles} open={inviteOpen} onOpenChange={setInviteOpen} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t("settings.users_section.staffMembers")}</CardTitle>
+          <CardTitle>{t('settings.users_section.staffMembers')}</CardTitle>
           <Button size="sm" onClick={() => setInviteOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
-            {t("settings.users_section.inviteUser")}
+            {t('settings.users_section.inviteUser')}
           </Button>
         </CardHeader>
         <CardContent>
           {/* Mobile grid */}
           {users.length === 0 ? (
             <p className="h-24 text-center text-sm text-muted-foreground flex items-center justify-center md:hidden">
-              {t("settings.users_section.noUsers")}
+              {t('settings.users_section.noUsers')}
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:hidden">
               {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="rounded-lg border border-border p-4 space-y-3"
-                >
+                <div key={user.id} className="rounded-lg border border-border p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                          user.is_super_admin ? "bg-primary/10" : "bg-muted"
+                          user.is_super_admin ? 'bg-primary/10' : 'bg-muted'
                         }`}
                       >
                         {user.is_super_admin ? (
@@ -154,12 +145,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium truncate">
-                          {user.display_name ||
-                            t("settings.users_section.unnamedUser")}
+                          {user.display_name || t('settings.users_section.unnamedUser')}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user.email}
-                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
                     <Button
@@ -175,7 +163,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                     {user.is_super_admin && (
                       <Badge className="bg-primary text-primary-foreground">
                         <Crown className="mr-1 h-3 w-3" />
-                        {t("settings.users_section.superAdmin")}
+                        {t('settings.users_section.superAdmin')}
                       </Badge>
                     )}
                     {user.user_roles.map((ur) => (
@@ -186,7 +174,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                     ))}
                     {user.user_roles.length === 0 && !user.is_super_admin && (
                       <span className="text-sm text-muted-foreground">
-                        {t("settings.users_section.noRoles")}
+                        {t('settings.users_section.noRoles')}
                       </span>
                     )}
                   </div>
@@ -206,24 +194,19 @@ export function UserManagement({ users, roles }: UserManagementProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("settings.users_section.user")}</TableHead>
-                  <TableHead>{t("settings.roles")}</TableHead>
+                  <TableHead>{t('settings.users_section.user')}</TableHead>
+                  <TableHead>{t('settings.roles')}</TableHead>
                   <TableHead className="hidden md:table-cell">
-                    {t("settings.users_section.joined")}
+                    {t('settings.users_section.joined')}
                   </TableHead>
-                  <TableHead className="w-[80px]">
-                    {t("common.actions")}
-                  </TableHead>
+                  <TableHead className="w-[80px]">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      {t("settings.users_section.noUsers")}
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      {t('settings.users_section.noUsers')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -233,7 +216,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                         <div className="flex items-center gap-3">
                           <div
                             className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                              user.is_super_admin ? "bg-primary/10" : "bg-muted"
+                              user.is_super_admin ? 'bg-primary/10' : 'bg-muted'
                             }`}
                           >
                             {user.is_super_admin ? (
@@ -244,12 +227,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                           </div>
                           <div>
                             <p className="font-medium">
-                              {user.display_name ||
-                                t("settings.users_section.unnamedUser")}
+                              {user.display_name || t('settings.users_section.unnamedUser')}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              {user.email}
-                            </p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -258,7 +238,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                           {user.is_super_admin && (
                             <Badge className="bg-primary text-primary-foreground">
                               <Crown className="mr-1 h-3 w-3" />
-                              {t("settings.users_section.superAdmin")}
+                              {t('settings.users_section.superAdmin')}
                             </Badge>
                           )}
                           {user.user_roles.map((ur) => (
@@ -267,12 +247,11 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                               <span className="ml-1">{ur.roles.name}</span>
                             </Badge>
                           ))}
-                          {user.user_roles.length === 0 &&
-                            !user.is_super_admin && (
-                              <span className="text-sm text-muted-foreground">
-                                {t("settings.users_section.noRoles")}
-                              </span>
-                            )}
+                          {user.user_roles.length === 0 && !user.is_super_admin && (
+                            <span className="text-sm text-muted-foreground">
+                              {t('settings.users_section.noRoles')}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
@@ -282,11 +261,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                         })}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEdit(user)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => openEdit(user)}>
                           <Pencil className="h-3 w-3" />
                         </Button>
                       </TableCell>
@@ -308,24 +283,19 @@ export function UserManagement({ users, roles }: UserManagementProps) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("settings.users_section.editUser")}</DialogTitle>
-            <DialogDescription>
-              {editingUser?.display_name || editingUser?.email}
-            </DialogDescription>
+            <DialogTitle>{t('settings.users_section.editUser')}</DialogTitle>
+            <DialogDescription>{editingUser?.display_name || editingUser?.email}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5">
             {/* Super Admin toggle */}
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-0.5">
-                <Label
-                  htmlFor="super-admin-switch"
-                  className="text-sm font-medium"
-                >
-                  {t("settings.users_section.superAdmin")}
+                <Label htmlFor="super-admin-switch" className="text-sm font-medium">
+                  {t('settings.users_section.superAdmin')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  {t("settings.users_section.superAdminDesc")}
+                  {t('settings.users_section.superAdminDesc')}
                 </p>
               </div>
               <Switch
@@ -340,7 +310,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
             {/* Roles */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">
-                {t("settings.users_section.availableRoles")}
+                {t('settings.users_section.availableRoles')}
               </Label>
               <div className="space-y-2">
                 {roles.map((role) => (
@@ -361,9 +331,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
                         {role.name}
                       </Label>
                       {role.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {role.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{role.description}</p>
                       )}
                     </div>
                   </div>
@@ -372,20 +340,11 @@ export function UserManagement({ users, roles }: UserManagementProps) {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={closeEdit}
-                disabled={isSaving}
-              >
-                {t("common.cancel")}
+              <Button variant="outline" className="flex-1" onClick={closeEdit} disabled={isSaving}>
+                {t('common.cancel')}
               </Button>
-              <Button
-                className="flex-1"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? t("common.saving") : t("common.save")}
+              <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </div>
@@ -395,23 +354,18 @@ export function UserManagement({ users, roles }: UserManagementProps) {
       {/* Roles Info */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("settings.users_section.availableRoles")}</CardTitle>
+          <CardTitle>{t('settings.users_section.availableRoles')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {roles.map((role) => (
-              <div
-                key={role.id}
-                className="rounded-lg border border-border p-4"
-              >
+              <div key={role.id} className="rounded-lg border border-border p-4">
                 <div className="flex items-center gap-2">
                   {getRoleIcon(role.name)}
                   <h4 className="font-medium">{role.name}</h4>
                 </div>
                 {role.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {role.description}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{role.description}</p>
                 )}
               </div>
             ))}

@@ -1,37 +1,40 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Role, User, Permission, UserWithRoles } from '@/lib/types'
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Role, User, Permission, UserWithRoles } from '@/lib/types';
 
 // ---- Return types ----
 
 export type UserWithRoleAssignments = User & {
   user_roles: Array<{
-    role_id: string
-    roles: Pick<Role, 'id' | 'name' | 'description'>
-  }>
-}
+    role_id: string;
+    roles: Pick<Role, 'id' | 'name' | 'description'>;
+  }>;
+};
 
 // ---- Queries ----
 
 export async function getUsersWithRoles(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<UserWithRoleAssignments[]> {
   const { data } = await supabase
     .from('users')
-    .select(`
+    .select(
+      `
       *,
       user_roles!user_roles_user_id_fkey(
         role_id,
         roles(id, name, description)
       )
-    `)
-    .order('created_at', { ascending: false })
+    `
+    )
+    .order('created_at', { ascending: false });
 
-  return data ?? []
+  return data ?? [];
 }
 
 export async function getRoles(supabase: SupabaseClient): Promise<Role[]> {
-  const { data } = await supabase.from('roles').select('*').order('name')
-  return data ?? []
+  const { data } = await supabase.from('roles').select('*').order('name');
+  return data ?? [];
 }
 
 // ---- Mutations ----
@@ -39,38 +42,38 @@ export async function getRoles(supabase: SupabaseClient): Promise<Role[]> {
 export async function assignRole(
   supabase: SupabaseClient,
   userId: string,
-  roleId: string,
+  roleId: string
 ): Promise<void> {
-  const { error } = await supabase.from('user_roles').insert({ user_id: userId, role_id: roleId })
+  const { error } = await supabase.from('user_roles').insert({ user_id: userId, role_id: roleId });
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 export async function removeRole(
   supabase: SupabaseClient,
   userId: string,
-  roleId: string,
+  roleId: string
 ): Promise<void> {
   const { error } = await supabase
     .from('user_roles')
     .delete()
     .eq('user_id', userId)
-    .eq('role_id', roleId)
+    .eq('role_id', roleId);
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 export async function updateUserSuperAdmin(
   supabase: SupabaseClient,
   userId: string,
-  isSuperAdmin: boolean,
+  isSuperAdmin: boolean
 ): Promise<void> {
   const { error } = await supabase
     .from('users')
     .update({ is_super_admin: isSuperAdmin })
-    .eq('id', userId)
+    .eq('id', userId);
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 /**
@@ -80,21 +83,18 @@ export async function updateUserSuperAdmin(
 export async function updateUserRoles(
   supabase: SupabaseClient,
   userId: string,
-  roleIds: string[],
+  roleIds: string[]
 ): Promise<void> {
-  const { error: deleteError } = await supabase
-    .from('user_roles')
-    .delete()
-    .eq('user_id', userId)
+  const { error: deleteError } = await supabase.from('user_roles').delete().eq('user_id', userId);
 
-  if (deleteError) throw deleteError
+  if (deleteError) throw deleteError;
 
   if (roleIds.length > 0) {
     const { error: insertError } = await supabase
       .from('user_roles')
-      .insert(roleIds.map((roleId) => ({ user_id: userId, role_id: roleId })))
+      .insert(roleIds.map((roleId) => ({ user_id: userId, role_id: roleId })));
 
-    if (insertError) throw insertError
+    if (insertError) throw insertError;
   }
 }
 
@@ -103,77 +103,71 @@ export async function updateUserRoles(
 export async function updateUserProfile(
   supabase: SupabaseClient,
   userId: string,
-  payload: { display_name?: string; theme_preference?: 'light' | 'dark' | 'system' },
+  payload: { display_name?: string; theme_preference?: 'light' | 'dark' | 'system' }
 ): Promise<void> {
   const { error } = await supabase
     .from('users')
     .update({ ...payload, updated_at: new Date().toISOString() })
-    .eq('id', userId)
+    .eq('id', userId);
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 // ---- Role management ----
 
 export type RoleWithPermissions = Role & {
   role_permissions: Array<{
-    permission_id: string
-    permissions: Pick<Permission, 'id' | 'scope' | 'description'>
-  }>
-}
+    permission_id: string;
+    permissions: Pick<Permission, 'id' | 'scope' | 'description'>;
+  }>;
+};
 
 export async function getRolesWithPermissions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<RoleWithPermissions[]> {
   const { data } = await supabase
     .from('roles')
-    .select(`
+    .select(
+      `
       *,
       role_permissions(
         permission_id,
         permissions(id, scope, description)
       )
-    `)
-    .order('name')
+    `
+    )
+    .order('name');
 
-  return data ?? []
+  return data ?? [];
 }
 
-export async function getAllPermissions(
-  supabase: SupabaseClient,
-): Promise<Permission[]> {
-  const { data } = await supabase.from('permissions').select('*').order('scope')
-  return data ?? []
+export async function getAllPermissions(supabase: SupabaseClient): Promise<Permission[]> {
+  const { data } = await supabase.from('permissions').select('*').order('scope');
+  return data ?? [];
 }
 
 export async function createRole(
   supabase: SupabaseClient,
   name: string,
-  description: string | null,
+  description: string | null
 ): Promise<void> {
-  const { error } = await supabase.from('roles').insert({ name, description })
-  if (error) throw error
+  const { error } = await supabase.from('roles').insert({ name, description });
+  if (error) throw error;
 }
 
 export async function updateRole(
   supabase: SupabaseClient,
   roleId: string,
   name: string,
-  description: string | null,
+  description: string | null
 ): Promise<void> {
-  const { error } = await supabase
-    .from('roles')
-    .update({ name, description })
-    .eq('id', roleId)
-  if (error) throw error
+  const { error } = await supabase.from('roles').update({ name, description }).eq('id', roleId);
+  if (error) throw error;
 }
 
-export async function deleteRole(
-  supabase: SupabaseClient,
-  roleId: string,
-): Promise<void> {
-  const { error } = await supabase.from('roles').delete().eq('id', roleId)
-  if (error) throw error
+export async function deleteRole(supabase: SupabaseClient, roleId: string): Promise<void> {
+  const { error } = await supabase.from('roles').delete().eq('id', roleId);
+  if (error) throw error;
 }
 
 /**
@@ -182,21 +176,23 @@ export async function deleteRole(
 export async function updateRolePermissions(
   supabase: SupabaseClient,
   roleId: string,
-  permissionIds: string[],
+  permissionIds: string[]
 ): Promise<void> {
   const { error: deleteError } = await supabase
     .from('role_permissions')
     .delete()
-    .eq('role_id', roleId)
+    .eq('role_id', roleId);
 
-  if (deleteError) throw deleteError
+  if (deleteError) throw deleteError;
 
   if (permissionIds.length > 0) {
     const { error: insertError } = await supabase
       .from('role_permissions')
-      .insert(permissionIds.map((permissionId) => ({ role_id: roleId, permission_id: permissionId })))
+      .insert(
+        permissionIds.map((permissionId) => ({ role_id: roleId, permission_id: permissionId }))
+      );
 
-    if (insertError) throw insertError
+    if (insertError) throw insertError;
   }
 }
 
@@ -210,11 +206,12 @@ export async function updateRolePermissions(
  */
 export async function getInitialProfile(
   supabase: SupabaseClient,
-  userId: string,
+  userId: string
 ): Promise<UserWithRoles | null> {
   const { data, error } = await supabase
     .from('users')
-    .select(`
+    .select(
+      `
       *,
       user_roles!user_roles_user_id_fkey(
         roles(
@@ -226,36 +223,39 @@ export async function getInitialProfile(
           )
         )
       )
-    `)
+    `
+    )
     .eq('id', userId)
-    .single()
+    .single();
 
-  if (error || !data) return null
+  if (error || !data) return null;
 
   type RoleRow = {
-    id: string
-    name: string
-    description: string | null
+    id: string;
+    name: string;
+    description: string | null;
     role_permissions: Array<{
-      permissions: { id: string; scope: string; description: string | null } | null
-    }>
-  }
+      permissions: { id: string; scope: string; description: string | null } | null;
+    }>;
+  };
 
-  const roles = (data.user_roles as Array<{ roles: RoleRow | null }>)
-    ?.map((ur) => ur.roles)
-    .filter((r): r is RoleRow => r !== null)
-    .map((role) => ({
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      // Embed permissions so AuthProvider never needs a follow-up DB query.
-      permissions: role.role_permissions
-        .map((rp) => rp.permissions?.scope)
-        .filter((scope): scope is string => Boolean(scope)),
-    })) ?? []
+  const roles =
+    (data.user_roles as Array<{ roles: RoleRow | null }>)
+      ?.map((ur) => ur.roles)
+      .filter((r): r is RoleRow => r !== null)
+      .map((role) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        // Embed permissions so AuthProvider never needs a follow-up DB query.
+        permissions: role.role_permissions
+          .map((rp) => rp.permissions?.scope)
+          .filter((scope): scope is string => Boolean(scope)),
+      })) ?? [];
 
-  const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))]
+  const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
 
-  const { user_roles: _omit, ...userData } = data
-  return { ...userData, roles, permissions } as UserWithRoles
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { user_roles: _omit, ...userData } = data;
+  return { ...userData, roles, permissions } as UserWithRoles;
 }

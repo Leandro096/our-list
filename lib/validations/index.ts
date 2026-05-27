@@ -1,1 +1,1 @@
-export * from './guest-import'
+export * from './guest-import';

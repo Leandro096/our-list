@@ -1,13 +1,9 @@
 name: CodeQL Security Analysis
 
 on:
-  pull_request:
-    branches: [main, releases]
-  push:
-    branches: [main, releases]
-  schedule:
-    # Cada lunes a las 9am UTC
-    - cron: '0 9 * * 1'
+  # Deshabilitado temporalmente para repositorio privado sin Code Scanning/GHAS.
+  # Se puede ejecutar manualmente cuando el feature esté habilitado.
+  workflow_dispatch:
 
 jobs:
   analyze:

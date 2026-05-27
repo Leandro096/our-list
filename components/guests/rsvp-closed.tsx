@@ -1,16 +1,18 @@
-'use client'
+'use client';
 
-import { useI18n } from '@/locales'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '18094405962'
+import { useI18n } from '@/locales';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
+
+const WHATSAPP_NUMBER = '18094405962';
 
 export function RsvpClosed() {
-  const { t } = useI18n()
+  const { t } = useI18n();
 
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}`
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}`;
 
   return (
     <div className="mx-auto max-w-md">
@@ -33,5 +35,5 @@ export function RsvpClosed() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

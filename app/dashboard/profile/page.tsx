@@ -1,18 +1,21 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
-import { ProfileForm } from "@/components/settings/profile-form";
-import type { UserWithRoles } from "@/lib";
+import { redirect } from 'next/navigation';
+
+import { createClient } from '@/lib/supabase/server';
+
+import type { UserWithRoles } from '@/lib';
+
+import { PageHeader } from '@/components/page-header';
+import { ProfileForm } from '@/components/settings/profile-form';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  if (!user) redirect('/auth/login');
 
   const { data: profile } = await supabase
-    .from("users")
+    .from('users')
     .select(
       `
       *,
@@ -20,12 +23,12 @@ export default async function ProfilePage() {
         role_id,
         roles(id, name, description)
       )
-    `,
+    `
     )
-    .eq("id", user.id)
+    .eq('id', user.id)
     .single();
 
-  if (!profile) redirect("/auth/login");
+  if (!profile) redirect('/auth/login');
 
   return (
     <div className="space-y-6">

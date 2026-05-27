@@ -1,32 +1,34 @@
 'use client';
 
-import { CheckCircle, XCircle, AlertTriangle, ScanLine, Users } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useRef, useState, useEffect } from 'react';
+import { Users, XCircle, ScanLine, CheckCircle, AlertTriangle } from 'lucide-react';
 
+import { createClient } from '@/lib/supabase/client';
+
+import { toast } from '@/hooks';
+import { useTranslation } from '@/locales';
 import {
+  getTodayStats,
+  type ScannerGuest,
+  type GroupScanMember,
+  processGuestScanByFamily,
+} from '@/services';
+
+import { useAuth } from '@/components/auth-provider';
+import {
+  Card,
   Badge,
   Button,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Card,
-  CardContent,
-  CardHeader,
   CardTitle,
+  SelectItem,
+  CardHeader,
+  SelectValue,
+  CardContent,
+  SelectContent,
+  SelectTrigger,
 } from '@/components/ui';
-import { useAuth } from '@/components/auth-provider';
-import { Html5Qrcode } from 'html5-qrcode';
-import { useTranslation } from '@/locales';
-import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from '@/hooks';
-import {
-  type ScannerGuest,
-  type GroupScanMember,
-  getTodayStats,
-  processGuestScanByFamily,
-} from '@/services';
 
 type ScanResult = {
   success: boolean;
@@ -48,7 +50,9 @@ export default function ScannerPage() {
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchTodayStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTodayStats = async () => {
@@ -63,41 +67,6 @@ export default function ScannerPage() {
       });
     }
   };
-
-  useEffect(() => {
-    if (!isScanning) return;
-
-    const scanner = new Html5Qrcode('qr-reader');
-    scannerRef.current = scanner;
-
-    Html5Qrcode.getCameras()
-      .then((cameras) => {
-        const cameraId = cameras.length > 0 ? cameras[0].id : { facingMode: 'environment' };
-
-        return scanner.start(
-          cameraId,
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          async (decodedText) => {
-            await scanner.stop().catch(() => {});
-            scannerRef.current = null;
-            setIsScanning(false);
-            await handleScan(decodedText);
-          },
-          undefined
-        );
-      })
-      .catch(() => {
-        scannerRef.current = null;
-        setIsScanning(false);
-      });
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current = null;
-      }
-    };
-  }, [isScanning]);
 
   const handleScan = async (invitationGuid: string) => {
     try {
@@ -135,6 +104,43 @@ export default function ScannerPage() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!isScanning) return;
+
+    const scanner = new Html5Qrcode('qr-reader');
+    scannerRef.current = scanner;
+
+    Html5Qrcode.getCameras()
+      .then((cameras) => {
+        const cameraId = cameras.length > 0 ? cameras[0].id : { facingMode: 'environment' };
+
+        return scanner.start(
+          cameraId,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText) => {
+            await scanner.stop().catch(() => {});
+            scannerRef.current = null;
+            setIsScanning(false);
+            await handleScan(decodedText);
+          },
+          undefined
+        );
+      })
+      .catch(() => {
+        scannerRef.current = null;
+        setIsScanning(false);
+      });
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScanning]);
 
   const startScanning = () => {
     setScanResult(null);

@@ -1,11 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/components/auth-provider';
-import { useTranslation } from '@/locales/i18n-provider';
-import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 import {
   Tags,
   Heart,
@@ -20,8 +17,15 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useAuth } from '@/components/auth-provider';
+
+import { useTranslation } from '@/locales/i18n-provider';
+
 import { useSidebar } from './sidebar-context';
 
 type NavItem = {
@@ -160,7 +164,9 @@ export function DashboardSidebar() {
                   <Link
                     key={child.nameKey}
                     href={child.href}
-                    onClick={() => { if (!isActive) setPageLoading(true); }}
+                    onClick={() => {
+                      if (!isActive) setPageLoading(true);
+                    }}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
@@ -187,7 +193,9 @@ export function DashboardSidebar() {
       <Link
         key={item.nameKey}
         href={item.href}
-        onClick={() => { if (!isActive) setPageLoading(true); }}
+        onClick={() => {
+          if (!isActive) setPageLoading(true);
+        }}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
@@ -220,11 +228,7 @@ export function DashboardSidebar() {
             <Heart className="h-5 w-5 text-primary" />
           </div>
           {!collapsed && (
-            <span
-              className={
-                'font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap'
-              }
-            >
+            <span className="font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap">
               {t('nav.weddingManager')}
             </span>
           )}

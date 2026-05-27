@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Supabase admin client using the service role key.
@@ -13,6 +13,6 @@ export function createAdminClient() {
         autoRefreshToken: false,
         persistSession: false,
       },
-    },
-  )
+    }
+  );
 }

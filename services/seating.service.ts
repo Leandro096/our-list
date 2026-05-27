@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Guest, SeatingAssignment, Table } from '@/lib/types';
+
+import type { Guest, Table, SeatingAssignment } from '@/lib/types';
 
 // ---- Return types ----
 
