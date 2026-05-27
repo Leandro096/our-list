@@ -1,18 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
-import { getInitialProfile } from "@/services/user.service";
+import { getInitialProfile } from '@/services/user.service';
 
-import { AuthGuard } from "@/components/auth-guard";
-import { AuthProvider } from "@/components/auth-provider";
-import { DashboardHeader } from "@/components/dashboard/header";
-import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { ShellInner, DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { AuthGuard } from '@/components/auth-guard';
+import { AuthProvider } from '@/components/auth-provider';
+import { DashboardHeader } from '@/components/dashboard/header';
+import { DashboardSidebar } from '@/components/dashboard/sidebar';
+import { ShellInner, DashboardShell } from '@/components/dashboard/dashboard-shell';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Resolve the user AND full profile server-side so AuthProvider receives
   // both as props and never makes any Supabase calls on the client during
   // initial mount. This eliminates the Web Lock contention that caused the
@@ -21,9 +17,7 @@ export default async function DashboardLayout({
   const {
     data: { user: initialUser },
   } = await supabase.auth.getUser();
-  const initialProfile = initialUser
-    ? await getInitialProfile(supabase, initialUser.id)
-    : null;
+  const initialProfile = initialUser ? await getInitialProfile(supabase, initialUser.id) : null;
 
   return (
     <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>

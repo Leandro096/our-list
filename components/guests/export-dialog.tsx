@@ -1,19 +1,24 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { useState } from 'react';
+import { Download } from 'lucide-react';
 
-import type { Category } from '@/lib/types'
-import { GUEST_COLUMNS, exportGuestsToExcel, DEFAULT_EXPORT_COLUMNS, REQUIRED_EXPORT_COLUMNS } from '@/lib/excel'
+import type { Category } from '@/lib/types';
+import {
+  GUEST_COLUMNS,
+  exportGuestsToExcel,
+  DEFAULT_EXPORT_COLUMNS,
+  REQUIRED_EXPORT_COLUMNS,
+} from '@/lib/excel';
 
-import type { GuestListItem } from '@/services/guest.service'
+import type { GuestListItem } from '@/services/guest.service';
 
-import { useI18n } from '@/locales'
+import { useI18n } from '@/locales';
 
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogTitle,
@@ -21,49 +26,47 @@ import {
   DialogFooter,
   DialogContent,
   DialogDescription,
-} from '@/components/ui/dialog'
+} from '@/components/ui/dialog';
 
 interface ExportDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  guests: GuestListItem[]
-  categories: Category[]
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  guests: GuestListItem[];
+  categories: Category[];
 }
 
 const GROUP_TRANSLATION_KEY: Record<string, string> = {
   basic: 'guests.exportDialog.groupBasic',
   attendance: 'guests.exportDialog.groupAttendance',
   logistics: 'guests.exportDialog.groupLogistics',
-}
+};
 
 export function ExportDialog({ open, onOpenChange, guests, categories }: ExportDialogProps) {
-  const { t } = useI18n()
-  const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_EXPORT_COLUMNS)
+  const { t } = useI18n();
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_EXPORT_COLUMNS);
 
   function toggleKey(key: string) {
-    if (REQUIRED_EXPORT_COLUMNS.includes(key)) return // cannot deselect required
+    if (REQUIRED_EXPORT_COLUMNS.includes(key)) return; // cannot deselect required
     setSelectedKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    )
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   }
 
   function handleExport() {
     // Preserve column order from GUEST_COLUMNS
-    const ordered = GUEST_COLUMNS.filter((c) => selectedKeys.includes(c.key)).map((c) => c.key)
-    exportGuestsToExcel(guests, ordered, categories)
-    onOpenChange(false)
+    const ordered = GUEST_COLUMNS.filter((c) => selectedKeys.includes(c.key)).map((c) => c.key);
+    exportGuestsToExcel(guests, ordered, categories);
+    onOpenChange(false);
   }
 
-  const groups = Array.from(new Set(GUEST_COLUMNS.map((c) => c.group)))
+  const groups = Array.from(new Set(GUEST_COLUMNS.map((c) => c.group)));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('guests.exportDialog.title')}</DialogTitle>
-          <DialogDescription>
-            {t('guests.exportDialog.description')}
-          </DialogDescription>
+          <DialogDescription>{t('guests.exportDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
@@ -78,8 +81,8 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {GUEST_COLUMNS.filter((c) => c.group === group).map((col) => {
-                  const isRequired = REQUIRED_EXPORT_COLUMNS.includes(col.key)
-                  const checked = selectedKeys.includes(col.key)
+                  const isRequired = REQUIRED_EXPORT_COLUMNS.includes(col.key);
+                  const checked = selectedKeys.includes(col.key);
                   return (
                     <div key={col.key} className="flex items-start gap-2">
                       <Checkbox
@@ -95,15 +98,15 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
                         >
                           {col.label}
                           {isRequired && (
-                            <span className="ml-1 text-xs text-muted-foreground">({t('guests.exportDialog.colRequired')})</span>
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({t('guests.exportDialog.colRequired')})
+                            </span>
                           )}
                         </Label>
-                        {col.hint && (
-                          <p className="text-xs text-muted-foreground">{col.hint}</p>
-                        )}
+                        {col.hint && <p className="text-xs text-muted-foreground">{col.hint}</p>}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
               <Separator className="mt-3" />
@@ -122,5 +125,5 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

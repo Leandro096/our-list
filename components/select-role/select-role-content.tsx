@@ -60,7 +60,9 @@ export function SelectRoleContent() {
               <p className="text-sm text-muted-foreground">{t('selectRole.noRolesDescription')}</p>
             </div>
           </div>
-          <p className="text-center text-xs text-muted-foreground">{t('selectRole.contactAdmin')}</p>
+          <p className="text-center text-xs text-muted-foreground">
+            {t('selectRole.contactAdmin')}
+          </p>
         </div>
       </div>
     );
@@ -75,10 +77,10 @@ export function SelectRoleContent() {
             <Heart className="h-7 w-7 text-primary" />
           </div>
           <div className="space-y-1">
-            <h1 className="font-serif text-3xl font-semibold text-foreground">{t('selectRole.title')}</h1>
-            <p className="text-sm text-muted-foreground">
-              {t('selectRole.description')}
-            </p>
+            <h1 className="font-serif text-3xl font-semibold text-foreground">
+              {t('selectRole.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t('selectRole.description')}</p>
           </div>
         </div>
 
@@ -117,9 +119,7 @@ export function SelectRoleContent() {
           })}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          {t('selectRole.switchHint')}
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t('selectRole.switchHint')}</p>
       </div>
     </div>
   );

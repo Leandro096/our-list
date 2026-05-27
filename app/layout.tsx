@@ -1,55 +1,55 @@
-import "./globals.css";
+import './globals.css';
 
-import { cookies } from "next/headers";
-import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { cookies } from 'next/headers';
+import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { Inter, Playfair_Display } from 'next/font/google';
 
-import type { Locale } from "@/lib";
-import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "@/locales";
+import type { Locale } from '@/lib';
+import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from '@/locales';
 
-import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
+  subsets: ['latin'],
+  variable: '--font-playfair',
 });
 
 export const metadata: Metadata = {
-  title: "Guests List App",
+  title: 'Guests List App',
   description:
-    "Elegant wedding guest management platform with QR check-in, seating assignments, and comprehensive guest tracking.",
+    'Elegant wedding guest management platform with QR check-in, seating assignments, and comprehensive guest tracking.',
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
       },
       {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
       },
       {
-        url: "/icon.svg",
-        type: "image/svg+xml",
+        url: '/icon.svg',
+        type: 'image/svg+xml',
       },
     ],
-    apple: "/apple-icon.png",
+    apple: '/apple-icon.png',
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAFAF8" },
-    { media: "(prefers-color-scheme: dark)", color: "#1C1917" },
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF8' },
+    { media: '(prefers-color-scheme: dark)', color: '#1C1917' },
   ],
-  width: "device-width",
+  width: 'device-width',
   initialScale: 1,
 };
 
@@ -59,8 +59,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const locale =
-    (cookieStore.get(LOCALE_STORAGE_KEY)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = (cookieStore.get(LOCALE_STORAGE_KEY)?.value as Locale) || DEFAULT_LOCALE;
 
   return (
     <html
@@ -69,9 +68,7 @@ export default async function RootLayout({
       className="bg-background"
       data-scroll-behavior="smooth"
     >
-      <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
-      >
+      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -83,7 +80,7 @@ export default async function RootLayout({
             <Toaster />
           </I18nProvider>
         </ThemeProvider>
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   );

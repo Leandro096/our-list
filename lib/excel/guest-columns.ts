@@ -1,33 +1,57 @@
-export type ColumnGroup = 'basic' | 'attendance' | 'logistics'
+export type ColumnGroup = 'basic' | 'attendance' | 'logistics';
 
 export interface GuestColumn {
-  key: string
-  label: string
-  group: ColumnGroup
-  required: boolean
-  hint?: string
+  key: string;
+  label: string;
+  group: ColumnGroup;
+  required: boolean;
+  hint?: string;
 }
 
 export const GUEST_COLUMNS: GuestColumn[] = [
-  { key: 'first_name',           label: 'First Name',           group: 'basic',      required: true },
-  { key: 'last_name',            label: 'Last Name',            group: 'basic',      required: true },
-  { key: 'email',                label: 'Email',                group: 'basic',      required: false },
-  { key: 'phone',                label: 'Phone',                group: 'basic',      required: false },
-  { key: 'status',               label: 'Status',               group: 'basic',      required: false, hint: 'pending | confirmed | declined | tentative' },
-  { key: 'dietary_restrictions', label: 'Dietary Restrictions', group: 'basic',      required: false },
-  { key: 'notes',                label: 'Notes',                group: 'basic',      required: false },
-  { key: 'is_plus_one',          label: 'Plus One',             group: 'basic',      required: false, hint: 'TRUE / FALSE' },
-  { key: 'categories',           label: 'Categories',           group: 'logistics',  required: false, hint: 'Comma-separated names' },
-  { key: 'ceremony_attending',   label: 'Ceremony',             group: 'attendance', required: false, hint: 'TRUE / FALSE' },
-  { key: 'reception_attending',  label: 'Reception',            group: 'attendance', required: false, hint: 'TRUE / FALSE' },
-  { key: 'table_number',         label: 'Table',                group: 'logistics',  required: false },
-]
+  { key: 'first_name', label: 'First Name', group: 'basic', required: true },
+  { key: 'last_name', label: 'Last Name', group: 'basic', required: true },
+  { key: 'email', label: 'Email', group: 'basic', required: false },
+  { key: 'phone', label: 'Phone', group: 'basic', required: false },
+  {
+    key: 'status',
+    label: 'Status',
+    group: 'basic',
+    required: false,
+    hint: 'pending | confirmed | declined | tentative',
+  },
+  { key: 'dietary_restrictions', label: 'Dietary Restrictions', group: 'basic', required: false },
+  { key: 'notes', label: 'Notes', group: 'basic', required: false },
+  { key: 'is_plus_one', label: 'Plus One', group: 'basic', required: false, hint: 'TRUE / FALSE' },
+  {
+    key: 'categories',
+    label: 'Categories',
+    group: 'logistics',
+    required: false,
+    hint: 'Comma-separated names',
+  },
+  {
+    key: 'ceremony_attending',
+    label: 'Ceremony',
+    group: 'attendance',
+    required: false,
+    hint: 'TRUE / FALSE',
+  },
+  {
+    key: 'reception_attending',
+    label: 'Reception',
+    group: 'attendance',
+    required: false,
+    hint: 'TRUE / FALSE',
+  },
+  { key: 'table_number', label: 'Table', group: 'logistics', required: false },
+];
 
 /** Keys that are always exported (user cannot deselect them) */
-export const REQUIRED_EXPORT_COLUMNS = ['first_name', 'last_name']
+export const REQUIRED_EXPORT_COLUMNS = ['first_name', 'last_name'];
 
 /** Default selection for export (all columns) */
-export const DEFAULT_EXPORT_COLUMNS = GUEST_COLUMNS.map((c) => c.key)
+export const DEFAULT_EXPORT_COLUMNS = GUEST_COLUMNS.map((c) => c.key);
 
 /**
  * Common alias headers users might have in their own spreadsheets.
@@ -91,15 +115,15 @@ export const HEADER_ALIASES: Record<string, string> = {
   mesa: 'table_number',
   'número de mesa': 'table_number',
   'numero de mesa': 'table_number',
-}
+};
 
 /** Auto-detect the guest column key from a raw header string. Returns undefined if not matched. */
 export function detectColumnKey(rawHeader: string): string | undefined {
-  const normalized = rawHeader.trim().toLowerCase()
+  const normalized = rawHeader.trim().toLowerCase();
   // Exact match first
-  if (HEADER_ALIASES[normalized]) return HEADER_ALIASES[normalized]
+  if (HEADER_ALIASES[normalized]) return HEADER_ALIASES[normalized];
   // Partial match with known keys
-  const col = GUEST_COLUMNS.find((c) => c.key === normalized)
-  if (col) return col.key
-  return undefined
+  const col = GUEST_COLUMNS.find((c) => c.key === normalized);
+  if (col) return col.key;
+  return undefined;
 }

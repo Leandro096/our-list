@@ -483,7 +483,9 @@ export function PublicRsvpFlow() {
                     </div>
                     <div className="flex items-center space-x-2 rounded-lg border p-2">
                       <RadioGroupItem value="tentative" id="plus-one-status-tentative" />
-                      <Label htmlFor="plus-one-status-tentative">{t('rsvp.status.tentative')}</Label>
+                      <Label htmlFor="plus-one-status-tentative">
+                        {t('rsvp.status.tentative')}
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2 rounded-lg border p-2">
                       <RadioGroupItem value="declined" id="plus-one-status-declined" />

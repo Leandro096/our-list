@@ -164,7 +164,9 @@ export function DashboardSidebar() {
                   <Link
                     key={child.nameKey}
                     href={child.href}
-                    onClick={() => { if (!isActive) setPageLoading(true); }}
+                    onClick={() => {
+                      if (!isActive) setPageLoading(true);
+                    }}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
@@ -191,7 +193,9 @@ export function DashboardSidebar() {
       <Link
         key={item.nameKey}
         href={item.href}
-        onClick={() => { if (!isActive) setPageLoading(true); }}
+        onClick={() => {
+          if (!isActive) setPageLoading(true);
+        }}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
@@ -224,9 +228,7 @@ export function DashboardSidebar() {
             <Heart className="h-5 w-5 text-primary" />
           </div>
           {!collapsed && (
-            <span
-              className="font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap"
-            >
+            <span className="font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap">
               {t('nav.weddingManager')}
             </span>
           )}

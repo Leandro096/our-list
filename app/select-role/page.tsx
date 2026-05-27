@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
-import { getInitialProfile } from "@/services/user.service";
+import { getInitialProfile } from '@/services/user.service';
 
-import { AuthProvider } from "@/components/auth-provider";
+import { AuthProvider } from '@/components/auth-provider';
 
-import SelectRoleClientPage from "./_content";
+import SelectRoleClientPage from './_content';
 
 export default async function SelectRolePage() {
   // Resolve the user AND full profile server-side so AuthProvider never needs
@@ -13,9 +13,7 @@ export default async function SelectRolePage() {
   const {
     data: { user: initialUser },
   } = await supabase.auth.getUser();
-  const initialProfile = initialUser
-    ? await getInitialProfile(supabase, initialUser.id)
-    : null;
+  const initialProfile = initialUser ? await getInitialProfile(supabase, initialUser.id) : null;
 
   return (
     <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>

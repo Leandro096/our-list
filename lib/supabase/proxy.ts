@@ -1,6 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient } from '@supabase/ssr';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -16,18 +16,16 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
   // Use getUser() to authenticate the token against the Supabase Auth server.
@@ -37,20 +35,20 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protect dashboard routes - redirect to login if not authenticated
-  if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = '/auth/login';
     return NextResponse.redirect(url);
   }
 
   // Redirect authenticated users away from auth pages.
   // Use a clean URL (no query params) to avoid leaking ?next= into the dashboard.
   if (
-    request.nextUrl.pathname.startsWith("/auth") &&
+    request.nextUrl.pathname.startsWith('/auth') &&
     user &&
-    !request.nextUrl.pathname.startsWith("/auth/callback")
+    !request.nextUrl.pathname.startsWith('/auth/callback')
   ) {
-    const url = new URL("/dashboard", request.url);
+    const url = new URL('/dashboard', request.url);
     return NextResponse.redirect(url);
   }
 

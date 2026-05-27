@@ -1,9 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
-import { getCategories } from "@/services";
+import { getCategories } from '@/services';
 
-import { PageHeader } from "@/components/page-header";
-import { GuestForm } from "@/components/guests/guest-form";
+import { PageHeader } from '@/components/page-header';
+import { GuestForm } from '@/components/guests/guest-form';
 
 export default async function NewGuestPage() {
   const supabase = await createClient();
@@ -11,10 +11,7 @@ export default async function NewGuestPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        titleKey="guests.newGuest"
-        descriptionKey="guests.newDescription"
-      />
+      <PageHeader titleKey="guests.newGuest" descriptionKey="guests.newDescription" />
       <GuestForm categories={categories} />
     </div>
   );

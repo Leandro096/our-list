@@ -1,9 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
-import { getScanHistory } from "@/services";
+import { getScanHistory } from '@/services';
 
-import { PageHeader } from "@/components/page-header";
-import { ScanHistoryList } from "@/components/scanner/scan-history-list";
+import { PageHeader } from '@/components/page-header';
+import { ScanHistoryList } from '@/components/scanner/scan-history-list';
 
 export default async function ScanHistoryPage() {
   const supabase = await createClient();
@@ -11,10 +11,7 @@ export default async function ScanHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        titleKey="scanner.history"
-        descriptionKey="scanner.historyDescription"
-      />
+      <PageHeader titleKey="scanner.history" descriptionKey="scanner.historyDescription" />
       <ScanHistoryList scanLogs={scanLogs} />
     </div>
   );
