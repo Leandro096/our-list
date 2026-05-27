@@ -8,8 +8,8 @@ updates:
       day: monday
       time: '09:00'
       timezone: America/Santo_Domingo
-    # PRs van a release, no directo a main
-    target-branch: release
+    # PRs van a releases, no directo a main
+    target-branch: releases
     open-pull-requests-limit: 10
     labels:
       - dependencies

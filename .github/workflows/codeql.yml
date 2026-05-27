@@ -2,9 +2,9 @@ name: CodeQL Security Analysis
 
 on:
   pull_request:
-    branches: [main, release]
+    branches: [main, releases]
   push:
-    branches: [main, release]
+    branches: [main, releases]
   schedule:
     # Cada lunes a las 9am UTC
     - cron: '0 9 * * 1'
@@ -45,6 +45,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
