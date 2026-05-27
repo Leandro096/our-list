@@ -123,13 +123,13 @@ function DrawerDescription({
 
 export {
   Drawer,
-  DrawerPortal,
-  DrawerOverlay,
-  DrawerTrigger,
   DrawerClose,
-  DrawerContent,
+  DrawerTitle,
+  DrawerPortal,
   DrawerHeader,
   DrawerFooter,
-  DrawerTitle,
+  DrawerOverlay,
+  DrawerTrigger,
+  DrawerContent,
   DrawerDescription,
 }

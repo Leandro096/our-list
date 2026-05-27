@@ -1,21 +1,24 @@
 'use client';
 
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import {
+  X,
+  Menu,
   Heart,
   Users,
+  Shield,
   ScanLine,
   Armchair,
-  Shield,
   Sparkles,
   LayoutDashboard,
-  Menu,
-  X,
 } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui';
-import { useEffect, useState } from 'react';
-import { useTranslation } from '@/locales';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { useTranslation } from '@/locales';
+
+import { Button } from '@/components/ui';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
 export default function HomePage() {

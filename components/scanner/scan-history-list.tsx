@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { Search, ScanLine } from "lucide-react";
+
+import type { ScanHistoryItem } from "@/services";
+
 import {
   Input,
   Badge,
@@ -16,9 +21,6 @@ import {
   SelectContent,
   SelectTrigger,
 } from "@/components/ui";
-import { format } from "date-fns";
-import { Search, ScanLine } from "lucide-react";
-import type { ScanHistoryItem } from "@/services";
 
 interface ScanHistoryListProps {
   scanLogs: ScanHistoryItem[];
@@ -29,8 +31,7 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [duplicateFilter, setDuplicateFilter] = useState<string>("all");
 
-  const filteredLogs = useMemo(() => {
-    return scanLogs.filter((log) => {
+  const filteredLogs = useMemo(() => scanLogs.filter((log) => {
       const searchLower = search.toLowerCase();
       const matchesSearch =
         search === "" ||
@@ -46,8 +47,7 @@ export function ScanHistoryList({ scanLogs }: ScanHistoryListProps) {
         (duplicateFilter === "unique" && !log.is_duplicate);
 
       return matchesSearch && matchesEvent && matchesDuplicate;
-    });
-  }, [scanLogs, search, eventFilter, duplicateFilter]);
+    }), [scanLogs, search, eventFilter, duplicateFilter]);
 
   return (
     <div className="space-y-4">

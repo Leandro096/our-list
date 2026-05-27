@@ -1,11 +1,14 @@
 "use client";
 
+import { useRef, useState, useEffect, useCallback } from "react";
+
+import { createClient } from "@/lib/supabase/client";
+
+import { toast } from "@/hooks";
 import type { DashboardStats } from "@/lib";
 import { getDashboardStats } from "@/services";
-import { createClient } from "@/lib/supabase/client";
+
 import { DashboardContent } from "./dashboard-content";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { toast } from "@/hooks";
 
 interface DashboardRealtimeProps {
   initialStats: DashboardStats;

@@ -1,11 +1,27 @@
 'use client';
 
+import Link from 'next/link';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { X, Plus, Check, Loader2, UserPlus, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+
+import { useToast } from '@/hooks/use-toast';
+
+import { createClient } from '@/lib/supabase/client';
+
+import type { Guest, Category } from '@/lib';
+import type { GuestForEdit } from '@/services';
+import { createGuest, updateGuest, linkGuestToParent, unlinkGuestFromParent } from '@/services';
+
+import { CategoriesDialog } from '@/components/categories';
 import {
+  Card,
   Label,
   Input,
   Select,
-  Card,
   Button,
+  Popover,
+  Command,
   Textarea,
   Checkbox,
   CardTitle,
@@ -13,36 +29,18 @@ import {
   CardHeader,
   CardContent,
   SelectValue,
-  SelectContent,
-  SelectTrigger,
-  Switch,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Command,
-  CommandInput,
   CommandList,
+  CommandItem,
+  CommandInput,
   CommandEmpty,
   CommandGroup,
-  CommandItem,
+  SelectContent,
+  SelectTrigger,
+  PopoverTrigger,
+  PopoverContent,
 } from '@/components/ui';
-import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import type { Category, Guest } from '@/lib';
-import type { GuestForEdit } from '@/services';
-import { ArrowLeft, Loader2, Plus, X, UserPlus, ChevronsUpDown, Check } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  createGuest,
-  updateGuest,
-  linkGuestToParent,
-  unlinkGuestFromParent,
-  getAvailableParentGuests,
-} from '@/services';
-import { useToast } from '@/hooks/use-toast';
+
 import { useTranslation } from '@/locales/i18n-provider';
-import { CategoriesDialog } from '@/components/categories';
 
 type PendingChild = {
   tempId: string;
@@ -59,11 +57,7 @@ interface GuestFormProps {
   mode?: 'create' | 'edit';
 }
 
-export function GuestForm({
-  categories,
-  guest,
-  mode = 'create',
-}: GuestFormProps) {
+export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
   const router = useRouter();
   const supabase = createClient();
   const { t } = useTranslation();
@@ -115,10 +109,11 @@ export function GuestForm({
       if (guest?.id) {
         query = query.neq('id', guest.id);
       }
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
       setAvailableGuests(data ?? []);
       setGuestsFetched(true);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       toast({
         title: t('common.error'),
@@ -166,8 +161,10 @@ export function GuestForm({
     notes: guest?.notes || '',
     is_plus_one: guest?.is_plus_one || false,
     selectedCategories: guest?.guest_categories?.map((gc) => gc.category_id) || [],
-    ceremony_attending: guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? true,
-    reception_attending: guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? true,
+    ceremony_attending:
+      guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? true,
+    reception_attending:
+      guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? true,
     pendingChildren: [] as PendingChild[],
     parent_guest_id: guest?.parent_guest_id || null,
   });
@@ -284,7 +281,8 @@ export function GuestForm({
       }
     } catch (err) {
       console.error('[GuestForm] caught error:', err);
-      const message = err instanceof Error ? err.message : 'Error inesperado al guardar el invitado.';
+      const message =
+        err instanceof Error ? err.message : 'Error inesperado al guardar el invitado.';
       setError(message);
       toast({
         title: 'Error',
@@ -467,7 +465,7 @@ export function GuestForm({
                       </>
                     ) : (
                       (() => {
-                        const g = availableGuests.find((g) => g.id === child.existing_guest_id);
+                        const g = availableGuests.find((ag) => ag.id === child.existing_guest_id);
                         return g ? `${g.first_name} ${g.last_name}` : t('guests.existingGuest');
                       })()
                     )}
@@ -548,7 +546,7 @@ export function GuestForm({
                           {formData.pendingChildren[0]?.existing_guest_id
                             ? (() => {
                                 const g = availableGuests.find(
-                                  (g) => g.id === formData.pendingChildren[0]?.existing_guest_id
+                                  (ag) => ag.id === formData.pendingChildren[0]?.existing_guest_id
                                 );
                                 return g
                                   ? `${g.first_name} ${g.last_name}`
@@ -656,7 +654,8 @@ export function GuestForm({
                   )}
                 </div>
               ) : (
-                !existingRelatedId && formData.pendingChildren.length === 0 && (
+                !existingRelatedId &&
+                formData.pendingChildren.length === 0 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -738,9 +737,7 @@ export function GuestForm({
             <button
               type="button"
               onClick={() => handleOpenDialog()}
-              className={
-                'rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center'
-              }
+              className="rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center"
             >
               <Plus className="h-4 w-4" />
             </button>

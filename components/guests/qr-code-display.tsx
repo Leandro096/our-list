@@ -1,5 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useRef } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { Printer, Download, ArrowLeft } from "lucide-react";
+
 import {
   Card,
   Button,
@@ -7,10 +12,6 @@ import {
   CardHeader,
   CardContent,
 } from "@/components/ui";
-import { useRef } from "react";
-import Link from "next/link";
-import { QRCodeSVG } from "qrcode.react";
-import { ArrowLeft, Printer, Download } from "lucide-react";
 
 interface QRCodeDisplayProps {
   guest: {
@@ -142,7 +143,7 @@ export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
               value={guest.invitation_guid}
               size={200}
               level="H"
-              includeMargin={true}
+              includeMargin
               fgColor="#1C1917"
               bgColor="#FFFFFF"
             />

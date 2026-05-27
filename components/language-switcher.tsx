@@ -1,17 +1,19 @@
 "use client";
 
+import { GlobeIcon } from "lucide-react";
+
+import { cn } from "@/lib";
+import { useI18n, LOCALES } from "@/locales";
+
 import {
   Button,
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui";
-import { cn } from "@/lib";
-import { GlobeIcon } from "lucide-react";
-import { useI18n, LOCALES } from "@/locales";
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale, t } = useI18n();

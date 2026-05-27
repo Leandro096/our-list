@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/server";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+
+import { getRoles, getUsersWithRoles } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
-import { getUsersWithRoles, getRoles } from "@/services";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { UserManagement } from "@/components/settings/user-management";
 
 export default async function UsersSettingsPage() {

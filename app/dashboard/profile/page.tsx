@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/server";
+
+import type { UserWithRoles } from "@/lib";
+
 import { PageHeader } from "@/components/page-header";
 import { ProfileForm } from "@/components/settings/profile-form";
-import type { UserWithRoles } from "@/lib";
 
 export default async function ProfilePage() {
   const supabase = await createClient();

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui";
+
 import { useTranslation } from "@/locales";
+
+import { Button } from "@/components/ui";
 
 interface PageHeaderProps {
   titleKey: string;

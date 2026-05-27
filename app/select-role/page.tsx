@@ -1,6 +1,9 @@
-import { AuthProvider } from "@/components/auth-provider";
 import { createClient } from "@/lib/supabase/server";
+
 import { getInitialProfile } from "@/services/user.service";
+
+import { AuthProvider } from "@/components/auth-provider";
+
 import SelectRoleClientPage from "./_content";
 
 export default async function SelectRolePage() {

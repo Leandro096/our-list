@@ -1,10 +1,12 @@
-import { AuthProvider } from "@/components/auth-provider";
-import { AuthGuard } from "@/components/auth-guard";
-import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { DashboardHeader } from "@/components/dashboard/header";
-import { DashboardShell, ShellInner } from "@/components/dashboard/dashboard-shell";
 import { createClient } from "@/lib/supabase/server";
+
 import { getInitialProfile } from "@/services/user.service";
+
+import { AuthGuard } from "@/components/auth-guard";
+import { AuthProvider } from "@/components/auth-provider";
+import { DashboardHeader } from "@/components/dashboard/header";
+import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { ShellInner, DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function DashboardLayout({
   children,

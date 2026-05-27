@@ -1,38 +1,40 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRef, useState, useCallback } from "react";
 import {
   Upload,
-  FileSpreadsheet,
+  RotateCcw,
+  ArrowRight,
   AlertCircle,
   CheckCircle2,
-  ArrowRight,
-  RotateCcw,
+  FileSpreadsheet,
 } from "lucide-react";
-import { parseExcelFile, GUEST_COLUMNS, detectColumnKey, downloadGuestTemplate, REQUIRED_EXPORT_COLUMNS } from "@/lib/excel";
+
 import { validateImportRows } from "@/lib/validations/guest-import";
-import { importGuestsAction } from "@/app/dashboard/guests/actions";
+import { GUEST_COLUMNS, parseExcelFile, detectColumnKey, downloadGuestTemplate, REQUIRED_EXPORT_COLUMNS } from "@/lib/excel";
+
 import { useI18n } from "@/locales";
+import { importGuestsAction } from "@/app/dashboard/guests/actions";
+
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectItem,
+  SelectValue,
+  SelectContent,
+  SelectTrigger,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogTitle,
+  DialogHeader,
+  DialogFooter,
+  DialogContent,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type Step = "upload" | "map" | "preview" | "result";
 

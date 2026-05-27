@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+
 import type { DashboardStats } from '@/lib/types'
 
 export async function getDashboardStats(supabase: SupabaseClient): Promise<DashboardStats> {

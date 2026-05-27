@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/server";
+
+import { getCategories, getGuestForEdit } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
 import { GuestForm } from "@/components/guests/guest-form";
-import { getGuestForEdit, getCategories } from "@/services";
 
 export default async function EditGuestPage({
   params,

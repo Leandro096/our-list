@@ -1,5 +1,7 @@
-import { getSeatingDataWithFamily } from "@/services";
 import { createClient } from "@/lib/supabase/server";
+
+import { getSeatingDataWithFamily } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
 import { SeatingManager } from "@/components/seating/seating-manager";
 

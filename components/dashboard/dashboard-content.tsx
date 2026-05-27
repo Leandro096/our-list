@@ -1,25 +1,27 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, UserCheck, Clock, UserX, ScanLine } from 'lucide-react'
-import type { DashboardStats, RecentActivityItem } from '@/lib/types'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 import { es as esLocale } from 'date-fns/locale'
-import { useTranslation } from '@/locales/i18n-provider'
-import { useLocale } from '@/locales/i18n-provider'
+import { Users, Clock, UserX, ScanLine, UserCheck } from 'lucide-react'
+import {
+  Bar,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Legend,
+  Tooltip,
+  BarChart,
+  PieChart,
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts'
+
+import type { DashboardStats, RecentActivityItem } from '@/lib/types'
+
+import { Card, CardTitle, CardHeader, CardContent, CardDescription } from '@/components/ui/card'
+
+import { useLocale , useTranslation } from '@/locales/i18n-provider'
 
 interface DashboardContentProps {
   stats: DashboardStats
@@ -202,7 +204,7 @@ export function DashboardContent({ stats }: DashboardContentProps) {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.guestsByCategory} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
                   <XAxis type="number" />
                   <YAxis 
                     type="category" 

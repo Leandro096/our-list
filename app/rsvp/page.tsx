@@ -1,6 +1,6 @@
-import { PublicRsvpFlow } from '@/components/guests/public-rsvp-flow'
 import { RsvpClosed } from '@/components/guests/rsvp-closed'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { PublicRsvpFlow } from '@/components/guests/public-rsvp-flow'
 
 export default function PublicRsvpPage() {
   const isRsvpEnabled = process.env.NEXT_PUBLIC_RSVP_ENABLED !== 'false'

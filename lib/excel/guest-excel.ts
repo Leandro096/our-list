@@ -1,6 +1,9 @@
 import * as XLSX from 'xlsx'
-import type { GuestListItem } from '@/services/guest.service'
+
 import type { Category } from '@/lib/types'
+
+import type { GuestListItem } from '@/services/guest.service'
+
 import { GUEST_COLUMNS } from './guest-columns'
 
 /** Header label by column key, for the exported file */

@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { Heart, SearchX } from 'lucide-react';
+
 import { useTranslation } from '@/locales';
+
 import { Button } from '@/components/ui/button';
 
 export default function NotFoundPage() {

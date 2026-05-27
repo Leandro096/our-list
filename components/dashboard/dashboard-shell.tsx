@@ -1,8 +1,10 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { SidebarProvider, useSidebar } from './sidebar-context';
+
 import { useVisibilityRefresh } from '@/hooks';
+
+import { useSidebar, SidebarProvider } from './sidebar-context';
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const { collapsed, isPageLoading } = useSidebar();

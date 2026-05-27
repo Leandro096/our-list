@@ -1,5 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { Mail, Heart } from "lucide-react";
+
+import { useTranslation } from "@/locales";
+
 import {
   Card,
   Button,
@@ -8,9 +13,6 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui";
-import Link from "next/link";
-import { Heart, Mail } from "lucide-react";
-import { useTranslation } from "@/locales";
 
 export default function SignUpSuccessPage() {
   const { t } = useTranslation();

@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/server";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+
+import { getAllPermissions, getRolesWithPermissions } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { RolesManager } from "@/components/settings/roles-manager";
-import { getRolesWithPermissions, getAllPermissions } from "@/services";
 
 export default async function RolesSettingsPage() {
   const supabase = await createClient();

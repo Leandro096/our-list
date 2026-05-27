@@ -1,11 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useContext, createContext } from "react";
+
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+
 import type { UserWithRoles } from "@/lib";
-import { useAuth } from "@/components/auth-provider";
+
 import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/components/auth-provider";
 
 // ---- Context ----------------------------------------------------------------
 

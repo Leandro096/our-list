@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
+
 import { getCategoriesWithGuestCount } from "@/services";
+
+import { PageHeader } from "@/components/page-header";
 import { CategoriesManager } from "@/components/categories/categories-manager";
 
 export default async function CategoriesPage() {

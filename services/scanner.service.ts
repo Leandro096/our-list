@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Guest, ScanLog, User } from '@/lib/types';
+
+import type { User, Guest, ScanLog } from '@/lib/types';
 
 // ---- Return types ----
 

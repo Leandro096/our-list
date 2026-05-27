@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { Category } from '@/lib/types';
 
 // ---- Return types ----

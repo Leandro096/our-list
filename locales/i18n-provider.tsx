@@ -1,10 +1,12 @@
 "use client"
 
 import * as React from "react"
+
 import type { Locale } from "@/lib/types"
-import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "./config-locale"
-import { en, type Dictionary } from "./langs/en"
+
 import { es } from "./langs/es"
+import { en, type Dictionary } from "./langs/en"
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "./config-locale"
 
 const DICTIONARIES: Record<Locale, Dictionary> = { en, es }
 
@@ -70,18 +72,16 @@ export function I18nProvider({
     try {
       const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null
       if (stored === "en" || stored === "es") {
-        setLocaleState(stored)
         document.cookie = `${LOCALE_STORAGE_KEY}=${stored}; path=/; max-age=31536000; SameSite=Lax`
       } else {
         const browserLocale = getBrowserPreferredLocale()
         if (browserLocale) {
-          setLocaleState(browserLocale)
           localStorage.setItem(LOCALE_STORAGE_KEY, browserLocale)
           document.cookie = `${LOCALE_STORAGE_KEY}=${browserLocale}; path=/; max-age=31536000; SameSite=Lax`
         }
       }
     } catch {}
-    setMounted(true)
+    requestAnimationFrame(() => setMounted(true))
   }, [])
 
   const setLocale = React.useCallback((next: Locale) => {

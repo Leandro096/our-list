@@ -1,12 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type {
+  User,
+  Guest,
+  Table,
+  ScanLog,
   Category,
   EventAttendance,
-  Guest,
-  ScanLog,
   SeatingAssignment,
-  Table,
-  User,
 } from '@/lib/types';
 
 // ---- Return types ----

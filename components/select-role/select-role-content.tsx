@@ -1,10 +1,12 @@
-import { Spinner } from '../ui';
-import { cn, type Role } from '@/lib';
-import { useAuth } from '../auth-provider';
-import { useEffect, useState } from 'react';
-import { Heart, ShieldCheck, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, Clock, ShieldCheck } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+import { cn, type Role } from '@/lib';
 import { useTranslation } from '@/locales';
+
+import { Spinner } from '../ui';
+import { useAuth } from '../auth-provider';
 
 export function SelectRoleContent() {
   const { isLoading, profile, activeRole, selectRole } = useAuth();

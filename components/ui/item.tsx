@@ -3,6 +3,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
+
 import { Separator } from '@/components/ui/separator'
 
 function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
@@ -182,12 +183,12 @@ function ItemFooter({ className, ...props }: React.ComponentProps<'div'>) {
 export {
   Item,
   ItemMedia,
-  ItemContent,
-  ItemActions,
   ItemGroup,
-  ItemSeparator,
   ItemTitle,
-  ItemDescription,
   ItemHeader,
   ItemFooter,
+  ItemContent,
+  ItemActions,
+  ItemSeparator,
+  ItemDescription,
 }

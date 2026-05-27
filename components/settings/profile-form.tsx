@@ -1,5 +1,16 @@
 "use client";
 
+import { useState } from "react";
+import { Lock, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import { createClient } from "@/lib/supabase/client";
+
+import { toast } from "@/hooks";
+import { useTranslation } from "@/locales";
+import type { UserWithRoles } from "@/lib";
+import { updateUserProfile } from "@/services";
+
 import {
   Card,
   Input,
@@ -9,20 +20,12 @@ import {
   Separator,
   CardTitle,
   CardHeader,
-  CardContent,
   SelectItem,
+  CardContent,
   SelectValue,
   SelectTrigger,
   SelectContent,
 } from "@/components/ui";
-import { useState } from "react";
-import { toast } from "@/hooks";
-import { useRouter } from "next/navigation";
-import { useTranslation } from "@/locales";
-import { createClient } from "@/lib/supabase/client";
-import { updateUserProfile } from "@/services";
-import { Lock, User } from "lucide-react";
-import type { UserWithRoles } from "@/lib";
 
 interface ProfileFormProps {
   profile: UserWithRoles;

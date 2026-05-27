@@ -1,9 +1,11 @@
 'use client'
 
-import { useI18n } from '@/locales'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { MessageCircle } from 'lucide-react'
+
+import { useI18n } from '@/locales'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card'
 
 const WHATSAPP_NUMBER = '18094405962'
 

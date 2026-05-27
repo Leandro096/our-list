@@ -1,5 +1,7 @@
-import { getCategories } from "@/services";
 import { createClient } from "@/lib/supabase/server";
+
+import { getCategories } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
 import { GuestForm } from "@/components/guests/guest-form";
 

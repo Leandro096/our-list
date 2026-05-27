@@ -1,5 +1,7 @@
-import { getScanHistory } from "@/services";
 import { createClient } from "@/lib/supabase/server";
+
+import { getScanHistory } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
 import { ScanHistoryList } from "@/components/scanner/scan-history-list";
 

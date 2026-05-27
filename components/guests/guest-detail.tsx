@@ -1,27 +1,29 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { es as esLocale } from 'date-fns/locale';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
-  ArrowLeft,
-  Pencil,
-  QrCode,
   Mail,
   Phone,
-  UtensilsCrossed,
-  StickyNote,
-  Armchair,
-  ScanLine,
   Users,
   Link2,
+  Pencil,
+  QrCode,
+  Armchair,
+  ScanLine,
+  ArrowLeft,
+  StickyNote,
+  UtensilsCrossed,
 } from 'lucide-react';
-import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+
 import type { Category } from '@/lib/types';
-import { useTranslation } from '@/locales/i18n-provider';
-import { useLocale } from '@/locales/i18n-provider';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
+
+import { useLocale , useTranslation } from '@/locales/i18n-provider';
 
 interface GuestDetailProps {
   guest: {

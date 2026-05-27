@@ -1,13 +1,15 @@
-import type { Locale } from "@/lib";
+import "./globals.css";
+
 import { cookies } from "next/headers";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Inter, Playfair_Display } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "@/locales";
-import { Toaster } from "@/components/ui/toaster";
 
-import "./globals.css";
+import type { Locale } from "@/lib";
+import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from "@/locales";
+
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],

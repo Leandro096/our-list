@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { ShieldXIcon } from "lucide-react";
+
 import { useTranslation } from "@/locales";
+
 import { Button } from "@/components/ui/button";
 
 interface UnauthorizedPageProps {

@@ -1,5 +1,7 @@
-import { getDashboardStats } from "@/services";
 import { createClient } from "@/lib/supabase/server";
+
+import { getDashboardStats } from "@/services";
+
 import { PageHeader } from "@/components/page-header";
 import { DashboardRealtime } from "@/components/dashboard/dashboard-realtime";
 
