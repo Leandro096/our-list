@@ -74,7 +74,7 @@ export async function getServerPermissions(supabase: SupabaseClient): Promise<{
 
   const permissions: string[] = [
     ...new Set(
-      ((profile as { user_roles?: RoleRow[] } | null)?.user_roles ?? [])
+      ((profile as unknown as { user_roles?: RoleRow[] } | null)?.user_roles ?? [])
         .flatMap((ur) => ur.roles?.role_permissions ?? [])
         .map((rp) => rp.permissions?.scope)
         .filter((scope): scope is string => Boolean(scope))
