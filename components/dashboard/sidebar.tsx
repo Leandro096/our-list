@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Tags,
-  Heart,
   Users,
   Shield,
   History,
@@ -225,7 +225,14 @@ export function DashboardSidebar() {
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Heart className="h-5 w-5 text-primary" />
+            <Image
+              src="/icon.png"
+              alt="GL Logo"
+              width={38}
+              height={38}
+              className="shrink-0 rounded-full ring-1 ring-primary/30"
+              priority
+            />
           </div>
           {!collapsed && (
             <span className="font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap">

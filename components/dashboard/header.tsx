@@ -47,6 +47,7 @@ import {
 } from '@/components/ui';
 
 import { LanguageSwitcher } from '../language-switcher';
+import { useSidebar } from './sidebar-context';
 
 const navigationItems = [
   {
@@ -115,6 +116,7 @@ export function DashboardHeader() {
   const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'));
+  const { setPageLoading } = useSidebar();
 
   const userPermissions = activePermissions;
   const isSuperAdmin = profile?.is_super_admin || false;
@@ -201,7 +203,10 @@ export function DashboardHeader() {
                             <Link
                               key={child.key}
                               href={child.href}
-                              onClick={() => setMobileOpen(false)}
+                              onClick={() => {
+                                if (!isActive) setPageLoading(true);
+                                setMobileOpen(false);
+                              }}
                               className={cn(
                                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                                 isActive
@@ -228,7 +233,10 @@ export function DashboardHeader() {
                 <Link
                   key={item.key}
                   href={item.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => {
+                    if (!isActive) setPageLoading(true);
+                    setMobileOpen(false);
+                  }}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive

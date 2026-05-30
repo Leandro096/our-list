@@ -257,12 +257,33 @@ export async function getGuestForEdit(
 // ---- Mutations ----
 
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label}: operación no respondió en ${ms / 1000}s`)), ms)
-    ),
-  ]);
+  const original = Promise.resolve(promise);
+
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => {
+      // The race is lost — but keep observing the original promise so we can
+      // log its eventual result. This surfaces the real Supabase error that
+      // arrives after the deadline (e.g. auth lock contention, RLS failure,
+      // network delay) which would otherwise be silently discarded.
+      original.then(
+        (late) => {
+          const pgErr = (late as Record<string, unknown>)?.error;
+          if (pgErr) {
+            console.warn(`[withTimeout] ${label} — Supabase respondió tarde con error:`, pgErr);
+          } else {
+            console.warn(
+              `[withTimeout] ${label} — Supabase respondió tarde (sin error). ` +
+                `Posible causa: Web Lock de autoRefreshToken bloqueado por inactividad.`
+            );
+          }
+        },
+        (lateErr) => console.warn(`[withTimeout] ${label} — rechazo tardío:`, lateErr)
+      );
+      reject(new Error(`${label}: operación no respondió en ${ms / 1000}s`));
+    }, ms)
+  );
+
+  return Promise.race([original, timeout]);
 }
 
 export async function createGuest(

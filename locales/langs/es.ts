@@ -618,6 +618,10 @@ export const es: Dictionary = {
     getStartedFree: 'Comenzar Gratis',
     goToDashboard: 'Ir al Dashboard',
     allRightsReserved: 'Todos los derechos reservados.',
+    weddingApp: 'Wedding App',
+    trust1: 'Gratis para comenzar',
+    trust2: 'Sin tarjeta de crédito',
+    trust3: 'Cancela cuando quieras',
   },
   selectRole: {
     title: 'Bienvenido de nuevo',

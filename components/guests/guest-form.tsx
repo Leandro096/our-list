@@ -63,7 +63,6 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
   const { t } = useTranslation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoriesState, setCategoriesState] = useState(categories);
 
@@ -173,7 +172,6 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
     e.preventDefault();
 
     setIsLoading(true);
-    setError(null);
 
     try {
       if (mode === 'create') {
@@ -283,7 +281,6 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
       console.error('[GuestForm] caught error:', err);
       const message =
         err instanceof Error ? err.message : 'Error inesperado al guardar el invitado.';
-      setError(message);
       toast({
         title: 'Error',
         description: message,
@@ -879,10 +876,6 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           </div>
         </CardContent>
       </Card>
-
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-      )}
 
       <div className="flex gap-4">
         <Button

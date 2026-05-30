@@ -612,6 +612,10 @@ export const en = {
     getStartedFree: 'Get Started Free',
     goToDashboard: 'Go to Dashboard',
     allRightsReserved: 'All rights reserved.',
+    weddingApp: 'Wedding App',
+    trust1: 'Free to start',
+    trust2: 'No credit card required',
+    trust3: 'Cancel anytime',
   },
   selectRole: {
     title: 'Welcome back',

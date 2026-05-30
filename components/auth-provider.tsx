@@ -4,7 +4,7 @@ import { useState, useEffect, useContext, useCallback, createContext } from 'rea
 
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient, resetClient } from '@/lib/supabase/client';
 
 import type { Role, UserWithRoles } from '@/lib';
 
@@ -335,17 +335,23 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   );
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    } finally {
-      if (user) clearActiveRoleStorage(user.id);
-      setUser(null);
-      setProfile(null);
-      setActiveRole(null);
-      setActivePermissions([]);
-    }
+    // 1. Limpiar estado local INMEDIATAMENTE (optimista) para que el router
+    //    pueda redirigir sin esperar la red. Así el usuario nunca queda colgado.
+    if (user) clearActiveRoleStorage(user.id);
+    setUser(null);
+    setProfile(null);
+    setActiveRole(null);
+    setActivePermissions([]);
+
+    // 2. Descartar el singleton para que el próximo login parta de un cliente limpio.
+    resetClient();
+
+    // 3. Invalidar la sesión en el servidor en segundo plano (fire-and-forget).
+    //    Si la red falla o tarda, no afecta la UX — el proxy detectará la sesión
+    //    expirada en la siguiente navegación y redirigirá a /auth/login.
+    supabase.auth.signOut().catch((error) => {
+      console.error('[AuthProvider] signOut network error:', error);
+    });
   };
 
   return (

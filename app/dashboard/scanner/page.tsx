@@ -113,7 +113,14 @@ export default function ScannerPage() {
 
     Html5Qrcode.getCameras()
       .then((cameras) => {
-        const cameraId = cameras.length > 0 ? cameras[0].id : { facingMode: 'environment' };
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+        const cameraId = isMobile
+          ? { facingMode: { exact: 'environment' } }
+          : cameras.length > 0
+            ? cameras[0].id
+            : { facingMode: 'environment' };
 
         return scanner.start(
           cameraId,
@@ -278,7 +285,7 @@ export default function ScannerPage() {
                       </p>
 
                       {/* Family members */}
-                      {scanResult.members && scanResult.members.length > 1 && (
+                      {scanResult.members && scanResult.members.length > 0 && (
                         <div className="mt-3 space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">
                             {t('scanner.familyGroup')} —{' '}
@@ -291,9 +298,16 @@ export default function ScannerPage() {
                               ) : (
                                 <CheckCircle className="h-3.5 w-3.5 text-sage shrink-0" />
                               )}
-                              <span>
+                              <span className="flex-1">
                                 {member.first_name} {member.last_name}
                               </span>
+                              {member.seating && (
+                                <span className="text-xs text-muted-foreground">
+                                  {t('scanner.tableNumber', {
+                                    number: String(member.seating.table_number),
+                                  })}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -317,25 +331,7 @@ export default function ScannerPage() {
                         </div>
                       )}
 
-                      {/* Seating */}
-                      {scanResult.guest.seating && (
-                        <div className="mt-3 rounded-md bg-background/50 p-3">
-                          <p className="text-sm font-medium">{t('scanner.seatingAssignment')}</p>
-                          <p className="text-lg font-semibold">
-                            {t('scanner.tableNumber', {
-                              number: String(scanResult.guest.seating.table_number),
-                            })}
-                            {scanResult.guest.seating.seat_number && (
-                              <>
-                                ,{' '}
-                                {t('scanner.seatNumber', {
-                                  number: String(scanResult.guest.seating.seat_number),
-                                })}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                      )}
+
                     </>
                   ) : (
                     <p className="text-destructive">{scanResult.message}</p>
