@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { useI18n } from '@/locales';
 import {
@@ -84,9 +84,9 @@ export function PublicRsvpFlow() {
     invitedEvents: Array<'ceremony' | 'reception' | 'both'>;
     decisionCounts: Record<RsvpStatus, number>;
   } | null>(null);
-  const [isSearching, startSearch] = useTransition();
-  const [isLoadingProfile, startProfileLoad] = useTransition();
-  const [isSubmitting, startSubmit] = useTransition();
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const statusLabel = (value: RsvpStatus) => t(`rsvp.statuses.${value}`);
 
@@ -110,7 +110,7 @@ export function PublicRsvpFlow() {
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setError(null);
     setSuccess(null);
 
@@ -120,16 +120,19 @@ export function PublicRsvpFlow() {
       return;
     }
 
-    startSearch(async () => {
+    setIsSearching(true);
+    try {
       const rows = await searchGuestsForPublicRsvp(term);
       setResults(rows);
       if (rows.length === 0) {
         setError(t('rsvp.errors.noMatches'));
       }
-    });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedGuest || !profile) {
       setError(t('rsvp.errors.selectGuestFirst'));
       return;
@@ -143,7 +146,8 @@ export function PublicRsvpFlow() {
     setError(null);
     setSuccess(null);
 
-    startSubmit(async () => {
+    setIsSubmitting(true);
+    try {
       const res = await submitPublicRsvp({
         invitationGuid: selectedGuest.invitation_guid,
         status,
@@ -200,15 +204,18 @@ export function PublicRsvpFlow() {
         invitedEvents: selectedGuest.invited_events,
         decisionCounts,
       });
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const loadGuestDetails = (guest: PublicGuest) => {
+  const loadGuestDetails = async (guest: PublicGuest) => {
     setSelectedGuest(guest);
     setSuccess(null);
     setError(null);
 
-    startProfileLoad(async () => {
+    setIsLoadingProfile(true);
+    try {
       const details = await getPublicRsvpDetails(guest.invitation_guid);
       if (!details.ok) {
         setProfile(null);
@@ -229,7 +236,9 @@ export function PublicRsvpFlow() {
         dietary_restrictions: '',
       });
       setStatus(details.data.guest.status === 'pending' ? 'confirmed' : details.data.guest.status);
-    });
+    } finally {
+      setIsLoadingProfile(false);
+    }
   };
 
   const decisionSummaryMessage = (counts: Record<RsvpStatus, number>) => {
@@ -378,6 +387,12 @@ export function PublicRsvpFlow() {
               {isLoadingProfile && (
                 <p className="text-xs text-muted-foreground">{t('rsvp.search.loadingProfile')}</p>
               )}
+            </div>
+          )}
+
+          {error && !profile && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
             </div>
           )}
         </CardContent>
@@ -539,182 +554,193 @@ export function PublicRsvpFlow() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('rsvp.status.title')}</CardTitle>
-          <CardDescription>{t('rsvp.status.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RadioGroup
-            value={status}
-            onValueChange={(value) => setStatus(value as RsvpStatus)}
-            className="space-y-2"
-          >
-            <div className="flex items-center space-x-2 rounded-lg border p-3">
-              <RadioGroupItem value="confirmed" id="status-confirmed" />
-              <Label htmlFor="status-confirmed">{t('rsvp.status.confirm')}</Label>
-            </div>
-            <div className="flex items-center space-x-2 rounded-lg border p-3">
-              <RadioGroupItem value="tentative" id="status-tentative" />
-              <Label htmlFor="status-tentative">{t('rsvp.status.tentative')}</Label>
-            </div>
-            <div className="flex items-center space-x-2 rounded-lg border p-3">
-              <RadioGroupItem value="declined" id="status-declined" />
-              <Label htmlFor="status-declined">{t('rsvp.status.decline')}</Label>
-            </div>
-          </RadioGroup>
+      {profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('rsvp.status.title')}</CardTitle>
+            <CardDescription>{t('rsvp.status.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup
+              value={status}
+              onValueChange={(value) => setStatus(value as RsvpStatus)}
+              className="space-y-2"
+            >
+              <div className="flex items-center space-x-2 rounded-lg border p-3">
+                <RadioGroupItem value="confirmed" id="status-confirmed" />
+                <Label htmlFor="status-confirmed">{t('rsvp.status.confirm')}</Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-lg border p-3">
+                <RadioGroupItem value="tentative" id="status-tentative" />
+                <Label htmlFor="status-tentative">{t('rsvp.status.tentative')}</Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-lg border p-3">
+                <RadioGroupItem value="declined" id="status-declined" />
+                <Label htmlFor="status-declined">{t('rsvp.status.decline')}</Label>
+              </div>
+            </RadioGroup>
 
-          {profile && profile.family_role === 'parent' && profile.related.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('rsvp.related.title')}</CardTitle>
-                <CardDescription>{t('rsvp.related.description')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {profile.related.map((relative) => (
-                  <div key={relative.id} className="space-y-3 rounded-lg border p-4">
-                    <div>
-                      <p className="font-medium">
-                        {relative.first_name} {relative.last_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t('rsvp.search.invitationFor', {
-                          events: formatInvitedEvents(relative.invited_events),
-                        })}
-                      </p>
-                    </div>
+            {profile && profile.family_role === 'parent' && profile.related.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('rsvp.related.title')}</CardTitle>
+                  <CardDescription>{t('rsvp.related.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {profile.related.map((relative) => (
+                    <div key={relative.id} className="space-y-3 rounded-lg border p-4">
+                      <div>
+                        <p className="font-medium">
+                          {relative.first_name} {relative.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('rsvp.search.invitationFor', {
+                            events: formatInvitedEvents(relative.invited_events),
+                          })}
+                        </p>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label>{t('rsvp.status.title')}</Label>
-                      <RadioGroup
-                        value={relative.status === 'pending' ? 'tentative' : relative.status}
-                        onValueChange={(value) =>
-                          updateRelatedStatus(relative.id, value as RsvpStatus)
-                        }
-                        className="grid gap-2 sm:grid-cols-3"
-                      >
-                        <div className="flex items-center space-x-2 rounded-lg border p-2">
-                          <RadioGroupItem
-                            value="confirmed"
-                            id={`related-${relative.id}-confirmed`}
-                          />
-                          <Label htmlFor={`related-${relative.id}-confirmed`}>
-                            {t('rsvp.status.confirm')}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2 rounded-lg border p-2">
-                          <RadioGroupItem
-                            value="tentative"
-                            id={`related-${relative.id}-tentative`}
-                          />
-                          <Label htmlFor={`related-${relative.id}-tentative`}>
-                            {t('rsvp.status.tentative')}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2 rounded-lg border p-2">
-                          <RadioGroupItem value="declined" id={`related-${relative.id}-declined`} />
-                          <Label htmlFor={`related-${relative.id}-declined`}>
-                            {t('rsvp.status.decline')}
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor={`related-${relative.id}-email`}>
-                          {t('rsvp.profile.email')}
-                        </Label>
-                        <Input
-                          id={`related-${relative.id}-email`}
-                          value={relative.email ?? ''}
-                          onChange={(e) => updateRelatedField(relative.id, 'email', e.target.value)}
-                          placeholder={t('rsvp.profile.emailPlaceholder')}
-                        />
+                        <Label>{t('rsvp.status.title')}</Label>
+                        <RadioGroup
+                          value={relative.status === 'pending' ? 'tentative' : relative.status}
+                          onValueChange={(value) =>
+                            updateRelatedStatus(relative.id, value as RsvpStatus)
+                          }
+                          className="grid gap-2 sm:grid-cols-3"
+                        >
+                          <div className="flex items-center space-x-2 rounded-lg border p-2">
+                            <RadioGroupItem
+                              value="confirmed"
+                              id={`related-${relative.id}-confirmed`}
+                            />
+                            <Label htmlFor={`related-${relative.id}-confirmed`}>
+                              {t('rsvp.status.confirm')}
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2 rounded-lg border p-2">
+                            <RadioGroupItem
+                              value="tentative"
+                              id={`related-${relative.id}-tentative`}
+                            />
+                            <Label htmlFor={`related-${relative.id}-tentative`}>
+                              {t('rsvp.status.tentative')}
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2 rounded-lg border p-2">
+                            <RadioGroupItem
+                              value="declined"
+                              id={`related-${relative.id}-declined`}
+                            />
+                            <Label htmlFor={`related-${relative.id}-declined`}>
+                              {t('rsvp.status.decline')}
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor={`related-${relative.id}-email`}>
+                            {t('rsvp.profile.email')}
+                          </Label>
+                          <Input
+                            id={`related-${relative.id}-email`}
+                            value={relative.email ?? ''}
+                            onChange={(e) =>
+                              updateRelatedField(relative.id, 'email', e.target.value)
+                            }
+                            placeholder={t('rsvp.profile.emailPlaceholder')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`related-${relative.id}-phone`}>
+                            {t('rsvp.profile.phone')}
+                          </Label>
+                          <Input
+                            id={`related-${relative.id}-phone`}
+                            value={relative.phone ?? ''}
+                            onChange={(e) =>
+                              updateRelatedField(relative.id, 'phone', e.target.value)
+                            }
+                            placeholder={t('rsvp.profile.phonePlaceholder')}
+                          />
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`related-${relative.id}-phone`}>
-                          {t('rsvp.profile.phone')}
+                        <Label htmlFor={`related-${relative.id}-diet`}>
+                          {t('rsvp.profile.dietaryRestrictions')}
                         </Label>
-                        <Input
-                          id={`related-${relative.id}-phone`}
-                          value={relative.phone ?? ''}
-                          onChange={(e) => updateRelatedField(relative.id, 'phone', e.target.value)}
-                          placeholder={t('rsvp.profile.phonePlaceholder')}
+                        <Textarea
+                          id={`related-${relative.id}-diet`}
+                          value={relative.dietary_restrictions ?? ''}
+                          onChange={(e) =>
+                            updateRelatedField(relative.id, 'dietary_restrictions', e.target.value)
+                          }
+                          placeholder={t('rsvp.related.dietaryPlaceholder')}
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`related-${relative.id}-diet`}>
-                        {t('rsvp.profile.dietaryRestrictions')}
-                      </Label>
-                      <Textarea
-                        id={`related-${relative.id}-diet`}
-                        value={relative.dietary_restrictions ?? ''}
-                        onChange={(e) =>
-                          updateRelatedField(relative.id, 'dietary_restrictions', e.target.value)
-                        }
-                        placeholder={t('rsvp.related.dietaryPlaceholder')}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !selectedGuest || !profile}
-            className="w-full"
-          >
-            {isSubmitting ? t('rsvp.actions.saving') : t('rsvp.actions.saveConfirmation')}
-          </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !selectedGuest || !profile}
+              className="w-full"
+            >
+              {isSubmitting ? t('rsvp.actions.saving') : t('rsvp.actions.saveConfirmation')}
+            </Button>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="space-y-3 rounded-lg border border-sage/30 bg-sage/10 p-4">
-              <p className="font-medium">
-                {t('rsvp.success.thanksSaved', { name: success.guestName })}
-              </p>
-              <p className="text-sm text-muted-foreground">{t('rsvp.success.thanksForYourTime')}</p>
-              <div className="rounded-md border bg-background/60 p-3 text-sm text-muted-foreground">
-                <p>
-                  {t('rsvp.success.status')}:{' '}
-                  <Badge variant="outline">{statusLabel(success.status)}</Badge>
-                </p>
-                <p className="mt-1">
-                  {t('rsvp.success.invitationFor', {
-                    events: formatInvitedEvents(success.invitedEvents),
-                  })}
-                </p>
-                <p className="mt-1">
-                  {t('rsvp.success.updatedAt', { date: formatDateTime(success.confirmedAt) })}
-                </p>
+            {error && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
               </div>
-              <p className="rounded-md border bg-background/60 p-3 text-sm text-muted-foreground">
-                {decisionSummaryMessage(success.decisionCounts)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t('rsvp.success.changeResponseHint')}
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setSuccess(null)}>
-                  {t('rsvp.actions.changeResponse')}
-                </Button>
-                <Button asChild>
-                  <Link href="/">{t('rsvp.actions.goHome')}</Link>
-                </Button>
+            )}
+
+            {success && (
+              <div className="space-y-3 rounded-lg border border-sage/30 bg-sage/10 p-4">
+                <p className="font-medium">
+                  {t('rsvp.success.thanksSaved', { name: success.guestName })}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {t('rsvp.success.thanksForYourTime')}
+                </p>
+                <div className="rounded-md border bg-background/60 p-3 text-sm text-muted-foreground">
+                  <p>
+                    {t('rsvp.success.status')}:{' '}
+                    <Badge variant="outline">{statusLabel(success.status)}</Badge>
+                  </p>
+                  <p className="mt-1">
+                    {t('rsvp.success.invitationFor', {
+                      events: formatInvitedEvents(success.invitedEvents),
+                    })}
+                  </p>
+                  <p className="mt-1">
+                    {t('rsvp.success.updatedAt', { date: formatDateTime(success.confirmedAt) })}
+                  </p>
+                </div>
+                <p className="rounded-md border bg-background/60 p-3 text-sm text-muted-foreground">
+                  {decisionSummaryMessage(success.decisionCounts)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {t('rsvp.success.changeResponseHint')}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setSuccess(null)}>
+                    {t('rsvp.actions.changeResponse')}
+                  </Button>
+                  <Button asChild>
+                    <Link href="/">{t('rsvp.actions.goHome')}</Link>
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

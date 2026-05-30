@@ -1,18 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import { User, Crown, Pencil, Shield, UserPlus } from 'lucide-react';
-
-import { createClient } from '@/lib/supabase/client';
 
 import { toast } from '@/hooks';
 import type { Role } from '@/lib';
 import { useLocale, useTranslation } from '@/locales';
 import type { UserWithRoleAssignments } from '@/services';
-import { updateUserRoles, updateUserSuperAdmin } from '@/services';
+import { updateUserRolesAction, updateUserSuperAdminAction } from '@/app/dashboard/settings/actions';
 
 import {
   Card,
@@ -46,8 +43,6 @@ interface UserManagementProps {
 }
 
 export function UserManagement({ users, roles }: UserManagementProps) {
-  const supabase = createClient();
-  const router = useRouter();
   const { t } = useTranslation();
   const { locale } = useLocale();
   const dateFnsLocale = locale === 'es' ? esLocale : undefined;
@@ -81,10 +76,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
     setIsSaving(true);
     try {
       await Promise.all([
-        updateUserSuperAdmin(supabase, editingUser.id, editIsSuperAdmin),
-        updateUserRoles(supabase, editingUser.id, editRoleIds),
+        updateUserSuperAdminAction(editingUser.id, editIsSuperAdmin),
+        updateUserRolesAction(editingUser.id, editRoleIds),
       ]);
-      router.refresh();
       closeEdit();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al actualizar el usuario.';

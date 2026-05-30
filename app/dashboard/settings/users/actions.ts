@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requirePermission } from '@/lib/server-auth';
+import { PERMISSIONS } from '@/lib/permissions';
 
 import { assignRole } from '@/services';
 
@@ -11,10 +13,7 @@ import { assignRole } from '@/services';
  */
 export async function inviteUserAction(email: string, roleId: string | null) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  await requirePermission(supabase, PERMISSIONS.SETTINGS_USERS);
 
   const admin = createAdminClient();
 

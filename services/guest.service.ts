@@ -59,6 +59,7 @@ export type CreateGuestInput = Pick<
   ceremony_attending: boolean;
   reception_attending: boolean;
   parent_guest_id?: string | null;
+  created_by?: string | null;
 };
 
 export type UpdateGuestInput = Partial<
@@ -76,6 +77,8 @@ export type UpdateGuestInput = Partial<
 > & {
   selectedCategories?: string[];
   parent_guest_id?: string | null;
+  ceremony_attending?: boolean;
+  reception_attending?: boolean;
 };
 
 // ---- Queries ----
@@ -259,8 +262,10 @@ export async function getGuestForEdit(
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
   const original = Promise.resolve(promise);
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => {
+  let timerId: ReturnType<typeof setTimeout>;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timerId = setTimeout(() => {
       // The race is lost — but keep observing the original promise so we can
       // log its eventual result. This surfaces the real Supabase error that
       // arrives after the deadline (e.g. auth lock contention, RLS failure,
@@ -280,10 +285,12 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
         (lateErr) => console.warn(`[withTimeout] ${label} — rechazo tardío:`, lateErr)
       );
       reject(new Error(`${label}: operación no respondió en ${ms / 1000}s`));
-    }, ms)
-  );
+    }, ms);
+  });
 
-  return Promise.race([original, timeout]);
+  // Cancel the timeout timer as soon as either side wins the race to prevent
+  // the timer callback from holding a reference to `original` indefinitely.
+  return Promise.race([original, timeout]).finally(() => clearTimeout(timerId));
 }
 
 export async function createGuest(
@@ -345,7 +352,7 @@ export async function updateGuest(
   id: string,
   input: UpdateGuestInput
 ): Promise<void> {
-  const { selectedCategories, ...rawFields } = input;
+  const { selectedCategories, ceremony_attending, reception_attending, ...rawFields } = input;
 
   const fields = {
     ...rawFields,
@@ -383,6 +390,32 @@ export async function updateGuest(
         'updateGuest:insertCategories'
       );
       if (insertError) throw insertError;
+    }
+  }
+
+  if (ceremony_attending !== undefined || reception_attending !== undefined) {
+    const { error: deleteAttError } = await withTimeout(
+      supabase.from('event_attendance').delete().eq('guest_id', id),
+      10000,
+      'updateGuest:deleteAttendance'
+    );
+    if (deleteAttError) throw deleteAttError;
+
+    const attendanceRows = [
+      ...(ceremony_attending
+        ? [{ guest_id: id, event_type: 'ceremony', attending: true }]
+        : []),
+      ...(reception_attending
+        ? [{ guest_id: id, event_type: 'reception', attending: true }]
+        : []),
+    ];
+    if (attendanceRows.length > 0) {
+      const { error: insertAttError } = await withTimeout(
+        supabase.from('event_attendance').insert(attendanceRows),
+        10000,
+        'updateGuest:insertAttendance'
+      );
+      if (insertAttError) throw insertAttError;
     }
   }
 }
@@ -534,10 +567,14 @@ export async function linkGuestToParent(
   childId: string,
   parentId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('guests')
-    .update({ parent_guest_id: parentId, updated_at: new Date().toISOString() })
-    .eq('id', childId);
+  const { error } = await withTimeout(
+    supabase
+      .from('guests')
+      .update({ parent_guest_id: parentId, updated_at: new Date().toISOString() })
+      .eq('id', childId),
+    10000,
+    'linkGuestToParent'
+  );
   if (error) throw error;
 }
 
@@ -545,9 +582,13 @@ export async function unlinkGuestFromParent(
   supabase: SupabaseClient,
   childId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('guests')
-    .update({ parent_guest_id: null, is_plus_one: false, updated_at: new Date().toISOString() })
-    .eq('id', childId);
+  const { error } = await withTimeout(
+    supabase
+      .from('guests')
+      .update({ parent_guest_id: null, is_plus_one: false, updated_at: new Date().toISOString() })
+      .eq('id', childId),
+    10000,
+    'unlinkGuestFromParent'
+  );
   if (error) throw error;
 }

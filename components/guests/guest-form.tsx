@@ -11,8 +11,14 @@ import { createClient } from '@/lib/supabase/client';
 
 import type { Guest, Category } from '@/lib';
 import type { GuestForEdit } from '@/services';
-import { createGuest, updateGuest, linkGuestToParent, unlinkGuestFromParent } from '@/services';
+import {
+  createGuestAction,
+  updateGuestAction,
+  linkGuestToParentAction,
+  unlinkGuestFromParentAction,
+} from '@/app/dashboard/guests/actions';
 
+import { useAuth } from '@/components/auth-provider';
 import { CategoriesDialog } from '@/components/categories';
 import {
   Card,
@@ -59,9 +65,9 @@ interface GuestFormProps {
 
 export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
   const router = useRouter();
-  const supabase = createClient();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoriesState, setCategoriesState] = useState(categories);
@@ -161,21 +167,66 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
     is_plus_one: guest?.is_plus_one || false,
     selectedCategories: guest?.guest_categories?.map((gc) => gc.category_id) || [],
     ceremony_attending:
-      guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? true,
+      guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? false,
     reception_attending:
-      guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? true,
+      guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? false,
     pendingChildren: [] as PendingChild[],
     parent_guest_id: guest?.parent_guest_id || null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsLoading(true);
 
     try {
       if (mode === 'create') {
-        const createdGuest = await createGuest(supabase, {
+        const createdGuest = await createGuestAction({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          email: formData.email,
+          phone: formData.phone,
+          status: formData.status as Guest['status'],
+          dietary_restrictions: formData.dietary_restrictions,
+          notes: formData.notes,
+          is_plus_one: formData.is_plus_one,
+          selectedCategories: formData.selectedCategories,
+          ceremony_attending: formData.ceremony_attending,
+          reception_attending: formData.reception_attending,
+          created_by: user?.id ?? null,
+        });
+
+        // Vincular invitados seleccionados como miembros del grupo
+        for (const memberId of familyMemberIds) {
+          await linkGuestToParentAction(memberId, createdGuest.id);
+        }
+
+        // Crear el nuevo relacionado (plus one)
+        for (const child of formData.pendingChildren) {
+          if (child.type === 'new') {
+            await createGuestAction({
+              first_name: child.first_name,
+              last_name: child.last_name,
+              email: '',
+              phone: '',
+              status: 'pending',
+              dietary_restrictions: '',
+              notes: '',
+              is_plus_one: child.is_plus_one,
+              selectedCategories: [],
+              ceremony_attending: formData.ceremony_attending,
+              reception_attending: formData.reception_attending,
+              parent_guest_id: createdGuest.id,
+              created_by: user?.id ?? null,
+            });
+          } else if (child.existing_guest_id) {
+            await linkGuestToParentAction(child.existing_guest_id, createdGuest.id);
+          }
+        }
+
+        router.push('/dashboard/guests');
+        router.refresh();
+      } else {
+        await updateGuestAction(guest!.id, {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
@@ -189,53 +240,11 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           reception_attending: formData.reception_attending,
         });
 
-        // Vincular invitados seleccionados como miembros del grupo
-        for (const memberId of familyMemberIds) {
-          await linkGuestToParent(supabase, memberId, createdGuest.id);
-        }
-
-        // Crear el nuevo relacionado (plus one)
-        for (const child of formData.pendingChildren) {
-          if (child.type === 'new') {
-            await createGuest(supabase, {
-              first_name: child.first_name,
-              last_name: child.last_name,
-              email: '',
-              phone: '',
-              status: 'pending',
-              dietary_restrictions: '',
-              notes: '',
-              is_plus_one: child.is_plus_one,
-              selectedCategories: [],
-              ceremony_attending: true,
-              reception_attending: true,
-              parent_guest_id: createdGuest.id,
-            });
-          } else if (child.existing_guest_id) {
-            await linkGuestToParent(supabase, child.existing_guest_id, createdGuest.id);
-          }
-        }
-
-        router.push('/dashboard/guests');
-        router.refresh();
-      } else {
-        await updateGuest(supabase, guest!.id, {
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email,
-          phone: formData.phone,
-          status: formData.status as Guest['status'],
-          dietary_restrictions: formData.dietary_restrictions,
-          notes: formData.notes,
-          is_plus_one: formData.is_plus_one,
-          selectedCategories: formData.selectedCategories,
-        });
-
         // Sincronizar el child relacionado único (si aplica)
         const originalRelatedId =
           (guest?.children?.length ?? 0) === 1 ? guest!.children[0].id : null;
         if (originalRelatedId && !existingRelatedId) {
-          await unlinkGuestFromParent(supabase, originalRelatedId);
+          await unlinkGuestFromParentAction(originalRelatedId);
         }
 
         // Sincronizar miembros del grupo familiar (>1 hijos)
@@ -243,19 +252,19 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           (guest?.children?.length ?? 0) > 1 ? (guest?.children?.map((c) => c.id) ?? []) : [];
         for (const id of originalChildIds) {
           if (!familyMemberIds.includes(id)) {
-            await unlinkGuestFromParent(supabase, id);
+            await unlinkGuestFromParentAction(id);
           }
         }
         for (const id of familyMemberIds) {
           if (!originalChildIds.includes(id)) {
-            await linkGuestToParent(supabase, id, guest!.id);
+            await linkGuestToParentAction(id, guest!.id);
           }
         }
 
         // Crear el nuevo relacionado (plus one)
         for (const child of formData.pendingChildren) {
           if (child.type === 'new') {
-            await createGuest(supabase, {
+            await createGuestAction({
               first_name: child.first_name,
               last_name: child.last_name,
               email: '',
@@ -265,12 +274,13 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
               notes: '',
               is_plus_one: child.is_plus_one,
               selectedCategories: [],
-              ceremony_attending: true,
-              reception_attending: true,
+              ceremony_attending: formData.ceremony_attending,
+              reception_attending: formData.reception_attending,
               parent_guest_id: guest!.id,
+              created_by: user?.id ?? null,
             });
           } else if (child.existing_guest_id) {
-            await linkGuestToParent(supabase, child.existing_guest_id, guest!.id);
+            await linkGuestToParentAction(child.existing_guest_id, guest!.id);
           }
         }
 
@@ -279,11 +289,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
       }
     } catch (err) {
       console.error('[GuestForm] caught error:', err);
-      const message =
-        err instanceof Error ? err.message : 'Error inesperado al guardar el invitado.';
       toast({
-        title: 'Error',
-        description: message,
+        title: t('common.error'),
+        description: t('guests.saveError'),
         variant: 'destructive',
       });
     } finally {

@@ -160,6 +160,7 @@ export const es: Dictionary = {
     deleteGuestConfirm: '¿Estás seguro de que deseas eliminar este invitado?',
     guestDeleted: 'Invitado eliminado exitosamente.',
     guestSaved: 'Invitado guardado exitosamente.',
+    saveError: 'No se pudo guardar el invitado. Intenta de nuevo.',
     firstName: 'Nombre',
     lastName: 'Apellido',
     fullName: 'Nombre Completo',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,7 +16,7 @@ interface DashboardRealtimeProps {
 
 export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
   const [stats, setStats] = useState<DashboardStats>(initialStats);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refetch = useCallback(async () => {

@@ -142,7 +142,9 @@ export default function ScannerPage() {
     // eslint-disable-next-line consistent-return
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.stop().catch((err) => {
+          console.warn('[Scanner] Error stopping camera on cleanup:', err);
+        });
         scannerRef.current = null;
       }
     };

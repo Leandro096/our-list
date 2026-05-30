@@ -158,6 +158,7 @@ export const en = {
     deleteGuestConfirm: 'Are you sure you want to delete this guest?',
     guestDeleted: 'Guest deleted successfully.',
     guestSaved: 'Guest saved successfully.',
+    saveError: 'Could not save guest. Please try again.',
     firstName: 'First Name',
     lastName: 'Last Name',
     fullName: 'Full Name',

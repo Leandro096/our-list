@@ -84,7 +84,8 @@ export function I18nProvider({
         }
       }
     } catch {}
-    requestAnimationFrame(() => setMounted(true));
+    const rafId = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const setLocale = React.useCallback((next: Locale) => {

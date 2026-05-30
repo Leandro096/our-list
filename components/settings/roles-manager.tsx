@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
-
-import { createClient } from '@/lib/supabase/client';
 
 import { toast } from '@/hooks';
 import type { Permission } from '@/lib';
 import { useTranslation } from '@/locales';
 import type { RoleWithPermissions } from '@/services';
-import { updateRole, deleteRole, updateRolePermissions } from '@/services';
+import {
+  updateRoleAction,
+  deleteRoleAction,
+  createRoleAction,
+  updateRolePermissionsAction,
+} from '@/app/dashboard/settings/actions';
 
 import {
   Card,
@@ -59,8 +61,6 @@ const EMPTY_EDIT: EditState = {
 };
 
 export function RolesManager({ roles, permissions }: RolesManagerProps) {
-  const supabase = createClient();
-  const router = useRouter();
   const { t } = useTranslation();
 
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -107,29 +107,23 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
     try {
       if (editState.roleId) {
         await Promise.all([
-          updateRole(
-            supabase,
+          updateRoleAction(
             editState.roleId,
             editState.name.trim(),
             editState.description || null
           ),
-          updateRolePermissions(supabase, editState.roleId, editState.permissionIds),
+          updateRolePermissionsAction(editState.roleId, editState.permissionIds),
         ]);
       } else {
-        // Create role first, then assign permissions
-        const { data } = await supabase
-          .from('roles')
-          .insert({
-            name: editState.name.trim(),
-            description: editState.description || null,
-          })
-          .select('id')
-          .single();
-        if (data && editState.permissionIds.length > 0) {
-          await updateRolePermissions(supabase, data.id, editState.permissionIds);
+        const { id, error } = await createRoleAction(
+          editState.name.trim(),
+          editState.description || null
+        );
+        if (error) throw new Error(error);
+        if (id && editState.permissionIds.length > 0) {
+          await updateRolePermissionsAction(id, editState.permissionIds);
         }
       }
-      router.refresh();
       closeEdit();
       toast({ title: t('settings.roles_section.roleSaved') });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -147,8 +141,7 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
   const handleDelete = async () => {
     if (!deletingRoleId) return;
     try {
-      await deleteRole(supabase, deletingRoleId);
-      router.refresh();
+      await deleteRoleAction(deletingRoleId);
       toast({ title: t('settings.roles_section.roleDeleted') });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {

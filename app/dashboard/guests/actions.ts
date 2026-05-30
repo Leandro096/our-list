@@ -6,8 +6,12 @@ import { createClient } from '@/lib/supabase/server';
 import { validateImportRows } from '@/lib/validations/guest-import';
 import type { ImportRowInput } from '@/lib/validations/guest-import';
 import { mutationLimiter, heavyActionLimiter } from '@/lib/rate-limit';
+import { requirePermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
+import { PERMISSIONS } from '@/lib/permissions';
 
-import { deleteGuest, bulkDeleteGuests } from '@/services';
+import { deleteGuest, bulkDeleteGuests, createGuest, updateGuest, linkGuestToParent, unlinkGuestFromParent } from '@/services';
+import type { CreateGuestInput, UpdateGuestInput } from '@/services';
+import type { Guest } from '@/lib';
 
 const MAX_IMPORT_ROWS = 1000;
 
@@ -31,10 +35,20 @@ export async function importGuestsAction(
   rawRows: Record<string, string>[]
 ): Promise<ImportGuestsResult> {
   const supabaseForUser = await createClient();
-  const {
-    data: { user },
-  } = await supabaseForUser.auth.getUser();
-  const userId = user?.id ?? 'anonymous';
+
+  let userId: string;
+  try {
+    const ctx = await requirePermission(supabaseForUser, PERMISSIONS.GUESTS_CREATE);
+    userId = ctx.userId;
+  } catch (err) {
+    const message =
+      err instanceof UnauthorizedError
+        ? 'No autenticado.'
+        : err instanceof ForbiddenError
+          ? 'No tienes permiso para importar invitados.'
+          : 'Error de autorización.';
+    return { created: 0, errors: [{ row: 0, error: message }] };
+  }
 
   const rateCheck = heavyActionLimiter.check(userId);
   if (!rateCheck.allowed) {
@@ -166,10 +180,19 @@ function buildAttendanceRows(
 
 export async function deleteGuestAction(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? 'anonymous';
+
+  let userId: string;
+  try {
+    const ctx = await requirePermission(supabase, PERMISSIONS.GUESTS_DELETE);
+    userId = ctx.userId;
+  } catch (err) {
+    return {
+      error:
+        err instanceof UnauthorizedError
+          ? 'No autenticado.'
+          : 'No tienes permiso para eliminar invitados.',
+    };
+  }
 
   const rateCheck = mutationLimiter.check(userId);
   if (!rateCheck.allowed) return { error: rateCheck.message };
@@ -181,10 +204,19 @@ export async function deleteGuestAction(id: string): Promise<{ error?: string }>
 
 export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? 'anonymous';
+
+  let userId: string;
+  try {
+    const ctx = await requirePermission(supabase, PERMISSIONS.GUESTS_DELETE);
+    userId = ctx.userId;
+  } catch (err) {
+    return {
+      error:
+        err instanceof UnauthorizedError
+          ? 'No autenticado.'
+          : 'No tienes permiso para eliminar invitados.',
+    };
+  }
 
   const rateCheck = mutationLimiter.check(userId);
   if (!rateCheck.allowed) return { error: rateCheck.message };
@@ -192,4 +224,39 @@ export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: s
   await bulkDeleteGuests(supabase, ids);
   revalidatePath('/dashboard/guests');
   return {};
+}
+
+// ---- Guest mutations (create / update / family links) ----------------------
+// These actions run server-side so the Supabase client is created fresh per
+// request. This completely bypasses the browser singleton's refreshingPromise,
+// which is the root cause of the 10-second timeout on POST/UPDATE operations
+// after periods of inactivity.
+
+export async function createGuestAction(input: CreateGuestInput): Promise<Guest> {
+  const supabase = await createClient();
+  await requirePermission(supabase, PERMISSIONS.GUESTS_CREATE);
+  const result = await createGuest(supabase, input);
+  revalidatePath('/dashboard/guests');
+  return result;
+}
+
+export async function updateGuestAction(id: string, input: UpdateGuestInput): Promise<void> {
+  const supabase = await createClient();
+  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await updateGuest(supabase, id, input);
+  revalidatePath('/dashboard/guests');
+}
+
+export async function linkGuestToParentAction(childId: string, parentId: string): Promise<void> {
+  const supabase = await createClient();
+  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await linkGuestToParent(supabase, childId, parentId);
+  revalidatePath('/dashboard/guests');
+}
+
+export async function unlinkGuestFromParentAction(childId: string): Promise<void> {
+  const supabase = await createClient();
+  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await unlinkGuestFromParent(supabase, childId);
+  revalidatePath('/dashboard/guests');
 }

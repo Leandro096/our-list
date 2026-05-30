@@ -2,14 +2,11 @@
 
 import { useState } from 'react';
 import { Lock, User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-
-import { createClient } from '@/lib/supabase/client';
 
 import { toast } from '@/hooks';
 import { useTranslation } from '@/locales';
 import type { UserWithRoles } from '@/lib';
-import { updateUserProfile } from '@/services';
+import { updateUserProfileAction, updatePasswordAction } from '@/app/dashboard/settings/actions';
 
 import {
   Card,
@@ -33,8 +30,6 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile }: ProfileFormProps) {
   const { t } = useTranslation();
-  const router = useRouter();
-  const supabase = createClient();
 
   // --- Profile state ---
   const [displayName, setDisplayName] = useState(profile.display_name ?? '');
@@ -52,12 +47,11 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     e.preventDefault();
     setIsSavingProfile(true);
     try {
-      await updateUserProfile(supabase, profile.id, {
+      await updateUserProfileAction(profile.id, {
         display_name: displayName || undefined,
         theme_preference: themePreference,
       });
       toast({ title: t('profile.profileUpdated') });
-      router.refresh();
     } catch (err) {
       toast({
         title: t('profile.profileUpdateError'),
@@ -80,9 +74,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     }
     setIsSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      const error = await updatePasswordAction(newPassword).then(() => null).catch((e) => e);
       if (error) throw error;
       toast({ title: t('profile.passwordUpdated') });
       setNewPassword('');

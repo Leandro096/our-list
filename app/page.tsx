@@ -29,14 +29,21 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
+
     supabase.auth.getSession().then(({ data }) => {
-      setUser(!!data.session?.user);
+      if (!cancelled) setUser(!!data.session?.user);
     });
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(!!session?.user);
+      if (!cancelled) setUser(!!session?.user);
     });
-    return () => listener.subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   return (

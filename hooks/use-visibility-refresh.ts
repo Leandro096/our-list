@@ -6,38 +6,60 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 /**
- * Keeps the Supabase session and the Next.js router fresh across three scenarios:
+ * Keeps the Supabase session and the Next.js router fresh, and signs the user
+ * out automatically after a period of inactivity.
+ *
+ * Scenarios handled:
  *
  * 1. **TOKEN_REFRESHED** — Supabase's autoRefreshToken silently mints a new
- *    access token in the browser. We call `router.refresh()` immediately so
- *    server components and server actions receive the new token from cookies
- *    on the very next request (avoids the "stale-cookie" hang).
+ *    access token. We call `router.refresh()` so server components receive the
+ *    new token from cookies on the next request.
  *
  * 2. **Tab visibility change** — user switches away and comes back after at
- *    least `thresholdMs`. We force-refresh the session and router so any
- *    expired token is replaced before the user clicks anything.
+ *    least `thresholdMs`. We call `router.refresh()` to re-run server
+ *    components with the current cookie. If the tab was hidden for the full
+ *    `inactivityLogoutMs`, the logout callback fires instead.
  *
- * 3. **Same-tab idle** — user leaves the page open but doesn't interact.
- *    The browser throttles autoRefreshToken timers aggressively in idle tabs.
- *    After `thresholdMs` of no activity we proactively call `getSession()`
- *    (which triggers a refresh if needed). When the user re-engages after a
- *    long idle period we also call `router.refresh()` to re-run server
- *    components with the fresh token.
+ * 3. **Inactivity logout** — after `inactivityLogoutMs` of no user activity,
+ *    `onInactivityTimeout` is called so the caller can sign out and redirect.
+ *    Any user interaction (mouse, keyboard, touch) resets the timer.
+ *
+ * NOTE: This hook intentionally never calls `supabase.auth.getSession()`
+ * proactively. That call can trigger `_callRefreshToken()` which, on a stale
+ * TCP connection, sets `refreshingPromise` to PENDING indefinitely. Every
+ * subsequent DB operation awaits that promise before issuing a fetch, so the
+ * request never reaches the network and `withTimeout` kills it after 10 s.
+ * autoRefreshToken handles proactive token refresh on its own schedule.
+ *
+ * @param thresholdMs        Minimum hidden/idle time before a router refresh
+ *                           on visibility change (default 2 min).
+ * @param inactivityLogoutMs Idle time before `onInactivityTimeout` fires
+ *                           (default 30 min).
+ * @param onInactivityTimeout Callback invoked when the inactivity limit is
+ *                            reached. Typically: signOut() + router.push('/login').
  */
-export function useVisibilityRefresh(thresholdMs = 120_000) {
+export function useVisibilityRefresh(
+  thresholdMs = 120_000,
+  inactivityLogoutMs = 30 * 60 * 1000,
+  onInactivityTimeout?: () => void | Promise<void>
+) {
   const router = useRouter();
   const hiddenAtRef = useRef<number | null>(null);
-  const lastActivityRef = useRef<number>(0);
+
+  // Keep the callback ref in sync on every render so the timer closure always
+  // calls the latest version without the timer needing to be recreated.
+  const onInactivityTimeoutRef = useRef(onInactivityTimeout);
+  useEffect(() => {
+    onInactivityTimeoutRef.current = onInactivityTimeout;
+  });
 
   useEffect(() => {
-    lastActivityRef.current = Date.now();
     const supabase = createClient();
 
-    async function doRefresh() {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        router.refresh();
-      }
+    // Safe refresh: only reloads the Server Component tree using the existing
+    // cookie. Does NOT touch the Supabase JS client or trigger a token refresh.
+    function doRefresh() {
+      router.refresh();
     }
 
     // --- 1. TOKEN_REFRESHED: sync server cookies whenever autoRefreshToken fires ---
@@ -59,47 +81,41 @@ export function useVisibilityRefresh(thresholdMs = 120_000) {
       const hiddenMs = hiddenAtRef.current !== null ? Date.now() - hiddenAtRef.current : 0;
       hiddenAtRef.current = null;
 
+      if (hiddenMs >= inactivityLogoutMs) {
+        // Tab was hidden for the full inactivity window — sign out immediately.
+        onInactivityTimeoutRef.current?.();
+        return;
+      }
+
       if (hiddenMs >= thresholdMs) {
         doRefresh();
       }
     }
 
-    // --- 3. Same-tab idle detection ---
+    // --- 3. Inactivity logout ---
+    let logoutTimer: ReturnType<typeof setTimeout>;
 
-    // After `thresholdMs` of no activity: silently keep the session alive
-    // so the token is ready when the user next interacts.
-    let idleTimer: ReturnType<typeof setTimeout>;
-
-    function resetIdleTimer() {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        supabase.auth.getSession();
-      }, thresholdMs);
+    function resetLogoutTimer() {
+      clearTimeout(logoutTimer);
+      logoutTimer = setTimeout(() => {
+        onInactivityTimeoutRef.current?.();
+      }, inactivityLogoutMs);
     }
 
     function handleActivity() {
-      const now = Date.now();
-      const idleMs = now - lastActivityRef.current;
-      lastActivityRef.current = now;
-      resetIdleTimer();
-
-      // User re-engaged after a long idle: refresh server components before
-      // they hit a server action with a potentially stale cookie.
-      if (idleMs >= thresholdMs) {
-        doRefresh();
-      }
+      resetLogoutTimer();
     }
 
     const activityEvents: string[] = ['mousemove', 'keydown', 'pointerdown', 'touchstart'];
     activityEvents.forEach((e) => document.addEventListener(e, handleActivity, { passive: true }));
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    resetIdleTimer();
+    resetLogoutTimer(); // arrancar el timer desde el momento del mount
 
     return () => {
-      clearTimeout(idleTimer);
+      clearTimeout(logoutTimer);
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       activityEvents.forEach((e) => document.removeEventListener(e, handleActivity));
     };
-  }, [router, thresholdMs]);
+  }, [router, thresholdMs, inactivityLogoutMs]);
 }

@@ -1,22 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { X, Plus, Users, Trash2, Search, Armchair } from 'lucide-react';
-
-import { createClient } from '@/lib/supabase/client';
 
 import { toast } from '@/hooks';
 import type { Table } from '@/lib';
 import { useTranslation } from '@/locales';
 import type { SeatingGuestWithFamily, SeatingAssignmentWithFamilyGuest } from '@/services';
 import {
-  createTable,
-  deleteTable,
-  updateTable,
-  assignSeatWithFamily,
-  removeSeatAssignmentWithFamily,
-} from '@/services';
+  createTableAction,
+  deleteTableAction,
+  updateTableAction,
+  assignSeatWithFamilyAction,
+  removeSeatAssignmentWithFamilyAction,
+} from '@/app/dashboard/seating/actions';
 
 import {
   Tabs,
@@ -58,8 +55,6 @@ export function SeatingManager({
   assignments,
   tables: initialTables,
 }: SeatingManagerProps) {
-  const supabase = createClient();
-  const router = useRouter();
   const { t } = useTranslation();
   const [tables, setTables] = useState(initialTables);
   const [newTableName, setNewTableName] = useState('');
@@ -102,16 +97,12 @@ export function SeatingManager({
 
     setIsSubmittingTable(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const created = await createTable(supabase, {
+      const created = await createTableAction({
         name: newTableName,
         number: newTableNumber,
         category: newTableCategory || null,
         notes: newTableNotes || null,
         capacity: newTableCapacity,
-        created_by: user?.id ?? null,
       });
       setTables([...tables, created]);
       setNewTableName('');
@@ -138,9 +129,8 @@ export function SeatingManager({
 
   const handleDeleteTable = async (tableId: string) => {
     try {
-      await deleteTable(supabase, tableId);
+      await deleteTableAction(tableId);
       setTables(tables.filter((tb) => tb.id !== tableId));
-      router.refresh();
       toast({ title: t('seating.tableDeleted') });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -164,7 +154,7 @@ export function SeatingManager({
     setIsSubmittingAssign(true);
     try {
       for (const guestId of selectedGuests) {
-        const result = await assignSeatWithFamily(supabase, {
+        const result = await assignSeatWithFamilyAction({
           guest_id: guestId,
           table_id: selectedTable,
         });
@@ -177,7 +167,6 @@ export function SeatingManager({
             }),
             variant: 'destructive',
           });
-          router.refresh();
           setSelectedGuests([]);
           setSelectedTable('');
           setIsAssigning(false);
@@ -188,7 +177,6 @@ export function SeatingManager({
         const g = unassignedGuests.find((ug) => ug.id === id);
         return sum + 1 + (g?.children?.length ?? 0);
       }, 0);
-      router.refresh();
       setSelectedGuests([]);
       setSelectedTable('');
       setGuestSearch('');
@@ -212,8 +200,7 @@ export function SeatingManager({
   const handleRemoveAssignment = async (guestId: string | undefined) => {
     if (!guestId) return;
     try {
-      await removeSeatAssignmentWithFamily(supabase, guestId);
-      router.refresh();
+      await removeSeatAssignmentWithFamilyAction(guestId);
       toast({ title: t('seating.guestUnassigned') });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -240,7 +227,7 @@ export function SeatingManager({
     if (!editingTable || !editName || !editNumber) return;
     setIsSubmittingEdit(true);
     try {
-      const updated = await updateTable(supabase, editingTable.id, {
+      const updated = await updateTableAction(editingTable.id, {
         name: editName,
         number: editNumber,
         category: editCategory || null,
@@ -253,7 +240,6 @@ export function SeatingManager({
         description: t('seating.tableUpdatedDesc', { name: updated.name }),
       });
       setEditingTable(null);
-      router.refresh();
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
@@ -271,7 +257,7 @@ export function SeatingManager({
     setIsSubmittingEditAssign(true);
     try {
       for (const guestId of editSelectedGuests) {
-        const result = await assignSeatWithFamily(supabase, {
+        const result = await assignSeatWithFamilyAction({
           guest_id: guestId,
           table_id: editingTable.id,
         });
@@ -284,7 +270,6 @@ export function SeatingManager({
             }),
             variant: 'destructive',
           });
-          router.refresh();
           setEditSelectedGuests([]);
           return;
         }
@@ -293,7 +278,6 @@ export function SeatingManager({
         const g = unassignedGuests.find((ug) => ug.id === id);
         return sum + 1 + (g?.children?.length ?? 0);
       }, 0);
-      router.refresh();
       setEditSelectedGuests([]);
       setEditGuestSearch('');
       toast({

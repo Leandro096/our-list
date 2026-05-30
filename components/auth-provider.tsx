@@ -242,8 +242,11 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   }, [user, fetchProfile, resolveActiveRole]);
 
   useEffect(() => {
+    let cancelled = false;
+
     // Failsafe: if profile loading hangs (slow DB), unblock the UI after 8 s.
     const failsafeTimer = setTimeout(() => {
+      if (cancelled) return;
       console.warn('[AuthProvider] Profile load timed out — forcing loading state off');
       setIsLoading(false);
     }, 8000);
@@ -264,7 +267,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         } else {
           const { data } = await supabase.auth.getUser();
           currentUser = data.user ?? null;
-          setUser(currentUser);
+          if (!cancelled) setUser(currentUser);
         }
 
         if (currentUser) {
@@ -273,16 +276,18 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
           // acquires Web Lock → can hang if _callRefreshToken() is in-flight.
           const profileData =
             initialProfile !== undefined ? initialProfile : await fetchProfile(currentUser.id);
-          if (profileData !== null) setProfile(profileData);
-          if (profileData?.roles) {
-            await resolveActiveRole(currentUser.id, profileData.roles as Role[]);
+          if (!cancelled) {
+            if (profileData !== null) setProfile(profileData);
+            if (profileData?.roles) {
+              await resolveActiveRole(currentUser.id, profileData.roles as Role[]);
+            }
           }
         }
       } catch (err) {
         console.error('[AuthProvider] loadData error:', err);
       } finally {
         clearTimeout(failsafeTimer);
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -293,15 +298,18 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       // INITIAL_SESSION is handled synchronously above (SSR user or getUser()).
       if (event === 'INITIAL_SESSION') return;
+      if (cancelled) return;
 
       try {
         setUser(session?.user ?? null);
 
         if (session?.user) {
           const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-          if (profileData?.roles) {
-            await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+          if (!cancelled) {
+            setProfile(profileData);
+            if (profileData?.roles) {
+              await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+            }
           }
         } else {
           setProfile(null);
@@ -314,6 +322,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     });
 
     return () => {
+      cancelled = true;
       clearTimeout(failsafeTimer);
       subscription.unsubscribe();
     };
@@ -346,12 +355,19 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     // 2. Descartar el singleton para que el próximo login parta de un cliente limpio.
     resetClient();
 
-    // 3. Invalidar la sesión en el servidor en segundo plano (fire-and-forget).
-    //    Si la red falla o tarda, no afecta la UX — el proxy detectará la sesión
-    //    expirada en la siguiente navegación y redirigirá a /auth/login.
-    supabase.auth.signOut().catch((error) => {
-      console.error('[AuthProvider] signOut network error:', error);
-    });
+    // 3. Limpiar la sesión localmente de forma inmediata (scope: 'local').
+    //    Con scope 'global' (el default), signOut() espera un POST /auth/v1/logout
+    //    que puede colgar si la conexión TCP está inactiva, dejando las cookies
+    //    intactas. Cuando AuthGuard redirige a /auth/login, el proxy ve la cookie
+    //    válida y rebota al usuario de vuelta al dashboard en un loop.
+    //    scope: 'local' llama _removeSession() directamente (sin red), borra
+    //    las cookies de inmediato y no hay bounce-loop.
+    //    La sesión del servidor expirará de forma natural.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.error('[AuthProvider] signOut error:', error);
+    }
   };
 
   return (

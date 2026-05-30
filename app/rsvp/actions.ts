@@ -1,7 +1,7 @@
 'use server';
 
 import { readLimiter } from '@/lib/rate-limit';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 type PublicGuestResult = {
   invitation_guid: string;
@@ -62,13 +62,17 @@ export async function searchGuestsForPublicRsvp(term: string): Promise<PublicGue
   const cleaned = sanitizeTerm(term);
   if (cleaned.length < MIN_SEARCH_CHARS) return [];
 
-  // Rate limit by a stable per-IP key (anonymous public route).
-  // We use the term as a rough per-session key; upgrade to header-based IP
-  // if more precision is needed.
-  const rateCheck = readLimiter.check('public_rsvp_search');
+  // Rate limit per IP address to prevent abuse.
+  const { headers } = await import('next/headers');
+  const headersList = await headers();
+  const ip =
+    headersList.get('x-forwarded-for')?.split(',')[0].trim() ??
+    headersList.get('x-real-ip') ??
+    'anonymous';
+  const rateCheck = readLimiter.check(`public_rsvp_search:${ip}`);
   if (!rateCheck.allowed) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from('guests')
     .select('invitation_guid, first_name, last_name, event_attendance(event_type)')
@@ -96,7 +100,7 @@ export async function getPublicRsvpDetails(
     return { ok: false, errorCode: 'invalid_invitation' };
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: base, error: baseError } = await supabase
     .from('guests')
     .select(
@@ -162,6 +166,51 @@ export async function getPublicRsvpDetails(
   };
 }
 
+const FIELD_LIMITS = {
+  name: 100,
+  email: 254,
+  phone: 30,
+  dietaryRestrictions: 500,
+} as const;
+
+function exceedsLimit(value: string | undefined | null, max: number): boolean {
+  return typeof value === 'string' && value.length > max;
+}
+
+function validateRsvpFieldLengths(input: {
+  email?: string;
+  phone?: string;
+  dietaryRestrictions?: string;
+  plusOne?: { firstName: string; lastName: string; email?: string; phone?: string; dietaryRestrictions?: string };
+  related?: Array<{ email?: string; phone?: string; dietaryRestrictions?: string }>;
+}): boolean {
+  if (
+    exceedsLimit(input.email, FIELD_LIMITS.email) ||
+    exceedsLimit(input.phone, FIELD_LIMITS.phone) ||
+    exceedsLimit(input.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
+  ) return false;
+
+  if (input.plusOne) {
+    if (
+      exceedsLimit(input.plusOne.firstName, FIELD_LIMITS.name) ||
+      exceedsLimit(input.plusOne.lastName, FIELD_LIMITS.name) ||
+      exceedsLimit(input.plusOne.email, FIELD_LIMITS.email) ||
+      exceedsLimit(input.plusOne.phone, FIELD_LIMITS.phone) ||
+      exceedsLimit(input.plusOne.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
+    ) return false;
+  }
+
+  for (const rel of input.related ?? []) {
+    if (
+      exceedsLimit(rel.email, FIELD_LIMITS.email) ||
+      exceedsLimit(rel.phone, FIELD_LIMITS.phone) ||
+      exceedsLimit(rel.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
+    ) return false;
+  }
+
+  return true;
+}
+
 export async function submitPublicRsvp(input: {
   invitationGuid: string;
   status: 'confirmed' | 'tentative' | 'declined';
@@ -197,7 +246,11 @@ export async function submitPublicRsvp(input: {
     return { ok: false, errorCode: 'invalid_invitation' };
   }
 
-  const supabase = await createClient();
+  if (!validateRsvpFieldLengths(input)) {
+    return { ok: false, errorCode: 'save_failed' };
+  }
+
+  const supabase = createAdminClient();
 
   const { data: baseGuest } = await supabase
     .from('guests')
