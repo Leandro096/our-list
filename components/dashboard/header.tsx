@@ -46,8 +46,8 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui';
 
-import { LanguageSwitcher } from '../language-switcher';
 import { useSidebar } from './sidebar-context';
+import { LanguageSwitcher } from '../language-switcher';
 
 const navigationItems = [
   {

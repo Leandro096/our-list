@@ -4,7 +4,7 @@ import { useState, useEffect, useContext, useCallback, createContext } from 'rea
 
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-import { createClient, resetClient } from '@/lib/supabase/client';
+import { resetClient, createClient } from '@/lib/supabase/client';
 
 import type { Role, UserWithRoles } from '@/lib';
 
