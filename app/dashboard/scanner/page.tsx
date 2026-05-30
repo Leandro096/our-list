@@ -1,32 +1,34 @@
 'use client';
 
-import { CheckCircle, XCircle, AlertTriangle, ScanLine, Users } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useRef, useState, useEffect } from 'react';
+import { Users, XCircle, ScanLine, CheckCircle, AlertTriangle } from 'lucide-react';
 
+import { createClient } from '@/lib/supabase/client';
+
+import { toast } from '@/hooks';
+import { useTranslation } from '@/locales';
 import {
+  getTodayStats,
+  type ScannerGuest,
+  type GroupScanMember,
+  processGuestScanByFamily,
+} from '@/services';
+
+import { useAuth } from '@/components/auth-provider';
+import {
+  Card,
   Badge,
   Button,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Card,
-  CardContent,
-  CardHeader,
   CardTitle,
+  SelectItem,
+  CardHeader,
+  SelectValue,
+  CardContent,
+  SelectContent,
+  SelectTrigger,
 } from '@/components/ui';
-import { useAuth } from '@/components/auth-provider';
-import { Html5Qrcode } from 'html5-qrcode';
-import { useTranslation } from '@/locales';
-import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from '@/hooks';
-import {
-  type ScannerGuest,
-  type GroupScanMember,
-  getTodayStats,
-  processGuestScanByFamily,
-} from '@/services';
 
 type ScanResult = {
   success: boolean;
@@ -48,7 +50,9 @@ export default function ScannerPage() {
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchTodayStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTodayStats = async () => {
@@ -63,41 +67,6 @@ export default function ScannerPage() {
       });
     }
   };
-
-  useEffect(() => {
-    if (!isScanning) return;
-
-    const scanner = new Html5Qrcode('qr-reader');
-    scannerRef.current = scanner;
-
-    Html5Qrcode.getCameras()
-      .then((cameras) => {
-        const cameraId = cameras.length > 0 ? cameras[0].id : { facingMode: 'environment' };
-
-        return scanner.start(
-          cameraId,
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          async (decodedText) => {
-            await scanner.stop().catch(() => {});
-            scannerRef.current = null;
-            setIsScanning(false);
-            await handleScan(decodedText);
-          },
-          undefined
-        );
-      })
-      .catch(() => {
-        scannerRef.current = null;
-        setIsScanning(false);
-      });
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current = null;
-      }
-    };
-  }, [isScanning]);
 
   const handleScan = async (invitationGuid: string) => {
     try {
@@ -135,6 +104,52 @@ export default function ScannerPage() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!isScanning) return;
+
+    const scanner = new Html5Qrcode('qr-reader');
+    scannerRef.current = scanner;
+
+    Html5Qrcode.getCameras()
+      .then((cameras) => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+        const cameraId = isMobile
+          ? { facingMode: { exact: 'environment' } }
+          : cameras.length > 0
+            ? cameras[0].id
+            : { facingMode: 'environment' };
+
+        return scanner.start(
+          cameraId,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText) => {
+            await scanner.stop().catch(() => {});
+            scannerRef.current = null;
+            setIsScanning(false);
+            await handleScan(decodedText);
+          },
+          undefined
+        );
+      })
+      .catch(() => {
+        scannerRef.current = null;
+        setIsScanning(false);
+      });
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch((err) => {
+          console.warn('[Scanner] Error stopping camera on cleanup:', err);
+        });
+        scannerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScanning]);
 
   const startScanning = () => {
     setScanResult(null);
@@ -272,7 +287,7 @@ export default function ScannerPage() {
                       </p>
 
                       {/* Family members */}
-                      {scanResult.members && scanResult.members.length > 1 && (
+                      {scanResult.members && scanResult.members.length > 0 && (
                         <div className="mt-3 space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">
                             {t('scanner.familyGroup')} —{' '}
@@ -285,9 +300,16 @@ export default function ScannerPage() {
                               ) : (
                                 <CheckCircle className="h-3.5 w-3.5 text-sage shrink-0" />
                               )}
-                              <span>
+                              <span className="flex-1">
                                 {member.first_name} {member.last_name}
                               </span>
+                              {member.seating && (
+                                <span className="text-xs text-muted-foreground">
+                                  {t('scanner.tableNumber', {
+                                    number: String(member.seating.table_number),
+                                  })}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -308,26 +330,6 @@ export default function ScannerPage() {
                               {cat.name}
                             </Badge>
                           ))}
-                        </div>
-                      )}
-
-                      {/* Seating */}
-                      {scanResult.guest.seating && (
-                        <div className="mt-3 rounded-md bg-background/50 p-3">
-                          <p className="text-sm font-medium">{t('scanner.seatingAssignment')}</p>
-                          <p className="text-lg font-semibold">
-                            {t('scanner.tableNumber', {
-                              number: String(scanResult.guest.seating.table_number),
-                            })}
-                            {scanResult.guest.seating.seat_number && (
-                              <>
-                                ,{' '}
-                                {t('scanner.seatNumber', {
-                                  number: String(scanResult.guest.seating.seat_number),
-                                })}
-                              </>
-                            )}
-                          </p>
                         </div>
                       )}
                     </>

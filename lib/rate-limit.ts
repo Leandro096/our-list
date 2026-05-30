@@ -7,7 +7,11 @@
  *   if (!result.allowed) throw new Error(result.message);
  *
  * NOTE: This is per-process memory — resets on server restart/redeploy.
- * Suitable for this app's scale. Swap for Redis-based limiter if needed.
+ * Suitable for this app's scale. Swap for a Redis-based limiter if you need
+ * cross-instance consistency in a multi-instance deployment.
+ *
+ * To prevent unbounded memory growth, stale buckets are evicted at each
+ * `check()` call when the number of tracked keys exceeds EVICTION_THRESHOLD.
  */
 
 interface RateLimiterOptions {
@@ -29,10 +33,26 @@ interface Bucket {
   timestamps: number[];
 }
 
+// Evict stale entries once the map reaches this size to prevent unbounded growth
+// in long-running processes (e.g. local dev server or traditional Node hosting).
+const EVICTION_THRESHOLD = 5_000;
+
 export function createRateLimiter({ limit, windowMs }: RateLimiterOptions) {
   const buckets = new Map<string, Bucket>();
 
+  function evictStale() {
+    if (buckets.size < EVICTION_THRESHOLD) return;
+    const cutoff = Date.now() - windowMs;
+    for (const [key, bucket] of buckets) {
+      if (bucket.timestamps.every((t) => t <= cutoff)) {
+        buckets.delete(key);
+      }
+    }
+  }
+
   function check(key: string): CheckResult {
+    evictStale();
+
     const now = Date.now();
     const cutoff = now - windowMs;
 
@@ -59,7 +79,12 @@ export function createRateLimiter({ limit, windowMs }: RateLimiterOptions) {
     return { allowed: true, message: '', retryAfterMs: 0 };
   }
 
-  return { check };
+  /** Clears all tracked buckets. Useful for tests. */
+  function reset() {
+    buckets.clear();
+  }
+
+  return { check, reset };
 }
 
 // ---------------------------------------------------------------------------

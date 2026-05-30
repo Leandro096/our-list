@@ -1,10 +1,12 @@
-import { Spinner } from '../ui';
-import { cn, type Role } from '@/lib';
-import { useAuth } from '../auth-provider';
-import { useEffect, useState } from 'react';
-import { Heart, ShieldCheck, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, Clock, ShieldCheck } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+import { cn, type Role } from '@/lib';
 import { useTranslation } from '@/locales';
+
+import { Spinner } from '../ui';
+import { useAuth } from '../auth-provider';
 
 export function SelectRoleContent() {
   const { isLoading, profile, activeRole, selectRole } = useAuth();
@@ -58,7 +60,9 @@ export function SelectRoleContent() {
               <p className="text-sm text-muted-foreground">{t('selectRole.noRolesDescription')}</p>
             </div>
           </div>
-          <p className="text-center text-xs text-muted-foreground">{t('selectRole.contactAdmin')}</p>
+          <p className="text-center text-xs text-muted-foreground">
+            {t('selectRole.contactAdmin')}
+          </p>
         </div>
       </div>
     );
@@ -73,10 +77,10 @@ export function SelectRoleContent() {
             <Heart className="h-7 w-7 text-primary" />
           </div>
           <div className="space-y-1">
-            <h1 className="font-serif text-3xl font-semibold text-foreground">{t('selectRole.title')}</h1>
-            <p className="text-sm text-muted-foreground">
-              {t('selectRole.description')}
-            </p>
+            <h1 className="font-serif text-3xl font-semibold text-foreground">
+              {t('selectRole.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t('selectRole.description')}</p>
           </div>
         </div>
 
@@ -115,9 +119,7 @@ export function SelectRoleContent() {
           })}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          {t('selectRole.switchHint')}
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t('selectRole.switchHint')}</p>
       </div>
     </div>
   );

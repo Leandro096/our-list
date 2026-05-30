@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Guest, ScanLog, User } from '@/lib/types';
+
+import type { User, Guest, ScanLog } from '@/lib/types';
 
 // ---- Return types ----
 
@@ -119,6 +120,7 @@ export type GroupScanMember = {
   first_name: string;
   last_name: string;
   is_duplicate: boolean;
+  seating: { table_number: string } | undefined;
 };
 
 export type ProcessGroupScanResult =
@@ -155,7 +157,7 @@ export async function processGuestScanByFamily(
   // Get all family members (root + children)
   const { data: children } = await supabase
     .from('guests')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, seating_assignments(tables(number))')
     .eq('parent_guest_id', rootId);
 
   // Get root guest full data for scanner display
@@ -194,9 +196,35 @@ export async function processGuestScanByFamily(
     })(),
   };
 
-  const allMemberIds: Array<{ id: string; first_name: string; last_name: string }> = [
-    { id: rootId, first_name: rootGuest.first_name, last_name: rootGuest.last_name },
-    ...((children ?? []) as Array<{ id: string; first_name: string; last_name: string }>),
+  type MemberRow = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    seating: { table_number: string } | undefined;
+  };
+
+  const allMemberIds: MemberRow[] = [
+    {
+      id: rootId,
+      first_name: rootGuest.first_name,
+      last_name: rootGuest.last_name,
+      seating: rootGuest.seating ? { table_number: rootGuest.seating.table_number } : undefined,
+    },
+    ...(
+      (children ?? []) as unknown as Array<{
+        id: string;
+        first_name: string;
+        last_name: string;
+        seating_assignments: Array<{ tables: { number: string } | null }>;
+      }>
+    ).map((c) => ({
+      id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+      seating: c.seating_assignments?.[0]?.tables
+        ? { table_number: c.seating_assignments[0].tables.number }
+        : undefined,
+    })),
   ];
 
   const today = new Date();
@@ -230,6 +258,7 @@ export async function processGuestScanByFamily(
       first_name: member.first_name,
       last_name: member.last_name,
       is_duplicate: isDuplicate,
+      seating: member.seating,
     });
   }
 

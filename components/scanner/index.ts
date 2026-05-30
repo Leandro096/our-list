@@ -1,1 +1,1 @@
-export * from "./scan-history-list";
+export * from './scan-history-list';

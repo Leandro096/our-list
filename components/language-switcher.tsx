@@ -1,17 +1,19 @@
-"use client";
+'use client';
+
+import { GlobeIcon } from 'lucide-react';
+
+import { cn } from '@/lib';
+import { useI18n, LOCALES } from '@/locales';
 
 import {
   Button,
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui";
-import { cn } from "@/lib";
-import { GlobeIcon } from "lucide-react";
-import { useI18n, LOCALES } from "@/locales";
+  DropdownMenuSeparator,
+} from '@/components/ui';
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale, t } = useI18n();
@@ -23,30 +25,23 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         <Button
           variant="ghost"
           size="sm"
-          className={cn("gap-2", className)}
-          aria-label={t("common.language")}
+          className={cn('gap-2', className)}
+          aria-label={t('common.language')}
         >
           <GlobeIcon className="h-4 w-4" />
-          <span className="text-xs font-medium uppercase">
-            {current?.flag ?? locale}
-          </span>
+          <span className="text-xs font-medium uppercase">{current?.flag ?? locale}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuLabel>{t("common.language")}</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('common.language')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {LOCALES.map((l) => (
           <DropdownMenuItem
             key={l.value}
             onClick={() => setLocale(l.value)}
-            className={cn(
-              "gap-2 cursor-pointer",
-              locale === l.value && "font-semibold",
-            )}
+            className={cn('gap-2 cursor-pointer', locale === l.value && 'font-semibold')}
           >
-            <span className="text-xs font-mono text-muted-foreground w-4">
-              {l.flag}
-            </span>
+            <span className="text-xs font-mono text-muted-foreground w-4">{l.flag}</span>
             {l.native}
           </DropdownMenuItem>
         ))}

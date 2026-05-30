@@ -1,9 +1,11 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { ShieldXIcon } from "lucide-react";
-import { useTranslation } from "@/locales";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link';
+import { ShieldXIcon } from 'lucide-react';
+
+import { useTranslation } from '@/locales';
+
+import { Button } from '@/components/ui/button';
 
 interface UnauthorizedPageProps {
   title?: string;
@@ -26,16 +28,16 @@ export function UnauthorizedPage({
 
       <div className="space-y-2">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
-          {title ?? t("errors.unauthorized.title")}
+          {title ?? t('errors.unauthorized.title')}
         </h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          {description ?? t("errors.unauthorized.description")}
+          {description ?? t('errors.unauthorized.description')}
         </p>
       </div>
 
       {showBackButton && (
         <Button asChild variant="outline">
-          <Link href="/dashboard">{t("errors.unauthorized.backToDashboard")}</Link>
+          <Link href="/dashboard">{t('errors.unauthorized.backToDashboard')}</Link>
         </Button>
       )}
     </div>

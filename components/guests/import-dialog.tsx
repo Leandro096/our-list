@@ -1,40 +1,48 @@
-"use client";
+'use client';
 
-import { useCallback, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRef, useState, useCallback } from 'react';
 import {
   Upload,
-  FileSpreadsheet,
+  RotateCcw,
+  ArrowRight,
   AlertCircle,
   CheckCircle2,
-  ArrowRight,
-  RotateCcw,
-} from "lucide-react";
-import { parseExcelFile, GUEST_COLUMNS, detectColumnKey, downloadGuestTemplate, REQUIRED_EXPORT_COLUMNS } from "@/lib/excel";
-import { validateImportRows } from "@/lib/validations/guest-import";
-import { importGuestsAction } from "@/app/dashboard/guests/actions";
-import { useI18n } from "@/locales";
+  FileSpreadsheet,
+} from 'lucide-react';
 
-type Step = "upload" | "map" | "preview" | "result";
+import { validateImportRows } from '@/lib/validations/guest-import';
+import {
+  GUEST_COLUMNS,
+  parseExcelFile,
+  detectColumnKey,
+  downloadGuestTemplate,
+  REQUIRED_EXPORT_COLUMNS,
+} from '@/lib/excel';
+
+import { useI18n } from '@/locales';
+import { importGuestsAction } from '@/app/dashboard/guests/actions';
+
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Select,
+  SelectItem,
+  SelectValue,
+  SelectContent,
+  SelectTrigger,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogTitle,
+  DialogHeader,
+  DialogFooter,
+  DialogContent,
+  DialogDescription,
+} from '@/components/ui/dialog';
+
+type Step = 'upload' | 'map' | 'preview' | 'result';
 
 interface ImportDialogProps {
   open: boolean;
@@ -42,14 +50,10 @@ interface ImportDialogProps {
   onImported?: () => void;
 }
 
-const IGNORE_VALUE = "__ignore__";
+const IGNORE_VALUE = '__ignore__';
 
-export function ImportDialog({
-  open,
-  onOpenChange,
-  onImported,
-}: ImportDialogProps) {
-  const [step, setStep] = useState<Step>("upload");
+export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogProps) {
+  const [step, setStep] = useState<Step>('upload');
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,9 +68,7 @@ export function ImportDialog({
   // After applying mapping
   const [mappedRows, setMappedRows] = useState<Record<string, string>[]>([]);
   const [validCount, setValidCount] = useState(0);
-  const [errorRows, setErrorRows] = useState<
-    Array<{ row: number; error: string }>
-  >([]);
+  const [errorRows, setErrorRows] = useState<Array<{ row: number; error: string }>>([]);
 
   // Final result
   const [importResult, setImportResult] = useState<{
@@ -78,7 +80,7 @@ export function ImportDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
-    setStep("upload");
+    setStep('upload');
     setError(null);
     setDetectedHeaders([]);
     setRawRows([]);
@@ -87,14 +89,14 @@ export function ImportDialog({
     setValidCount(0);
     setErrorRows([]);
     setImportResult(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   // ── Step 1: Upload ──────────────────────────────────────────────────────────
 
   async function handleFile(file: File) {
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      setError(t("guests.importDialog.errorOnlyFormats"));
+      setError(t('guests.importDialog.errorOnlyFormats'));
       return;
     }
     setIsLoading(true);
@@ -102,7 +104,7 @@ export function ImportDialog({
     try {
       const { headers, rows } = await parseExcelFile(file);
       if (headers.length === 0 || rows.length === 0) {
-        setError(t("guests.importDialog.errorEmpty"));
+        setError(t('guests.importDialog.errorEmpty'));
         return;
       }
       // Auto-detect column mapping
@@ -114,9 +116,9 @@ export function ImportDialog({
       setDetectedHeaders(headers);
       setRawRows(rows);
       setColumnMap(autoMap);
-      setStep("map");
+      setStep('map');
     } catch {
-      setError(t("guests.importDialog.errorReadFail"));
+      setError(t('guests.importDialog.errorReadFail'));
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +137,7 @@ export function ImportDialog({
       if (file) handleFile(file);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    []
   );
 
   // ── Step 2: Map columns ─────────────────────────────────────────────────────
@@ -147,7 +149,7 @@ export function ImportDialog({
       detectedHeaders.forEach((h) => {
         const key = columnMap[h];
         if (key && key !== IGNORE_VALUE) {
-          newRow[key] = row[h] ?? "";
+          newRow[key] = row[h] ?? '';
         }
       });
       return newRow;
@@ -159,10 +161,10 @@ export function ImportDialog({
     setErrorRows([
       ...errors.map((e) => ({
         row: e.row,
-        error: e.error ?? "Validation error",
+        error: e.error ?? 'Validation error',
       })),
     ]);
-    setStep("preview");
+    setStep('preview');
   }
 
   // ── Step 4: Import ──────────────────────────────────────────────────────────
@@ -173,12 +175,10 @@ export function ImportDialog({
     try {
       const result = await importGuestsAction(mappedRows);
       setImportResult(result);
-      setStep("result");
+      setStep('result');
       if (result.created > 0) onImported?.();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : t("guests.importDialog.importFailed"),
-      );
+      setError(e instanceof Error ? e.message : t('guests.importDialog.importFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -203,10 +203,8 @@ export function ImportDialog({
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t("guests.importDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("guests.importDialog.description")}
-          </DialogDescription>
+          <DialogTitle>{t('guests.importDialog.title')}</DialogTitle>
+          <DialogDescription>{t('guests.importDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <Progress value={stepProgress[step]} className="h-1" />
@@ -219,12 +217,12 @@ export function ImportDialog({
         )}
 
         {/* ─── Step 1: Upload ─── */}
-        {step === "upload" && (
+        {step === 'upload' && (
           <div className="space-y-4">
             {/* Column reference */}
             <div className="rounded-md border bg-muted/40 px-4 py-3 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("guests.importDialog.templateTitle")}
+                {t('guests.importDialog.templateTitle')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {GUEST_COLUMNS.map((col) => {
@@ -234,30 +232,26 @@ export function ImportDialog({
                       key={col.key}
                       className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${
                         isRequired
-                          ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                          : "bg-muted text-muted-foreground ring-1 ring-border"
+                          ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                          : 'bg-muted text-muted-foreground ring-1 ring-border'
                       }`}
                     >
                       {col.label}
-                      {isRequired && (
-                        <span className="font-bold text-destructive">*</span>
-                      )}
-                      {col.hint && (
-                        <span className="opacity-60"> — {col.hint}</span>
-                      )}
+                      {isRequired && <span className="font-bold text-destructive">*</span>}
+                      {col.hint && <span className="opacity-60"> — {col.hint}</span>}
                     </span>
                   );
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {t("guests.importDialog.templateHint")}
+                {t('guests.importDialog.templateHint')}
               </p>
             </div>
 
             {/* Drop zone */}
             <div
               className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 transition-colors ${
-                isDragging ? "border-primary bg-primary/5" : "border-border"
+                isDragging ? 'border-primary bg-primary/5' : 'border-border'
               }`}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -268,20 +262,12 @@ export function ImportDialog({
             >
               <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
               <div className="text-center">
-                <p className="font-medium">
-                  {t("guests.importDialog.dragDropHere")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t("guests.importDialog.supports")}
-                </p>
+                <p className="font-medium">{t('guests.importDialog.dragDropHere')}</p>
+                <p className="text-sm text-muted-foreground">{t('guests.importDialog.supports')}</p>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadGuestTemplate()}
-                >
-                  {t("guests.importDialog.downloadTemplate")}
+                <Button variant="outline" size="sm" onClick={() => downloadGuestTemplate()}>
+                  {t('guests.importDialog.downloadTemplate')}
                 </Button>
                 <Button
                   variant="default"
@@ -291,8 +277,8 @@ export function ImportDialog({
                 >
                   <Upload className="mr-2 h-4 w-4" />
                   {isLoading
-                    ? t("guests.importDialog.readingFile")
-                    : t("guests.importDialog.chooseFile")}
+                    ? t('guests.importDialog.readingFile')
+                    : t('guests.importDialog.chooseFile')}
                 </Button>
               </div>
               <input
@@ -307,10 +293,10 @@ export function ImportDialog({
         )}
 
         {/* ─── Step 2: Map columns ─── */}
-        {step === "map" && (
+        {step === 'map' && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {t("guests.importDialog.mapDescription", {
+              {t('guests.importDialog.mapDescription', {
                 cols: detectedHeaders.length,
                 rows: rawRows.length,
               })}
@@ -320,13 +306,13 @@ export function ImportDialog({
                 <thead className="sticky top-0 bg-muted">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">
-                      {t("guests.importDialog.colFile")}
+                      {t('guests.importDialog.colFile')}
                     </th>
                     <th className="px-3 py-2 text-left font-medium">
-                      {t("guests.importDialog.colMapsTo")}
+                      {t('guests.importDialog.colMapsTo')}
                     </th>
                     <th className="px-3 py-2 text-left font-medium">
-                      {t("guests.importDialog.colPreview")}
+                      {t('guests.importDialog.colPreview')}
                     </th>
                   </tr>
                 </thead>
@@ -347,24 +333,20 @@ export function ImportDialog({
                           <SelectContent>
                             <SelectItem value={IGNORE_VALUE}>
                               <span className="text-muted-foreground">
-                                {t("guests.importDialog.ignore")}
+                                {t('guests.importDialog.ignore')}
                               </span>
                             </SelectItem>
                             {GUEST_COLUMNS.map((col) => (
                               <SelectItem key={col.key} value={col.key}>
                                 {col.label}
-                                {col.required && (
-                                  <span className="ml-1 text-destructive">
-                                    *
-                                  </span>
-                                )}
+                                {col.required && <span className="ml-1 text-destructive">*</span>}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                        {rawRows[0]?.[header] ?? "—"}
+                        {rawRows[0]?.[header] ?? '—'}
                       </td>
                     </tr>
                   ))}
@@ -372,26 +354,26 @@ export function ImportDialog({
               </table>
             </ScrollArea>
             <p className="text-xs text-muted-foreground">
-              {t("guests.importDialog.firstLastRequired")}
+              {t('guests.importDialog.firstLastRequired')}
             </p>
           </div>
         )}
 
         {/* ─── Step 3: Preview ─── */}
-        {step === "preview" && (
+        {step === 'preview' && (
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex items-center gap-2 rounded-md border bg-green-50 px-3 py-2 dark:bg-green-950">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                  {t("guests.importDialog.validRows", { count: validCount })}
+                  {t('guests.importDialog.validRows', { count: validCount })}
                 </span>
               </div>
               {errorRows.length > 0 && (
                 <div className="flex items-center gap-2 rounded-md border bg-red-50 px-3 py-2 dark:bg-red-950">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <span className="text-sm font-medium text-red-700 dark:text-red-400">
-                    {t("guests.importDialog.errorRows", {
+                    {t('guests.importDialog.errorRows', {
                       count: errorRows.length,
                     })}
                   </span>
@@ -404,21 +386,15 @@ export function ImportDialog({
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-muted">
                     <tr>
-                      <th className="px-3 py-1.5 text-left">
-                        {t("guests.importDialog.rowCol")}
-                      </th>
-                      <th className="px-3 py-1.5 text-left">
-                        {t("guests.importDialog.errorCol")}
-                      </th>
+                      <th className="px-3 py-1.5 text-left">{t('guests.importDialog.rowCol')}</th>
+                      <th className="px-3 py-1.5 text-left">{t('guests.importDialog.errorCol')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {errorRows.map((e) => (
                       <tr key={e.row} className="border-t">
                         <td className="px-3 py-1.5 font-mono">{e.row}</td>
-                        <td className="px-3 py-1.5 text-destructive">
-                          {e.error}
-                        </td>
+                        <td className="px-3 py-1.5 text-destructive">{e.error}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -429,22 +405,20 @@ export function ImportDialog({
             {validCount === 0 && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {t("guests.importDialog.noValidRows")}
-                </AlertDescription>
+                <AlertDescription>{t('guests.importDialog.noValidRows')}</AlertDescription>
               </Alert>
             )}
           </div>
         )}
 
         {/* ─── Step 4: Result ─── */}
-        {step === "result" && importResult && (
+        {step === 'result' && importResult && (
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-md border bg-green-50 px-4 py-3 dark:bg-green-950">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
               <div>
                 <p className="font-semibold text-green-700 dark:text-green-400">
-                  {t("guests.importDialog.importedOk", {
+                  {t('guests.importDialog.importedOk', {
                     count: importResult.created,
                   })}
                 </p>
@@ -454,7 +428,7 @@ export function ImportDialog({
             {importResult.errors.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">
-                  {t("guests.importDialog.failedRows", {
+                  {t('guests.importDialog.failedRows', {
                     count: importResult.errors.length,
                   })}
                 </p>
@@ -462,11 +436,9 @@ export function ImportDialog({
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-muted">
                       <tr>
+                        <th className="px-3 py-1.5 text-left">{t('guests.importDialog.rowCol')}</th>
                         <th className="px-3 py-1.5 text-left">
-                          {t("guests.importDialog.rowCol")}
-                        </th>
-                        <th className="px-3 py-1.5 text-left">
-                          {t("guests.importDialog.errorCol")}
+                          {t('guests.importDialog.errorCol')}
                         </th>
                       </tr>
                     </thead>
@@ -474,9 +446,7 @@ export function ImportDialog({
                       {importResult.errors.map((e) => (
                         <tr key={e.row} className="border-t">
                           <td className="px-3 py-1.5 font-mono">{e.row}</td>
-                          <td className="px-3 py-1.5 text-destructive">
-                            {e.error}
-                          </td>
+                          <td className="px-3 py-1.5 text-destructive">{e.error}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -489,30 +459,30 @@ export function ImportDialog({
 
         {/* ─── Footer ─── */}
         <DialogFooter className="gap-2">
-          {step !== "upload" && step !== "result" && (
+          {step !== 'upload' && step !== 'result' && (
             <Button
               variant="outline"
-              onClick={() => setStep(step === "map" ? "upload" : "map")}
+              onClick={() => setStep(step === 'map' ? 'upload' : 'map')}
               disabled={isLoading}
             >
-              {t("guests.importDialog.back")}
+              {t('guests.importDialog.back')}
             </Button>
           )}
 
-          {step === "upload" && (
+          {step === 'upload' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              {t("guests.importDialog.cancel")}
+              {t('guests.importDialog.cancel')}
             </Button>
           )}
 
-          {step === "map" && (
+          {step === 'map' && (
             <Button onClick={applyMapping}>
-              {t("guests.importDialog.previewBtn")}
+              {t('guests.importDialog.previewBtn')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
 
-          {step === "preview" && (
+          {step === 'preview' && (
             <>
               <Button
                 variant="outline"
@@ -521,28 +491,25 @@ export function ImportDialog({
                 }}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                {t("guests.importDialog.startOver")}
+                {t('guests.importDialog.startOver')}
               </Button>
-              <Button
-                onClick={handleImport}
-                disabled={isLoading || validCount === 0}
-              >
+              <Button onClick={handleImport} disabled={isLoading || validCount === 0}>
                 {isLoading
-                  ? t("guests.importDialog.importingBtn")
-                  : t("guests.importDialog.importBtn", { count: validCount })}
+                  ? t('guests.importDialog.importingBtn')
+                  : t('guests.importDialog.importBtn', { count: validCount })}
                 {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </>
           )}
 
-          {step === "result" && (
+          {step === 'result' && (
             <Button
               onClick={() => {
                 reset();
                 onOpenChange(false);
               }}
             >
-              {t("guests.importDialog.done")}
+              {t('guests.importDialog.done')}
             </Button>
           )}
         </DialogFooter>

@@ -1,16 +1,11 @@
-"use client";
+'use client';
 
-import {
-  Card,
-  Button,
-  CardTitle,
-  CardHeader,
-  CardContent,
-  CardDescription,
-} from "@/components/ui";
-import Link from "next/link";
-import { Heart, Mail } from "lucide-react";
-import { useTranslation } from "@/locales";
+import Link from 'next/link';
+import { Mail, Heart } from 'lucide-react';
+
+import { useTranslation } from '@/locales';
+
+import { Card, Button, CardTitle, CardHeader, CardContent, CardDescription } from '@/components/ui';
 
 export default function SignUpSuccessPage() {
   const { t } = useTranslation();
@@ -24,7 +19,7 @@ export default function SignUpSuccessPage() {
               <Heart className="h-6 w-6 text-primary" />
             </div>
             <h1 className="font-serif text-2xl font-semibold text-foreground">
-              {t("common.appName")}
+              {t('common.appName')}
             </h1>
           </div>
 
@@ -33,19 +28,15 @@ export default function SignUpSuccessPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sage/20">
                 <Mail className="h-8 w-8 text-sage" />
               </div>
-              <CardTitle className="font-serif text-xl">
-                {t("auth.checkEmail")}
-              </CardTitle>
+              <CardTitle className="font-serif text-xl">{t('auth.checkEmail')}</CardTitle>
               <CardDescription className="text-base">
-                {t("auth.checkEmailDescription")}
+                {t('auth.checkEmailDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="mb-6 text-sm text-muted-foreground">
-                {t("auth.checkEmailDetails")}
-              </p>
+              <p className="mb-6 text-sm text-muted-foreground">{t('auth.checkEmailDetails')}</p>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/auth/login">{t("auth.backToSignIn")}</Link>
+                <Link href="/auth/login">{t('auth.backToSignIn')}</Link>
               </Button>
             </CardContent>
           </Card>

@@ -1,4 +1,13 @@
-"use client";
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Mail, UserPlus } from 'lucide-react';
+
+import { toast } from '@/hooks';
+import type { Role } from '@/lib';
+import { useTranslation } from '@/locales';
+import { inviteUserAction } from '@/app/dashboard/settings/users/actions';
 
 import {
   Input,
@@ -6,22 +15,15 @@ import {
   Button,
   Dialog,
   Select,
+  SelectItem,
   DialogTitle,
+  SelectValue,
   DialogHeader,
   DialogContent,
-  SelectItem,
-  SelectValue,
   SelectTrigger,
   SelectContent,
   DialogDescription,
-} from "@/components/ui";
-import { useState } from "react";
-import type { Role } from "@/lib";
-import { toast } from "@/hooks";
-import { Mail, UserPlus } from "lucide-react";
-import { useTranslation } from "@/locales";
-import { useRouter } from "next/navigation";
-import { inviteUserAction } from "@/app/dashboard/settings/users/actions";
+} from '@/components/ui';
 
 interface InviteUserDialogProps {
   roles: Role[];
@@ -29,25 +31,21 @@ interface InviteUserDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function InviteUserDialog({
-  roles,
-  open,
-  onOpenChange,
-}: InviteUserDialogProps) {
+export function InviteUserDialog({ roles, open, onOpenChange }: InviteUserDialogProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [roleId, setRoleId] = useState<string>("none");
+  const [email, setEmail] = useState('');
+  const [roleId, setRoleId] = useState<string>('none');
   const [isInviting, setIsInviting] = useState(false);
 
   const reset = () => {
-    setEmail("");
-    setRoleId("none");
+    setEmail('');
+    setRoleId('none');
   };
 
-  const handleClose = (open: boolean) => {
-    if (!open) reset();
-    onOpenChange(open);
+  const handleClose = (opened: boolean) => {
+    if (!opened) reset();
+    onOpenChange(opened);
   };
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -56,21 +54,18 @@ export function InviteUserDialog({
 
     setIsInviting(true);
     try {
-      await inviteUserAction(email, roleId === "none" ? null : roleId);
+      await inviteUserAction(email, roleId === 'none' ? null : roleId);
       toast({
-        title: t("settings.users_section.inviteSuccess"),
-        description: t("settings.users_section.inviteSuccessDesc").replace(
-          "{email}",
-          email,
-        ),
+        title: t('settings.users_section.inviteSuccess'),
+        description: t('settings.users_section.inviteSuccessDesc').replace('{email}', email),
       });
       router.refresh();
       handleClose(false);
     } catch (err) {
       toast({
-        title: t("settings.users_section.inviteError"),
+        title: t('settings.users_section.inviteError'),
         description: err instanceof Error ? err.message : undefined,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsInviting(false);
@@ -83,18 +78,16 @@ export function InviteUserDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
-            {t("settings.users_section.inviteUser")}
+            {t('settings.users_section.inviteUser')}
           </DialogTitle>
-          <DialogDescription>
-            {t("settings.users_section.inviteDescription")}
-          </DialogDescription>
+          <DialogDescription>{t('settings.users_section.inviteDescription')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleInvite} className="space-y-5 pt-2">
           {/* Email */}
           <div className="grid gap-2">
             <Label htmlFor="invite-email">
-              {t("settings.users_section.inviteEmail")}
+              {t('settings.users_section.inviteEmail')}
               <span className="ml-1 text-destructive">*</span>
             </Label>
             <div className="relative">
@@ -114,21 +107,15 @@ export function InviteUserDialog({
           {/* Role */}
           <div className="grid gap-2">
             <Label htmlFor="invite-role">
-              {t("settings.users_section.inviteRole")}
-              <span className="ml-1 text-xs text-muted-foreground">
-                ({t("common.optional")})
-              </span>
+              {t('settings.users_section.inviteRole')}
+              <span className="ml-1 text-xs text-muted-foreground">({t('common.optional')})</span>
             </Label>
             <Select value={roleId} onValueChange={setRoleId}>
               <SelectTrigger id="invite-role">
-                <SelectValue
-                  placeholder={t("settings.users_section.inviteNoRole")}
-                />
+                <SelectValue placeholder={t('settings.users_section.inviteNoRole')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">
-                  {t("settings.users_section.inviteNoRole")}
-                </SelectItem>
+                <SelectItem value="none">{t('settings.users_section.inviteNoRole')}</SelectItem>
                 {roles.map((role) => (
                   <SelectItem key={role.id} value={role.id}>
                     {role.name}
@@ -150,12 +137,12 @@ export function InviteUserDialog({
               onClick={() => handleClose(false)}
               disabled={isInviting}
             >
-              {t("common.cancel")}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isInviting || !email}>
               {isInviting
-                ? t("settings.users_section.inviting")
-                : t("settings.users_section.inviteUser")}
+                ? t('settings.users_section.inviting')
+                : t('settings.users_section.inviteUser')}
             </Button>
           </div>
         </form>

@@ -1,11 +1,33 @@
 'use client';
 
+import Link from 'next/link';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { X, Plus, Check, Loader2, UserPlus, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+
+import { useToast } from '@/hooks/use-toast';
+
+import { createClient } from '@/lib/supabase/client';
+
+import type { Guest, Category } from '@/lib';
+import type { GuestForEdit } from '@/services';
 import {
+  createGuestAction,
+  updateGuestAction,
+  linkGuestToParentAction,
+  unlinkGuestFromParentAction,
+} from '@/app/dashboard/guests/actions';
+
+import { useAuth } from '@/components/auth-provider';
+import { CategoriesDialog } from '@/components/categories';
+import {
+  Card,
   Label,
   Input,
   Select,
-  Card,
   Button,
+  Popover,
+  Command,
   Textarea,
   Checkbox,
   CardTitle,
@@ -13,36 +35,18 @@ import {
   CardHeader,
   CardContent,
   SelectValue,
-  SelectContent,
-  SelectTrigger,
-  Switch,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Command,
-  CommandInput,
   CommandList,
+  CommandItem,
+  CommandInput,
   CommandEmpty,
   CommandGroup,
-  CommandItem,
+  SelectContent,
+  SelectTrigger,
+  PopoverTrigger,
+  PopoverContent,
 } from '@/components/ui';
-import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import type { Category, Guest } from '@/lib';
-import type { GuestForEdit } from '@/services';
-import { ArrowLeft, Loader2, Plus, X, UserPlus, ChevronsUpDown, Check } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  createGuest,
-  updateGuest,
-  linkGuestToParent,
-  unlinkGuestFromParent,
-  getAvailableParentGuests,
-} from '@/services';
-import { useToast } from '@/hooks/use-toast';
+
 import { useTranslation } from '@/locales/i18n-provider';
-import { CategoriesDialog } from '@/components/categories';
 
 type PendingChild = {
   tempId: string;
@@ -59,17 +63,12 @@ interface GuestFormProps {
   mode?: 'create' | 'edit';
 }
 
-export function GuestForm({
-  categories,
-  guest,
-  mode = 'create',
-}: GuestFormProps) {
+export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
   const router = useRouter();
-  const supabase = createClient();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoriesState, setCategoriesState] = useState(categories);
 
@@ -115,10 +114,11 @@ export function GuestForm({
       if (guest?.id) {
         query = query.neq('id', guest.id);
       }
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
       setAvailableGuests(data ?? []);
       setGuestsFetched(true);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       toast({
         title: t('common.error'),
@@ -166,21 +166,67 @@ export function GuestForm({
     notes: guest?.notes || '',
     is_plus_one: guest?.is_plus_one || false,
     selectedCategories: guest?.guest_categories?.map((gc) => gc.category_id) || [],
-    ceremony_attending: guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? true,
-    reception_attending: guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? true,
+    ceremony_attending:
+      guest?.event_attendance?.find((ea) => ea.event_type === 'ceremony')?.attending ?? false,
+    reception_attending:
+      guest?.event_attendance?.find((ea) => ea.event_type === 'reception')?.attending ?? false,
     pendingChildren: [] as PendingChild[],
     parent_guest_id: guest?.parent_guest_id || null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsLoading(true);
-    setError(null);
 
     try {
       if (mode === 'create') {
-        const createdGuest = await createGuest(supabase, {
+        const createdGuest = await createGuestAction({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          email: formData.email,
+          phone: formData.phone,
+          status: formData.status as Guest['status'],
+          dietary_restrictions: formData.dietary_restrictions,
+          notes: formData.notes,
+          is_plus_one: formData.is_plus_one,
+          selectedCategories: formData.selectedCategories,
+          ceremony_attending: formData.ceremony_attending,
+          reception_attending: formData.reception_attending,
+          created_by: user?.id ?? null,
+        });
+
+        // Vincular invitados seleccionados como miembros del grupo
+        for (const memberId of familyMemberIds) {
+          await linkGuestToParentAction(memberId, createdGuest.id);
+        }
+
+        // Crear el nuevo relacionado (plus one)
+        for (const child of formData.pendingChildren) {
+          if (child.type === 'new') {
+            await createGuestAction({
+              first_name: child.first_name,
+              last_name: child.last_name,
+              email: '',
+              phone: '',
+              status: 'pending',
+              dietary_restrictions: '',
+              notes: '',
+              is_plus_one: child.is_plus_one,
+              selectedCategories: [],
+              ceremony_attending: formData.ceremony_attending,
+              reception_attending: formData.reception_attending,
+              parent_guest_id: createdGuest.id,
+              created_by: user?.id ?? null,
+            });
+          } else if (child.existing_guest_id) {
+            await linkGuestToParentAction(child.existing_guest_id, createdGuest.id);
+          }
+        }
+
+        router.push('/dashboard/guests');
+        router.refresh();
+      } else {
+        await updateGuestAction(guest!.id, {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
@@ -194,53 +240,11 @@ export function GuestForm({
           reception_attending: formData.reception_attending,
         });
 
-        // Vincular invitados seleccionados como miembros del grupo
-        for (const memberId of familyMemberIds) {
-          await linkGuestToParent(supabase, memberId, createdGuest.id);
-        }
-
-        // Crear el nuevo relacionado (plus one)
-        for (const child of formData.pendingChildren) {
-          if (child.type === 'new') {
-            await createGuest(supabase, {
-              first_name: child.first_name,
-              last_name: child.last_name,
-              email: '',
-              phone: '',
-              status: 'pending',
-              dietary_restrictions: '',
-              notes: '',
-              is_plus_one: child.is_plus_one,
-              selectedCategories: [],
-              ceremony_attending: true,
-              reception_attending: true,
-              parent_guest_id: createdGuest.id,
-            });
-          } else if (child.existing_guest_id) {
-            await linkGuestToParent(supabase, child.existing_guest_id, createdGuest.id);
-          }
-        }
-
-        router.push('/dashboard/guests');
-        router.refresh();
-      } else {
-        await updateGuest(supabase, guest!.id, {
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email,
-          phone: formData.phone,
-          status: formData.status as Guest['status'],
-          dietary_restrictions: formData.dietary_restrictions,
-          notes: formData.notes,
-          is_plus_one: formData.is_plus_one,
-          selectedCategories: formData.selectedCategories,
-        });
-
         // Sincronizar el child relacionado único (si aplica)
         const originalRelatedId =
           (guest?.children?.length ?? 0) === 1 ? guest!.children[0].id : null;
         if (originalRelatedId && !existingRelatedId) {
-          await unlinkGuestFromParent(supabase, originalRelatedId);
+          await unlinkGuestFromParentAction(originalRelatedId);
         }
 
         // Sincronizar miembros del grupo familiar (>1 hijos)
@@ -248,19 +252,19 @@ export function GuestForm({
           (guest?.children?.length ?? 0) > 1 ? (guest?.children?.map((c) => c.id) ?? []) : [];
         for (const id of originalChildIds) {
           if (!familyMemberIds.includes(id)) {
-            await unlinkGuestFromParent(supabase, id);
+            await unlinkGuestFromParentAction(id);
           }
         }
         for (const id of familyMemberIds) {
           if (!originalChildIds.includes(id)) {
-            await linkGuestToParent(supabase, id, guest!.id);
+            await linkGuestToParentAction(id, guest!.id);
           }
         }
 
         // Crear el nuevo relacionado (plus one)
         for (const child of formData.pendingChildren) {
           if (child.type === 'new') {
-            await createGuest(supabase, {
+            await createGuestAction({
               first_name: child.first_name,
               last_name: child.last_name,
               email: '',
@@ -270,12 +274,13 @@ export function GuestForm({
               notes: '',
               is_plus_one: child.is_plus_one,
               selectedCategories: [],
-              ceremony_attending: true,
-              reception_attending: true,
+              ceremony_attending: formData.ceremony_attending,
+              reception_attending: formData.reception_attending,
               parent_guest_id: guest!.id,
+              created_by: user?.id ?? null,
             });
           } else if (child.existing_guest_id) {
-            await linkGuestToParent(supabase, child.existing_guest_id, guest!.id);
+            await linkGuestToParentAction(child.existing_guest_id, guest!.id);
           }
         }
 
@@ -284,11 +289,9 @@ export function GuestForm({
       }
     } catch (err) {
       console.error('[GuestForm] caught error:', err);
-      const message = err instanceof Error ? err.message : 'Error inesperado al guardar el invitado.';
-      setError(message);
       toast({
-        title: 'Error',
-        description: message,
+        title: t('common.error'),
+        description: t('guests.saveError'),
         variant: 'destructive',
       });
     } finally {
@@ -467,7 +470,7 @@ export function GuestForm({
                       </>
                     ) : (
                       (() => {
-                        const g = availableGuests.find((g) => g.id === child.existing_guest_id);
+                        const g = availableGuests.find((ag) => ag.id === child.existing_guest_id);
                         return g ? `${g.first_name} ${g.last_name}` : t('guests.existingGuest');
                       })()
                     )}
@@ -548,7 +551,7 @@ export function GuestForm({
                           {formData.pendingChildren[0]?.existing_guest_id
                             ? (() => {
                                 const g = availableGuests.find(
-                                  (g) => g.id === formData.pendingChildren[0]?.existing_guest_id
+                                  (ag) => ag.id === formData.pendingChildren[0]?.existing_guest_id
                                 );
                                 return g
                                   ? `${g.first_name} ${g.last_name}`
@@ -656,7 +659,8 @@ export function GuestForm({
                   )}
                 </div>
               ) : (
-                !existingRelatedId && formData.pendingChildren.length === 0 && (
+                !existingRelatedId &&
+                formData.pendingChildren.length === 0 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -738,9 +742,7 @@ export function GuestForm({
             <button
               type="button"
               onClick={() => handleOpenDialog()}
-              className={
-                'rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center'
-              }
+              className="rounded-full p-2.5 transition-colors hover:bg-primary/10 flex items-center justify-center"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -882,10 +884,6 @@ export function GuestForm({
           </div>
         </CardContent>
       </Card>
-
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-      )}
 
       <div className="flex gap-4">
         <Button

@@ -1,14 +1,13 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
-import { GuestForm } from "@/components/guests/guest-form";
-import { getGuestForEdit, getCategories } from "@/services";
+import { notFound } from 'next/navigation';
 
-export default async function EditGuestPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+import { createClient } from '@/lib/supabase/server';
+
+import { getCategories, getGuestForEdit } from '@/services';
+
+import { PageHeader } from '@/components/page-header';
+import { GuestForm } from '@/components/guests/guest-form';
+
+export default async function EditGuestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const [guest, categories] = await Promise.all([
@@ -22,15 +21,8 @@ export default async function EditGuestPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        titleKey="guests.editGuest"
-        descriptionKey="guests.editDescription"
-      />
-      <GuestForm
-        categories={categories}
-        guest={guest}
-        mode="edit"
-      />
+      <PageHeader titleKey="guests.editGuest" descriptionKey="guests.editDescription" />
+      <GuestForm categories={categories} guest={guest} mode="edit" />
     </div>
   );
 }

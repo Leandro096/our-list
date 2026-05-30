@@ -1,14 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/components/auth-provider';
-import { useTranslation } from '@/locales/i18n-provider';
-import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 import {
   Tags,
-  Heart,
   Users,
   Shield,
   History,
@@ -20,8 +17,15 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useAuth } from '@/components/auth-provider';
+
+import { useTranslation } from '@/locales/i18n-provider';
+
 import { useSidebar } from './sidebar-context';
 
 type NavItem = {
@@ -160,7 +164,9 @@ export function DashboardSidebar() {
                   <Link
                     key={child.nameKey}
                     href={child.href}
-                    onClick={() => { if (!isActive) setPageLoading(true); }}
+                    onClick={() => {
+                      if (!isActive) setPageLoading(true);
+                    }}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
@@ -187,7 +193,9 @@ export function DashboardSidebar() {
       <Link
         key={item.nameKey}
         href={item.href}
-        onClick={() => { if (!isActive) setPageLoading(true); }}
+        onClick={() => {
+          if (!isActive) setPageLoading(true);
+        }}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
@@ -217,14 +225,17 @@ export function DashboardSidebar() {
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Heart className="h-5 w-5 text-primary" />
+            <Image
+              src="/icon.png"
+              alt="GL Logo"
+              width={38}
+              height={38}
+              className="shrink-0 rounded-full ring-1 ring-primary/30"
+              priority
+            />
           </div>
           {!collapsed && (
-            <span
-              className={
-                'font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap'
-              }
-            >
+            <span className="font-serif text-lg font-semibold text-sidebar-foreground overflow-hidden text-ellipsis whitespace-nowrap">
               {t('nav.weddingManager')}
             </span>
           )}

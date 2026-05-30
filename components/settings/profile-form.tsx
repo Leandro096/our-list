@@ -1,4 +1,12 @@
-"use client";
+'use client';
+
+import { useState } from 'react';
+import { Lock, User } from 'lucide-react';
+
+import { toast } from '@/hooks';
+import { useTranslation } from '@/locales';
+import type { UserWithRoles } from '@/lib';
+import { updatePasswordAction, updateUserProfileAction } from '@/app/dashboard/settings/actions';
 
 import {
   Card,
@@ -9,20 +17,12 @@ import {
   Separator,
   CardTitle,
   CardHeader,
-  CardContent,
   SelectItem,
+  CardContent,
   SelectValue,
   SelectTrigger,
   SelectContent,
-} from "@/components/ui";
-import { useState } from "react";
-import { toast } from "@/hooks";
-import { useRouter } from "next/navigation";
-import { useTranslation } from "@/locales";
-import { createClient } from "@/lib/supabase/client";
-import { updateUserProfile } from "@/services";
-import { Lock, User } from "lucide-react";
-import type { UserWithRoles } from "@/lib";
+} from '@/components/ui';
 
 interface ProfileFormProps {
   profile: UserWithRoles;
@@ -30,36 +30,33 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile }: ProfileFormProps) {
   const { t } = useTranslation();
-  const router = useRouter();
-  const supabase = createClient();
 
   // --- Profile state ---
-  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
-  const [themePreference, setThemePreference] = useState<
-    "light" | "dark" | "system"
-  >(profile.theme_preference ?? "system");
+  const [displayName, setDisplayName] = useState(profile.display_name ?? '');
+  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(
+    profile.theme_preference ?? 'system'
+  );
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // --- Password state ---
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
     try {
-      await updateUserProfile(supabase, profile.id, {
+      await updateUserProfileAction(profile.id, {
         display_name: displayName || undefined,
         theme_preference: themePreference,
       });
-      toast({ title: t("profile.profileUpdated") });
-      router.refresh();
+      toast({ title: t('profile.profileUpdated') });
     } catch (err) {
       toast({
-        title: t("profile.profileUpdateError"),
+        title: t('profile.profileUpdateError'),
         description: err instanceof Error ? err.message : undefined,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSavingProfile(false);
@@ -70,25 +67,25 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast({
-        title: t("auth.passwordsMustMatch"),
-        variant: "destructive",
+        title: t('auth.passwordsMustMatch'),
+        variant: 'destructive',
       });
       return;
     }
     setIsSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      const error = await updatePasswordAction(newPassword)
+        .then(() => null)
+        .catch((err) => err);
       if (error) throw error;
-      toast({ title: t("profile.passwordUpdated") });
-      setNewPassword("");
-      setConfirmPassword("");
+      toast({ title: t('profile.passwordUpdated') });
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
       toast({
-        title: t("common.error"),
+        title: t('common.error'),
         description: err instanceof Error ? err.message : undefined,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSavingPassword(false);
@@ -102,14 +99,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <User className="h-5 w-5 text-primary" />
-            {t("profile.personalInfo")}
+            {t('profile.personalInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveProfile} className="space-y-5">
             {/* Email (read-only) */}
             <div className="grid gap-2">
-              <Label htmlFor="profile-email">{t("common.email")}</Label>
+              <Label htmlFor="profile-email">{t('common.email')}</Label>
               <Input
                 id="profile-email"
                 type="email"
@@ -117,18 +114,16 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 disabled
                 className="cursor-not-allowed bg-muted text-muted-foreground"
               />
-              <p className="text-xs text-muted-foreground">
-                {t("profile.emailReadonly")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('profile.emailReadonly')}</p>
             </div>
 
             {/* Display name */}
             <div className="grid gap-2">
-              <Label htmlFor="profile-name">{t("auth.displayName")}</Label>
+              <Label htmlFor="profile-name">{t('auth.displayName')}</Label>
               <Input
                 id="profile-name"
                 type="text"
-                placeholder={t("auth.displayNamePlaceholder")}
+                placeholder={t('auth.displayNamePlaceholder')}
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
               />
@@ -136,27 +131,25 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
             {/* Theme preference */}
             <div className="grid gap-2">
-              <Label htmlFor="profile-theme">{t("common.theme")}</Label>
+              <Label htmlFor="profile-theme">{t('common.theme')}</Label>
               <Select
                 value={themePreference}
-                onValueChange={(v) =>
-                  setThemePreference(v as "light" | "dark" | "system")
-                }
+                onValueChange={(v) => setThemePreference(v as 'light' | 'dark' | 'system')}
               >
                 <SelectTrigger id="profile-theme">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">{t("common.light")}</SelectItem>
-                  <SelectItem value="dark">{t("common.dark")}</SelectItem>
-                  <SelectItem value="system">{t("common.system")}</SelectItem>
+                  <SelectItem value="light">{t('common.light')}</SelectItem>
+                  <SelectItem value="dark">{t('common.dark')}</SelectItem>
+                  <SelectItem value="system">{t('common.system')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isSavingProfile}>
-                {isSavingProfile ? t("common.saving") : t("common.save")}
+                {isSavingProfile ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </form>
@@ -170,13 +163,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Lock className="h-5 w-5 text-primary" />
-            {t("profile.changePassword")}
+            {t('profile.changePassword')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleChangePassword} className="space-y-5">
             <div className="grid gap-2">
-              <Label htmlFor="new-password">{t("profile.newPassword")}</Label>
+              <Label htmlFor="new-password">{t('profile.newPassword')}</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -188,9 +181,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="confirm-password">
-                {t("auth.confirmPassword")}
-              </Label>
+              <Label htmlFor="confirm-password">{t('auth.confirmPassword')}</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -199,19 +190,12 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                {t("auth.passwordMinLength")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('auth.passwordMinLength')}</p>
             </div>
 
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={isSavingPassword || !newPassword || !confirmPassword}
-              >
-                {isSavingPassword
-                  ? t("common.saving")
-                  : t("profile.changePassword")}
+              <Button type="submit" disabled={isSavingPassword || !newPassword || !confirmPassword}>
+                {isSavingPassword ? t('common.saving') : t('profile.changePassword')}
               </Button>
             </div>
           </form>

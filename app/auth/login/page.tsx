@@ -1,4 +1,13 @@
-"use client";
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { Heart } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { createClient } from '@/lib/supabase/client';
+
+import { useTranslation } from '@/locales';
 
 import {
   Card,
@@ -9,18 +18,12 @@ import {
   CardHeader,
   CardContent,
   CardDescription,
-} from "@/components/ui";
-import Link from "next/link";
-import { useState } from "react";
-import { Heart } from "lucide-react";
-import { useTranslation } from "@/locales";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+} from '@/components/ui';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -32,14 +35,14 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) throw error;
-      router.push("/dashboard");
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      if (authError) throw authError;
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -55,25 +58,21 @@ export default function LoginPage() {
               <Heart className="h-6 w-6 text-primary" />
             </div>
             <h1 className="font-serif text-2xl font-semibold text-foreground">
-              {t("common.appName")}
+              {t('common.appName')}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("common.tagline")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('common.tagline')}</p>
           </div>
 
           <Card className="border-border/50 shadow-lg">
             <CardHeader className="text-center">
-              <CardTitle className="font-serif text-xl">
-                {t("auth.welcomeBack")}
-              </CardTitle>
-              <CardDescription>{t("auth.signInDescription")}</CardDescription>
+              <CardTitle className="font-serif text-xl">{t('auth.welcomeBack')}</CardTitle>
+              <CardDescription>{t('auth.signInDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin}>
                 <div className="flex flex-col gap-5">
                   <div className="grid gap-2">
-                    <Label htmlFor="email">{t("auth.email")}</Label>
+                    <Label htmlFor="email">{t('auth.email')}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -85,7 +84,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">{t("auth.password")}</Label>
+                    <Label htmlFor="password">{t('auth.password')}</Label>
                     <Input
                       id="password"
                       type="password"
@@ -105,25 +104,23 @@ export default function LoginPage() {
                     className="h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     disabled={isLoading}
                   >
-                    {isLoading ? t("auth.signingIn") : t("auth.signIn")}
+                    {isLoading ? t('auth.signingIn') : t('auth.signIn')}
                   </Button>
                 </div>
                 <div className="mt-6 text-center text-sm text-muted-foreground">
-                  {t("auth.noAccount")}{" "}
+                  {t('auth.noAccount')}{' '}
                   <Link
                     href="/auth/sign-up"
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   >
-                    {t("auth.signUp")}
+                    {t('auth.signUp')}
                   </Link>
                 </div>
               </form>
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-muted-foreground">
-            {t("auth.agreement")}
-          </p>
+          <p className="text-center text-xs text-muted-foreground">{t('auth.agreement')}</p>
         </div>
       </div>
     </div>

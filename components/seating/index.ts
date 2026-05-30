@@ -1,1 +1,1 @@
-export * from "./seating-manager";
+export * from './seating-manager';

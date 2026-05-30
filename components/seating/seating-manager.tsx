@@ -1,12 +1,20 @@
-"use client";
+'use client';
 
+import { useState } from 'react';
+import { X, Plus, Users, Trash2, Search, Armchair } from 'lucide-react';
+
+import { toast } from '@/hooks';
+import type { Table } from '@/lib';
+import { useTranslation } from '@/locales';
+import type { SeatingGuestWithFamily, SeatingAssignmentWithFamilyGuest } from '@/services';
 import {
-  assignSeatWithFamily,
-  removeSeatAssignmentWithFamily,
-  createTable,
-  deleteTable,
-  updateTable,
-} from "@/services";
+  createTableAction,
+  deleteTableAction,
+  updateTableAction,
+  assignSeatWithFamilyAction,
+  removeSeatAssignmentWithFamilyAction,
+} from '@/app/dashboard/seating/actions';
+
 import {
   Tabs,
   Card,
@@ -34,15 +42,7 @@ import {
   SelectTrigger,
   SelectContent,
   DialogDescription,
-} from "@/components/ui";
-import { toast } from "@/hooks";
-import { useState } from "react";
-import type { Table } from "@/lib";
-import { useTranslation } from "@/locales";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Plus, Armchair, Users, X, Trash2, Search } from "lucide-react";
-import type { SeatingGuestWithFamily, SeatingAssignmentWithFamilyGuest } from "@/services";
+} from '@/components/ui';
 
 interface SeatingManagerProps {
   guests: SeatingGuestWithFamily[];
@@ -55,18 +55,16 @@ export function SeatingManager({
   assignments,
   tables: initialTables,
 }: SeatingManagerProps) {
-  const supabase = createClient();
-  const router = useRouter();
   const { t } = useTranslation();
   const [tables, setTables] = useState(initialTables);
-  const [newTableName, setNewTableName] = useState("");
-  const [newTableNumber, setNewTableNumber] = useState("");
-  const [newTableCategory, setNewTableCategory] = useState("");
-  const [newTableNotes, setNewTableNotes] = useState("");
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableNumber, setNewTableNumber] = useState('');
+  const [newTableCategory, setNewTableCategory] = useState('');
+  const [newTableNotes, setNewTableNotes] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState(10);
   const [selectedGuests, setSelectedGuests] = useState<string[]>([]);
-  const [selectedTable, setSelectedTable] = useState<string>("");
-  const [guestSearch, setGuestSearch] = useState("");
+  const [selectedTable, setSelectedTable] = useState<string>('');
+  const [guestSearch, setGuestSearch] = useState('');
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
@@ -74,12 +72,12 @@ export function SeatingManager({
 
   // Edit dialog state
   const [editingTable, setEditingTable] = useState<Table | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editNumber, setEditNumber] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editNotes, setEditNotes] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editNumber, setEditNumber] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editNotes, setEditNotes] = useState('');
   const [editCapacity, setEditCapacity] = useState(10);
-  const [editGuestSearch, setEditGuestSearch] = useState("");
+  const [editGuestSearch, setEditGuestSearch] = useState('');
   const [editSelectedGuests, setEditSelectedGuests] = useState<string[]>([]);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [isSubmittingEditAssign, setIsSubmittingEditAssign] = useState(false);
@@ -88,51 +86,41 @@ export function SeatingManager({
   const unassignedGuests = guests.filter((g) => !assignedGuestIds.has(g.id));
   const assignedGuestsCount = guests.length - unassignedGuests.length;
 
-  const getTableGuests = (tableId: string) => {
+  const getTableGuests = (tableId: string) =>
     // Show only parent/solo assignments (not children) for clean group view
-    return assignments.filter(
-      (a) => a.table_id === tableId && !a.guests?.parent_guest_id,
-    );
-  };
-
-  const getChildrenInTable = (parentId: string, tableId: string) => {
-    return assignments.filter(
-      (a) => a.table_id === tableId && a.guests?.parent_guest_id === parentId,
-    );
-  };
+    assignments.filter((a) => a.table_id === tableId && !a.guests?.parent_guest_id);
+  const getChildrenInTable = (parentId: string, tableId: string) =>
+    assignments.filter((a) => a.table_id === tableId && a.guests?.parent_guest_id === parentId);
 
   const handleAddTable = async () => {
     if (!newTableName || !newTableNumber) return;
 
     setIsSubmittingTable(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const created = await createTable(supabase, {
+      const created = await createTableAction({
         name: newTableName,
         number: newTableNumber,
         category: newTableCategory || null,
         notes: newTableNotes || null,
         capacity: newTableCapacity,
-        created_by: user?.id ?? null,
       });
       setTables([...tables, created]);
-      setNewTableName("");
-      setNewTableNumber("");
-      setNewTableCategory("");
-      setNewTableNotes("");
+      setNewTableName('');
+      setNewTableNumber('');
+      setNewTableCategory('');
+      setNewTableNotes('');
       setNewTableCapacity(10);
       setIsAddingTable(false);
       toast({
-        title: t("seating.tableAdded"),
-        description: t("seating.tableCreated", { name: created.name }),
+        title: t('seating.tableAdded'),
+        description: t('seating.tableCreated', { name: created.name }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.tableCreationError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.tableCreationError'),
+        variant: 'destructive',
       });
     } finally {
       setIsSubmittingTable(false);
@@ -141,24 +129,22 @@ export function SeatingManager({
 
   const handleDeleteTable = async (tableId: string) => {
     try {
-      await deleteTable(supabase, tableId);
-      setTables(tables.filter((t) => t.id !== tableId));
-      router.refresh();
-      toast({ title: t("seating.tableDeleted") });
+      await deleteTableAction(tableId);
+      setTables(tables.filter((tb) => tb.id !== tableId));
+      toast({ title: t('seating.tableDeleted') });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.tableDeleteError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.tableDeleteError'),
+        variant: 'destructive',
       });
     }
   };
 
   const toggleGuestSelection = (guestId: string) => {
     setSelectedGuests((prev) =>
-      prev.includes(guestId)
-        ? prev.filter((id) => id !== guestId)
-        : [...prev, guestId],
+      prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId]
     );
   };
 
@@ -168,22 +154,21 @@ export function SeatingManager({
     setIsSubmittingAssign(true);
     try {
       for (const guestId of selectedGuests) {
-        const result = await assignSeatWithFamily(supabase, {
+        const result = await assignSeatWithFamilyAction({
           guest_id: guestId,
           table_id: selectedTable,
         });
         if (result.skipped_capacity) {
           toast({
-            title: t("common.error"),
-            description: t("seating.capacityExceeded", {
+            title: t('common.error'),
+            description: t('seating.capacityExceeded', {
               needed: String(result.needed ?? 0),
               available: String(result.available ?? 0),
             }),
-            variant: "destructive",
+            variant: 'destructive',
           });
-          router.refresh();
           setSelectedGuests([]);
-          setSelectedTable("");
+          setSelectedTable('');
           setIsAssigning(false);
           return;
         }
@@ -192,20 +177,20 @@ export function SeatingManager({
         const g = unassignedGuests.find((ug) => ug.id === id);
         return sum + 1 + (g?.children?.length ?? 0);
       }, 0);
-      router.refresh();
       setSelectedGuests([]);
-      setSelectedTable("");
-      setGuestSearch("");
+      setSelectedTable('');
+      setGuestSearch('');
       setIsAssigning(false);
       toast({
-        title: t("seating.guestsAssigned"),
-        description: t("seating.groupAssignedDesc", { count: totalCount }),
+        title: t('seating.guestsAssigned'),
+        description: t('seating.groupAssignedDesc', { count: totalCount }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.guestAssignError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.guestAssignError'),
+        variant: 'destructive',
       });
     } finally {
       setIsSubmittingAssign(false);
@@ -215,14 +200,14 @@ export function SeatingManager({
   const handleRemoveAssignment = async (guestId: string | undefined) => {
     if (!guestId) return;
     try {
-      await removeSeatAssignmentWithFamily(supabase, guestId);
-      router.refresh();
-      toast({ title: t("seating.guestUnassigned") });
+      await removeSeatAssignmentWithFamilyAction(guestId);
+      toast({ title: t('seating.guestUnassigned') });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.guestUnassignError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.guestUnassignError'),
+        variant: 'destructive',
       });
     }
   };
@@ -231,10 +216,10 @@ export function SeatingManager({
     setEditingTable(table);
     setEditName(table.name);
     setEditNumber(table.number);
-    setEditCategory(table.category ?? "");
-    setEditNotes(table.notes ?? "");
+    setEditCategory(table.category ?? '');
+    setEditNotes(table.notes ?? '');
     setEditCapacity(table.capacity);
-    setEditGuestSearch("");
+    setEditGuestSearch('');
     setEditSelectedGuests([]);
   };
 
@@ -242,25 +227,25 @@ export function SeatingManager({
     if (!editingTable || !editName || !editNumber) return;
     setIsSubmittingEdit(true);
     try {
-      const updated = await updateTable(supabase, editingTable.id, {
+      const updated = await updateTableAction(editingTable.id, {
         name: editName,
         number: editNumber,
         category: editCategory || null,
         notes: editNotes || null,
         capacity: editCapacity,
       });
-      setTables(tables.map((t) => (t.id === updated.id ? updated : t)));
+      setTables(tables.map((tb) => (tb.id === updated.id ? updated : tb)));
       toast({
-        title: t("seating.tableUpdated"),
-        description: t("seating.tableUpdatedDesc", { name: updated.name }),
+        title: t('seating.tableUpdated'),
+        description: t('seating.tableUpdatedDesc', { name: updated.name }),
       });
       setEditingTable(null);
-      router.refresh();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.tableUpdateError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.tableUpdateError'),
+        variant: 'destructive',
       });
     } finally {
       setIsSubmittingEdit(false);
@@ -272,20 +257,19 @@ export function SeatingManager({
     setIsSubmittingEditAssign(true);
     try {
       for (const guestId of editSelectedGuests) {
-        const result = await assignSeatWithFamily(supabase, {
+        const result = await assignSeatWithFamilyAction({
           guest_id: guestId,
           table_id: editingTable.id,
         });
         if (result.skipped_capacity) {
           toast({
-            title: t("common.error"),
-            description: t("seating.capacityExceeded", {
+            title: t('common.error'),
+            description: t('seating.capacityExceeded', {
               needed: String(result.needed ?? 0),
               available: String(result.available ?? 0),
             }),
-            variant: "destructive",
+            variant: 'destructive',
           });
-          router.refresh();
           setEditSelectedGuests([]);
           return;
         }
@@ -294,18 +278,18 @@ export function SeatingManager({
         const g = unassignedGuests.find((ug) => ug.id === id);
         return sum + 1 + (g?.children?.length ?? 0);
       }, 0);
-      router.refresh();
       setEditSelectedGuests([]);
-      setEditGuestSearch("");
+      setEditGuestSearch('');
       toast({
-        title: t("seating.guestsAssigned"),
-        description: t("seating.groupAssignedDesc", { count: totalCount }),
+        title: t('seating.guestsAssigned'),
+        description: t('seating.groupAssignedDesc', { count: totalCount }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("seating.guestAssignError"),
-        variant: "destructive",
+        title: t('common.error'),
+        description: t('seating.guestAssignError'),
+        variant: 'destructive',
       });
     } finally {
       setIsSubmittingEditAssign(false);
@@ -314,9 +298,7 @@ export function SeatingManager({
 
   const toggleEditGuestSelection = (guestId: string) => {
     setEditSelectedGuests((prev) =>
-      prev.includes(guestId)
-        ? prev.filter((id) => id !== guestId)
-        : [...prev, guestId],
+      prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId]
     );
   };
 
@@ -331,9 +313,7 @@ export function SeatingManager({
             </div>
             <div>
               <p className="text-2xl font-bold">{tables.length}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("seating.tables")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('seating.tables')}</p>
             </div>
           </CardContent>
         </Card>
@@ -344,9 +324,7 @@ export function SeatingManager({
             </div>
             <div>
               <p className="text-2xl font-bold">{assignedGuestsCount}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("seating.assigned")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('seating.assigned')}</p>
             </div>
           </CardContent>
         </Card>
@@ -357,9 +335,7 @@ export function SeatingManager({
             </div>
             <div>
               <p className="text-2xl font-bold">{unassignedGuests.length}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("seating.unassigned")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('seating.unassigned')}</p>
             </div>
           </CardContent>
         </Card>
@@ -371,69 +347,61 @@ export function SeatingManager({
           <DialogTrigger asChild>
             <Button variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              {t("seating.addTable")}
+              {t('seating.addTable')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t("seating.addNewTable")}</DialogTitle>
-              <DialogDescription className="sr-only">
-                {t("seating.addTableDesc")}
-              </DialogDescription>
+              <DialogTitle>{t('seating.addNewTable')}</DialogTitle>
+              <DialogDescription className="sr-only">{t('seating.addTableDesc')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tableNumber">
-                    {t("seating.tableNumberId")}
-                  </Label>
+                  <Label htmlFor="tableNumber">{t('seating.tableNumberId')}</Label>
                   <Input
                     id="tableNumber"
                     value={newTableNumber}
                     onChange={(e) => setNewTableNumber(e.target.value)}
-                    placeholder={t("seating.tableNumberPlaceholder")}
+                    placeholder={t('seating.tableNumberPlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tableCapacity">{t("seating.capacity")}</Label>
+                  <Label htmlFor="tableCapacity">{t('seating.capacity')}</Label>
                   <Input
                     id="tableCapacity"
                     type="number"
                     min={1}
                     value={newTableCapacity}
-                    onChange={(e) =>
-                      setNewTableCapacity(Number(e.target.value))
-                    }
+                    onChange={(e) => setNewTableCapacity(Number(e.target.value))}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tableName">{t("seating.tableName")}</Label>
+                <Label htmlFor="tableName">{t('seating.tableName')}</Label>
                 <Input
                   id="tableName"
                   value={newTableName}
                   onChange={(e) => setNewTableName(e.target.value)}
-                  placeholder={t("seating.tableNamePlaceholder")}
+                  placeholder={t('seating.tableNamePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tableCategory">
-                  {t("seating.tableCategory")}
-                </Label>
+                <Label htmlFor="tableCategory">{t('seating.tableCategory')}</Label>
                 <Input
                   id="tableCategory"
                   value={newTableCategory}
                   onChange={(e) => setNewTableCategory(e.target.value)}
-                  placeholder={t("seating.tableCategoryPlaceholder")}
+                  placeholder={t('seating.tableCategoryPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tableNotes">{t("seating.notes")}</Label>
+                <Label htmlFor="tableNotes">{t('seating.notes')}</Label>
                 <Textarea
                   id="tableNotes"
                   value={newTableNotes}
                   onChange={(e) => setNewTableNotes(e.target.value)}
-                  placeholder={t("seating.notesPlaceholder")}
+                  placeholder={t('seating.notesPlaceholder')}
                   rows={2}
                 />
               </div>
@@ -443,9 +411,7 @@ export function SeatingManager({
                 className="w-full"
                 disabled={!newTableName || !newTableNumber || isSubmittingTable}
               >
-                {isSubmittingTable
-                  ? t("seating.adding")
-                  : t("seating.addTable")}
+                {isSubmittingTable ? t('seating.adding') : t('seating.addTable')}
               </Button>
             </div>
           </DialogContent>
@@ -455,23 +421,23 @@ export function SeatingManager({
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Users className="mr-2 h-4 w-4" />
-              {t("seating.assignGuest")}
+              {t('seating.assignGuest')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{t("seating.assignGuestsToTable")}</DialogTitle>
+              <DialogTitle>{t('seating.assignGuestsToTable')}</DialogTitle>
               <DialogDescription className="sr-only">
-                {t("seating.assignGuestDesc")}
+                {t('seating.assignGuestDesc')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {/* Table selector */}
               <div className="space-y-2">
-                <Label>{t("seating.table")}</Label>
+                <Label>{t('seating.table')}</Label>
                 <Select value={selectedTable} onValueChange={setSelectedTable}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("seating.selectTable")} />
+                    <SelectValue placeholder={t('seating.selectTable')} />
                   </SelectTrigger>
                   <SelectContent>
                     {tables.map((table) => {
@@ -484,7 +450,7 @@ export function SeatingManager({
                         >
                           {table.number} — {table.name}
                           {occupied >= table.capacity
-                            ? ` (${t("seating.full")})`
+                            ? ` (${t('seating.full')})`
                             : ` (${occupied}/${table.capacity})`}
                         </SelectItem>
                       );
@@ -497,7 +463,7 @@ export function SeatingManager({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>
-                    {t("seating.guestsSelected", {
+                    {t('seating.guestsSelected', {
                       count: selectedGuests.length,
                     })}
                   </Label>
@@ -512,15 +478,15 @@ export function SeatingManager({
                       }
                     >
                       {selectedGuests.length === unassignedGuests.length
-                        ? t("seating.deselectAll")
-                        : t("seating.selectAll")}
+                        ? t('seating.deselectAll')
+                        : t('seating.selectAll')}
                     </button>
                   )}
                 </div>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder={t("seating.searchGuests")}
+                    placeholder={t('seating.searchGuests')}
                     value={guestSearch}
                     onChange={(e) => setGuestSearch(e.target.value)}
                     className="pl-8"
@@ -528,7 +494,7 @@ export function SeatingManager({
                 </div>
                 {unassignedGuests.length === 0 ? (
                   <p className="py-4 text-center text-sm text-muted-foreground">
-                    {t("seating.allGuestsAssigned")}
+                    {t('seating.allGuestsAssigned')}
                   </p>
                 ) : (
                   <ScrollArea className="h-48 rounded-md border">
@@ -537,7 +503,7 @@ export function SeatingManager({
                         .filter((g) =>
                           `${g.first_name} ${g.last_name}`
                             .toLowerCase()
-                            .includes(guestSearch.toLowerCase()),
+                            .includes(guestSearch.toLowerCase())
                         )
                         .map((guest) => (
                           <label
@@ -546,15 +512,13 @@ export function SeatingManager({
                           >
                             <Checkbox
                               checked={selectedGuests.includes(guest.id)}
-                              onCheckedChange={() =>
-                                toggleGuestSelection(guest.id)
-                              }
+                              onCheckedChange={() => toggleGuestSelection(guest.id)}
                             />
                             <span className="text-sm">
                               {guest.first_name} {guest.last_name}
                               {guest.children.length > 0 && (
                                 <span className="ml-1 text-xs text-muted-foreground">
-                                  {t("seating.groupSize", { count: guest.children.length + 1 })}
+                                  {t('seating.groupSize', { count: guest.children.length + 1 })}
                                 </span>
                               )}
                             </span>
@@ -565,25 +529,23 @@ export function SeatingManager({
                 )}
               </div>
 
-                  <Button
-                    type="button"
-                    onClick={handleAssignGuest}
-                    className="w-full"
-                    disabled={
-                      !selectedGuests.length || !selectedTable || isSubmittingAssign
-                    }
-                  >
-                    {isSubmittingAssign
-                      ? t("seating.assigning")
-                      : selectedGuests.length > 0
-                        ? t("seating.assignCount", {
-                            count: selectedGuests.reduce((sum, id) => {
-                              const g = unassignedGuests.find((ug) => ug.id === id);
-                              return sum + 1 + (g?.children?.length ?? 0);
-                            }, 0),
-                          })
-                        : t("seating.assignGuest")}
-                  </Button>
+              <Button
+                type="button"
+                onClick={handleAssignGuest}
+                className="w-full"
+                disabled={!selectedGuests.length || !selectedTable || isSubmittingAssign}
+              >
+                {isSubmittingAssign
+                  ? t('seating.assigning')
+                  : selectedGuests.length > 0
+                    ? t('seating.assignCount', {
+                        count: selectedGuests.reduce((sum, id) => {
+                          const g = unassignedGuests.find((ug) => ug.id === id);
+                          return sum + 1 + (g?.children?.length ?? 0);
+                        }, 0),
+                      })
+                    : t('seating.assignGuest')}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -594,12 +556,8 @@ export function SeatingManager({
         <Card>
           <CardContent className="py-12 text-center">
             <Armchair className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">
-              {t("seating.noTables")}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t("seating.noTablesDescription")}
-            </p>
+            <p className="mt-4 text-muted-foreground">{t('seating.noTables')}</p>
+            <p className="text-sm text-muted-foreground">{t('seating.noTablesDescription')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -629,7 +587,7 @@ export function SeatingManager({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={isFull ? "destructive" : "outline"}>
+                      <Badge variant={isFull ? 'destructive' : 'outline'}>
                         {tableGuests.length}/{table.capacity}
                       </Badge>
                       <Button
@@ -648,20 +606,16 @@ export function SeatingManager({
                 </CardHeader>
                 <CardContent>
                   {table.notes && (
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      {table.notes}
-                    </p>
+                    <p className="mb-2 text-xs text-muted-foreground">{table.notes}</p>
                   )}
                   {tableGuests.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("seating.noGuestsAssigned")}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t('seating.noGuestsAssigned')}</p>
                   ) : (
                     <div className="space-y-2">
                       {tableGuests.map((assignment) => {
                         const childCount = getChildrenInTable(
                           assignment.guests?.id ?? '',
-                          table.id,
+                          table.id
                         ).length;
                         return (
                           <div
@@ -669,8 +623,7 @@ export function SeatingManager({
                             className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
                           >
                             <span className="text-sm">
-                              {assignment.guests?.first_name}{" "}
-                              {assignment.guests?.last_name}
+                              {assignment.guests?.first_name} {assignment.guests?.last_name}
                               {childCount > 0 && (
                                 <span className="ml-1 text-xs text-muted-foreground">
                                   (+{childCount})
@@ -705,7 +658,7 @@ export function SeatingManager({
         <Card>
           <CardHeader>
             <CardTitle className="font-serif">
-              {t("seating.unassignedGuests", {
+              {t('seating.unassignedGuests', {
                 count: unassignedGuests.length,
               })}
             </CardTitle>
@@ -724,29 +677,24 @@ export function SeatingManager({
 
       {/* Edit Table Dialog */}
       {editingTable && (
-        <Dialog
-          open={!!editingTable}
-          onOpenChange={(open) => !open && setEditingTable(null)}
-        >
+        <Dialog open={!!editingTable} onOpenChange={(open) => !open && setEditingTable(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {t("seating.editTableTitle")} —{" "}
-                <span className="font-mono text-muted-foreground">
-                  #{editingTable.number}
-                </span>
+                {t('seating.editTableTitle')} —{' '}
+                <span className="font-mono text-muted-foreground">#{editingTable.number}</span>
               </DialogTitle>
               <DialogDescription className="sr-only">
-                {t("seating.editTableDesc")}
+                {t('seating.editTableDesc')}
               </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="details">
               <TabsList className="w-full">
                 <TabsTrigger value="details" className="flex-1">
-                  {t("seating.tableDetails")}
+                  {t('seating.tableDetails')}
                 </TabsTrigger>
                 <TabsTrigger value="guests" className="flex-1">
-                  {t("seating.manageGuests")}
+                  {t('seating.manageGuests')}
                 </TabsTrigger>
               </TabsList>
 
@@ -754,20 +702,16 @@ export function SeatingManager({
               <TabsContent value="details" className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="editNumber">
-                      {t("seating.tableNumberId")}
-                    </Label>
+                    <Label htmlFor="editNumber">{t('seating.tableNumberId')}</Label>
                     <Input
                       id="editNumber"
                       value={editNumber}
                       onChange={(e) => setEditNumber(e.target.value)}
-                      placeholder={t("seating.tableNumberPlaceholder")}
+                      placeholder={t('seating.tableNumberPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="editCapacity">
-                      {t("seating.capacity")}
-                    </Label>
+                    <Label htmlFor="editCapacity">{t('seating.capacity')}</Label>
                     <Input
                       id="editCapacity"
                       type="number"
@@ -778,32 +722,30 @@ export function SeatingManager({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="editName">{t("seating.tableName")}</Label>
+                  <Label htmlFor="editName">{t('seating.tableName')}</Label>
                   <Input
                     id="editName"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder={t("seating.tableNamePlaceholder")}
+                    placeholder={t('seating.tableNamePlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="editCategory">
-                    {t("seating.tableCategory")}
-                  </Label>
+                  <Label htmlFor="editCategory">{t('seating.tableCategory')}</Label>
                   <Input
                     id="editCategory"
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
-                    placeholder={t("seating.tableCategoryPlaceholder")}
+                    placeholder={t('seating.tableCategoryPlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="editNotes">{t("seating.notes")}</Label>
+                  <Label htmlFor="editNotes">{t('seating.notes')}</Label>
                   <Textarea
                     id="editNotes"
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
-                    placeholder={t("seating.notesPlaceholder")}
+                    placeholder={t('seating.notesPlaceholder')}
                     rows={2}
                   />
                 </div>
@@ -813,7 +755,7 @@ export function SeatingManager({
                   className="w-full"
                   disabled={!editName || !editNumber || isSubmittingEdit}
                 >
-                  {isSubmittingEdit ? t("common.saving") : t("common.save")}
+                  {isSubmittingEdit ? t('common.saving') : t('common.save')}
                 </Button>
               </TabsContent>
 
@@ -821,11 +763,9 @@ export function SeatingManager({
               <TabsContent value="guests" className="space-y-4 pt-2">
                 {/* Currently assigned */}
                 <div className="space-y-2">
-                  <Label>{t("seating.assignedGuests")}</Label>
+                  <Label>{t('seating.assignedGuests')}</Label>
                   {getTableGuests(editingTable.id).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("seating.noGuestsAssigned")}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t('seating.noGuestsAssigned')}</p>
                   ) : (
                     <div className="space-y-1">
                       {getTableGuests(editingTable.id).map((assignment) => (
@@ -834,16 +774,13 @@ export function SeatingManager({
                           className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
                         >
                           <span className="text-sm">
-                            {assignment.guests?.first_name}{" "}
-                            {assignment.guests?.last_name}
+                            {assignment.guests?.first_name} {assignment.guests?.last_name}
                           </span>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              handleRemoveAssignment(assignment.guests?.id)
-                            }
+                            onClick={() => handleRemoveAssignment(assignment.guests?.id)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -858,12 +795,11 @@ export function SeatingManager({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>
-                        {t("seating.addMoreGuests")} (
-                        {editSelectedGuests.length}{" "}
-                        {t("seating.guestsSelected", {
+                        {t('seating.addMoreGuests')} ({editSelectedGuests.length}{' '}
+                        {t('seating.guestsSelected', {
                           count: editSelectedGuests.length,
                         })
-                          .split("(")[0]
+                          .split('(')[0]
                           .trim()
                           .toLowerCase()}
                         )
@@ -872,7 +808,7 @@ export function SeatingManager({
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder={t("seating.searchGuests")}
+                        placeholder={t('seating.searchGuests')}
                         value={editGuestSearch}
                         onChange={(e) => setEditGuestSearch(e.target.value)}
                         className="pl-8"
@@ -884,7 +820,7 @@ export function SeatingManager({
                           .filter((g) =>
                             `${g.first_name} ${g.last_name}`
                               .toLowerCase()
-                              .includes(editGuestSearch.toLowerCase()),
+                              .includes(editGuestSearch.toLowerCase())
                           )
                           .map((guest) => (
                             <label
@@ -893,9 +829,7 @@ export function SeatingManager({
                             >
                               <Checkbox
                                 checked={editSelectedGuests.includes(guest.id)}
-                                onCheckedChange={() =>
-                                  toggleEditGuestSelection(guest.id)
-                                }
+                                onCheckedChange={() => toggleEditGuestSelection(guest.id)}
                               />
                               <span className="text-sm">
                                 {guest.first_name} {guest.last_name}
@@ -908,13 +842,11 @@ export function SeatingManager({
                       type="button"
                       onClick={handleEditAssignGuests}
                       className="w-full"
-                      disabled={
-                        !editSelectedGuests.length || isSubmittingEditAssign
-                      }
+                      disabled={!editSelectedGuests.length || isSubmittingEditAssign}
                     >
                       {isSubmittingEditAssign
-                        ? t("seating.assigning")
-                        : t("seating.assignCount", {
+                        ? t('seating.assigning')
+                        : t('seating.assignCount', {
                             count: editSelectedGuests.length,
                           })}
                     </Button>

@@ -1,15 +1,12 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
-import type { UserWithRoles, Role } from "@/lib";
-import { createClient } from "@/lib/supabase/client";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { useState, useEffect, useContext, useCallback, createContext } from 'react';
+
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+import { resetClient, createClient } from '@/lib/supabase/client';
+
+import type { Role, UserWithRoles } from '@/lib';
 
 // ---- localStorage helpers (user-scoped to prevent cross-user leakage) ------
 
@@ -36,16 +33,9 @@ function readStoredPermissions(userId: string): string[] {
   }
 }
 
-function persistActiveRole(
-  userId: string,
-  role: Role,
-  permissions: string[],
-): void {
+function persistActiveRole(userId: string, role: Role, permissions: string[]): void {
   localStorage.setItem(storageKey.role(userId), JSON.stringify(role));
-  localStorage.setItem(
-    storageKey.permissions(userId),
-    JSON.stringify(permissions),
-  );
+  localStorage.setItem(storageKey.permissions(userId), JSON.stringify(permissions));
 }
 
 function clearActiveRoleStorage(userId: string): void {
@@ -107,22 +97,20 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const fetchPermissionsForRole = useCallback(
     async (roleId: string): Promise<string[]> => {
       const { data } = await supabase
-        .from("role_permissions")
-        .select("permissions(scope)")
-        .eq("role_id", roleId);
+        .from('role_permissions')
+        .select('permissions(scope)')
+        .eq('role_id', roleId);
 
       return (data ?? [])
-        .flatMap(
-          (rp: { permissions: { scope: string }[] | { scope: string } | null }) => {
-            if (!rp.permissions) return [];
-            return Array.isArray(rp.permissions)
-              ? rp.permissions.map((p) => p.scope)
-              : [rp.permissions.scope];
-          },
-        )
+        .flatMap((rp: { permissions: { scope: string }[] | { scope: string } | null }) => {
+          if (!rp.permissions) return [];
+          return Array.isArray(rp.permissions)
+            ? rp.permissions.map((p) => p.scope)
+            : [rp.permissions.scope];
+        })
         .filter((scope): scope is string => Boolean(scope));
     },
-    [supabase],
+    [supabase]
   );
 
   // ---- Internal: resolve active role after profile load ------------------
@@ -141,7 +129,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         // Use permissions embedded in the role (from SSR profile) to avoid a
         // DB round-trip. Falls back to a live query only when not available
         // (e.g. old onAuthStateChange path before fetchProfile was updated).
-        const permissions = role.permissions ?? await fetchPermissionsForRole(role.id);
+        const permissions = role.permissions ?? (await fetchPermissionsForRole(role.id));
         persistActiveRole(userId, role, permissions);
         setActiveRole(role);
         setActivePermissions(permissions);
@@ -158,7 +146,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
 
         // Use embedded permissions when available — avoids a DB query.
         const storedRoleFull = roles.find((r) => r.id === stored.id);
-        const fresh = storedRoleFull?.permissions ?? await fetchPermissionsForRole(stored.id);
+        const fresh = storedRoleFull?.permissions ?? (await fetchPermissionsForRole(stored.id));
         setActivePermissions(fresh);
         persistActiveRole(userId, stored, fresh);
       } else {
@@ -168,13 +156,13 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         setActivePermissions([]);
       }
     },
-    [fetchPermissionsForRole],
+    [fetchPermissionsForRole]
   );
 
   const fetchProfile = useCallback(
     async (userId: string) => {
       const { data, error } = await supabase
-        .from("users")
+        .from('users')
         .select(
           `
           *,
@@ -188,13 +176,13 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
               )
             )
           )
-        `,
+        `
         )
-        .eq("id", userId)
+        .eq('id', userId)
         .single();
 
       if (error || !data) {
-        console.error("Error fetching user profile:", error);
+        console.error('Error fetching user profile:', error);
         return null;
       }
 
@@ -224,23 +212,23 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
             permissions: role.role_permissions
               .map((rp) => rp.permissions?.scope)
               .filter((scope): scope is string => Boolean(scope)),
-          })) ??
-        [];
+          })) ?? [];
 
       const permissions = [
         ...new Set(
           (data.user_roles as Array<{ roles: RoleRow | null }>)
             ?.flatMap((ur) => ur.roles?.role_permissions ?? [])
             .map((rp) => rp.permissions?.scope)
-            .filter((scope): scope is string => Boolean(scope)) ?? [],
+            .filter((scope): scope is string => Boolean(scope)) ?? []
         ),
       ];
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { user_roles: _omit, ...userData } = data;
 
       return { ...userData, roles, permissions } as UserWithRoles;
     },
-    [supabase],
+    [supabase]
   );
 
   const refreshProfile = useCallback(async () => {
@@ -254,9 +242,12 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   }, [user, fetchProfile, resolveActiveRole]);
 
   useEffect(() => {
+    let cancelled = false;
+
     // Failsafe: if profile loading hangs (slow DB), unblock the UI after 8 s.
     const failsafeTimer = setTimeout(() => {
-      console.warn("[AuthProvider] Profile load timed out — forcing loading state off");
+      if (cancelled) return;
+      console.warn('[AuthProvider] Profile load timed out — forcing loading state off');
       setIsLoading(false);
     }, 8000);
 
@@ -276,7 +267,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         } else {
           const { data } = await supabase.auth.getUser();
           currentUser = data.user ?? null;
-          setUser(currentUser);
+          if (!cancelled) setUser(currentUser);
         }
 
         if (currentUser) {
@@ -284,19 +275,19 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
           // internal supabase.from() call which triggers getSession() →
           // acquires Web Lock → can hang if _callRefreshToken() is in-flight.
           const profileData =
-            initialProfile !== undefined
-              ? initialProfile
-              : await fetchProfile(currentUser.id);
-          if (profileData !== null) setProfile(profileData);
-          if (profileData?.roles) {
-            await resolveActiveRole(currentUser.id, profileData.roles as Role[]);
+            initialProfile !== undefined ? initialProfile : await fetchProfile(currentUser.id);
+          if (!cancelled) {
+            if (profileData !== null) setProfile(profileData);
+            if (profileData?.roles) {
+              await resolveActiveRole(currentUser.id, profileData.roles as Role[]);
+            }
           }
         }
       } catch (err) {
-        console.error("[AuthProvider] loadData error:", err);
+        console.error('[AuthProvider] loadData error:', err);
       } finally {
         clearTimeout(failsafeTimer);
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -306,19 +297,19 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       // INITIAL_SESSION is handled synchronously above (SSR user or getUser()).
-      if (event === "INITIAL_SESSION") return;
+      if (event === 'INITIAL_SESSION') return;
+      if (cancelled) return;
 
       try {
         setUser(session?.user ?? null);
 
         if (session?.user) {
           const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-          if (profileData?.roles) {
-            await resolveActiveRole(
-              session.user.id,
-              profileData.roles as Role[],
-            );
+          if (!cancelled) {
+            setProfile(profileData);
+            if (profileData?.roles) {
+              await resolveActiveRole(session.user.id, profileData.roles as Role[]);
+            }
           }
         } else {
           setProfile(null);
@@ -326,11 +317,12 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
           setActivePermissions([]);
         }
       } catch (err) {
-        console.error("[AuthProvider] onAuthStateChange error:", err);
+        console.error('[AuthProvider] onAuthStateChange error:', err);
       }
     });
 
     return () => {
+      cancelled = true;
       clearTimeout(failsafeTimer);
       subscription.unsubscribe();
     };
@@ -343,25 +335,38 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const selectRole = useCallback(
     async (role: Role) => {
       if (!user) return;
-      const permissions = role.permissions ?? await fetchPermissionsForRole(role.id);
+      const permissions = role.permissions ?? (await fetchPermissionsForRole(role.id));
       persistActiveRole(user.id, role, permissions);
       setActiveRole(role);
       setActivePermissions(permissions);
     },
-    [user, fetchPermissionsForRole],
+    [user, fetchPermissionsForRole]
   );
 
   const signOut = async () => {
+    // 1. Limpiar estado local INMEDIATAMENTE (optimista) para que el router
+    //    pueda redirigir sin esperar la red. Así el usuario nunca queda colgado.
+    if (user) clearActiveRoleStorage(user.id);
+    setUser(null);
+    setProfile(null);
+    setActiveRole(null);
+    setActivePermissions([]);
+
+    // 2. Descartar el singleton para que el próximo login parta de un cliente limpio.
+    resetClient();
+
+    // 3. Limpiar la sesión localmente de forma inmediata (scope: 'local').
+    //    Con scope 'global' (el default), signOut() espera un POST /auth/v1/logout
+    //    que puede colgar si la conexión TCP está inactiva, dejando las cookies
+    //    intactas. Cuando AuthGuard redirige a /auth/login, el proxy ve la cookie
+    //    válida y rebota al usuario de vuelta al dashboard en un loop.
+    //    scope: 'local' llama _removeSession() directamente (sin red), borra
+    //    las cookies de inmediato y no hay bounce-loop.
+    //    La sesión del servidor expirará de forma natural.
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
     } catch (error) {
-      console.error("Error signing out:", error);
-    } finally {
-      if (user) clearActiveRoleStorage(user.id);
-      setUser(null);
-      setProfile(null);
-      setActiveRole(null);
-      setActivePermissions([]);
+      console.error('[AuthProvider] signOut error:', error);
     }
   };
 
@@ -386,7 +391,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
