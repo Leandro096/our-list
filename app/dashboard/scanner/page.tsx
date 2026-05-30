@@ -330,8 +330,6 @@ export default function ScannerPage() {
                           ))}
                         </div>
                       )}
-
-
                     </>
                   ) : (
                     <p className="text-destructive">{scanResult.message}</p>

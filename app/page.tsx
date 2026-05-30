@@ -218,7 +218,7 @@ export default function HomePage() {
                         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                         {label}
                       </span>
-                    ),
+                    )
                   )}
                 </div>
               </div>
@@ -310,7 +310,11 @@ export default function HomePage() {
           {/* Dot grid */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ backgroundImage: 'radial-gradient(circle, oklch(0.72 0.12 85 / 0.13) 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+            style={{
+              backgroundImage:
+                'radial-gradient(circle, oklch(0.72 0.12 85 / 0.13) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
           />
           {/* GL icon watermark */}
           <div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center">
@@ -328,7 +332,12 @@ export default function HomePage() {
             <div className="mx-auto max-w-xl">
               {/* Ornamental rule */}
               <div className="mb-8 flex items-center justify-center gap-4">
-                <svg viewBox="0 0 100 8" className="h-2 w-24 text-primary" fill="none" aria-hidden="true">
+                <svg
+                  viewBox="0 0 100 8"
+                  className="h-2 w-24 text-primary"
+                  fill="none"
+                  aria-hidden="true"
+                >
                   <path d="M0,4 Q25,1 50,4 Q75,7 100,4" stroke="currentColor" strokeWidth="1.2" />
                   <circle cx="0" cy="4" r="1.8" fill="currentColor" />
                   <circle cx="50" cy="4" r="2.2" fill="currentColor" />
@@ -337,7 +346,12 @@ export default function HomePage() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/50 bg-primary/15">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
-                <svg viewBox="0 0 100 8" className="h-2 w-24 -scale-x-100 text-primary" fill="none" aria-hidden="true">
+                <svg
+                  viewBox="0 0 100 8"
+                  className="h-2 w-24 -scale-x-100 text-primary"
+                  fill="none"
+                  aria-hidden="true"
+                >
                   <path d="M0,4 Q25,1 50,4 Q75,7 100,4" stroke="currentColor" strokeWidth="1.2" />
                   <circle cx="0" cy="4" r="1.8" fill="currentColor" />
                   <circle cx="50" cy="4" r="2.2" fill="currentColor" />
@@ -386,12 +400,14 @@ export default function HomePage() {
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/40">
-                {([t('home.trust1'), t('home.trust2'), t('home.trust3')] as string[]).map((label) => (
-                  <span key={label} className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
-                    {label}
-                  </span>
-                ))}
+                {([t('home.trust1'), t('home.trust2'), t('home.trust3')] as string[]).map(
+                  (label) => (
+                    <span key={label} className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+                      {label}
+                    </span>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -471,14 +487,40 @@ function MedallionRing() {
       aria-hidden="true"
     >
       {/* Outer dashed ring */}
-      <circle cx="250" cy="250" r="228" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.7" strokeDasharray="2 10" fill="none" />
+      <circle
+        cx="250"
+        cy="250"
+        r="228"
+        stroke="currentColor"
+        strokeOpacity="0.4"
+        strokeWidth="0.7"
+        strokeDasharray="2 10"
+        fill="none"
+      />
       {/* Inner solid ring */}
-      <circle cx="250" cy="250" r="195" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1" fill="none" />
+      <circle
+        cx="250"
+        cy="250"
+        r="195"
+        stroke="currentColor"
+        strokeOpacity="0.55"
+        strokeWidth="1"
+        fill="none"
+      />
 
       {/* TOP (0\u00b0) — leaf motif pointing outward */}
       <g transform="translate(250,37) rotate(0)" fill="currentColor">
         <ellipse cx="0" cy="0" rx="4.5" ry="13" />
-        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <line
+          x1="0"
+          y1="-13"
+          x2="0"
+          y2="13"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="0.8"
+          fill="none"
+        />
         <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
         <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
         <circle cx="0" cy="-19" r="2.3" />
@@ -486,7 +528,16 @@ function MedallionRing() {
       {/* RIGHT (90\u00b0) */}
       <g transform="translate(463,250) rotate(90)" fill="currentColor">
         <ellipse cx="0" cy="0" rx="4.5" ry="13" />
-        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <line
+          x1="0"
+          y1="-13"
+          x2="0"
+          y2="13"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="0.8"
+          fill="none"
+        />
         <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
         <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
         <circle cx="0" cy="-19" r="2.3" />
@@ -494,7 +545,16 @@ function MedallionRing() {
       {/* BOTTOM (180\u00b0) */}
       <g transform="translate(250,463) rotate(180)" fill="currentColor">
         <ellipse cx="0" cy="0" rx="4.5" ry="13" />
-        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <line
+          x1="0"
+          y1="-13"
+          x2="0"
+          y2="13"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="0.8"
+          fill="none"
+        />
         <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
         <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
         <circle cx="0" cy="-19" r="2.3" />
@@ -502,17 +562,34 @@ function MedallionRing() {
       {/* LEFT (270\u00b0) */}
       <g transform="translate(37,250) rotate(270)" fill="currentColor">
         <ellipse cx="0" cy="0" rx="4.5" ry="13" />
-        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <line
+          x1="0"
+          y1="-13"
+          x2="0"
+          y2="13"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="0.8"
+          fill="none"
+        />
         <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
         <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
         <circle cx="0" cy="-19" r="2.3" />
       </g>
 
       {/* Diamond ornaments at 45\u00b0 / 135\u00b0 / 225\u00b0 / 315\u00b0 */}
-      <g transform="translate(401,99) rotate(45)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
-      <g transform="translate(401,401) rotate(135)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
-      <g transform="translate(99,401) rotate(225)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
-      <g transform="translate(99,99) rotate(315)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
+      <g transform="translate(401,99) rotate(45)" fill="currentColor">
+        <path d="M0,-8 L5,0 L0,8 L-5,0 Z" />
+      </g>
+      <g transform="translate(401,401) rotate(135)" fill="currentColor">
+        <path d="M0,-8 L5,0 L0,8 L-5,0 Z" />
+      </g>
+      <g transform="translate(99,401) rotate(225)" fill="currentColor">
+        <path d="M0,-8 L5,0 L0,8 L-5,0 Z" />
+      </g>
+      <g transform="translate(99,99) rotate(315)" fill="currentColor">
+        <path d="M0,-8 L5,0 L0,8 L-5,0 Z" />
+      </g>
     </svg>
   );
 }

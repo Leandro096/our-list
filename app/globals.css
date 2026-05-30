@@ -6,24 +6,24 @@
 /* Wedding Design System — Navy & Gold (GL Monogram) */
 :root {
   /* Core Colors - Light Mode: Ivory canvas with Deep Navy text */
-  --background: oklch(0.98 0.005 90);    /* Ivory #FAFAF8 */
-  --foreground: oklch(0.18 0.085 258);   /* Deep Navy #1a2744 */
+  --background: oklch(0.98 0.005 90); /* Ivory #FAFAF8 */
+  --foreground: oklch(0.18 0.085 258); /* Deep Navy #1a2744 */
 
-  --card: oklch(1 0 0);                  /* Pure white */
+  --card: oklch(1 0 0); /* Pure white */
   --card-foreground: oklch(0.18 0.085 258);
 
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.085 258);
 
   /* Champagne Gold — Primary */
-  --primary: oklch(0.72 0.12 85);        /* #C9A84C */
+  --primary: oklch(0.72 0.12 85); /* #C9A84C */
   --primary-foreground: oklch(0.13 0.07 258); /* Dark navy on gold */
 
   /* Navy Tint — Secondary */
-  --secondary: oklch(0.92 0.03 258);     /* Very light navy tint */
+  --secondary: oklch(0.92 0.03 258); /* Very light navy tint */
   --secondary-foreground: oklch(0.18 0.085 258);
 
-  --muted: oklch(0.95 0.018 258);        /* Near-white navy tint */
+  --muted: oklch(0.95 0.018 258); /* Near-white navy tint */
   --muted-foreground: oklch(0.42 0.065 258); /* Medium navy */
 
   /* Light Navy Tint — Accent */
@@ -33,21 +33,21 @@
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
 
-  --border: oklch(0.88 0.025 258);       /* Subtle navy border */
+  --border: oklch(0.88 0.025 258); /* Subtle navy border */
   --input: oklch(0.91 0.02 258);
-  --ring: oklch(0.72 0.12 85);           /* Gold ring */
+  --ring: oklch(0.72 0.12 85); /* Gold ring */
 
   /* Chart Colors */
-  --chart-1: oklch(0.72 0.12 85);        /* Gold */
-  --chart-2: oklch(0.35 0.08 258);       /* Navy */
-  --chart-3: oklch(0.55 0.09 200);       /* Teal */
-  --chart-4: oklch(0.65 0.13 50);        /* Amber */
-  --chart-5: oklch(0.50 0.06 258);       /* Slate navy */
+  --chart-1: oklch(0.72 0.12 85); /* Gold */
+  --chart-2: oklch(0.35 0.08 258); /* Navy */
+  --chart-3: oklch(0.55 0.09 200); /* Teal */
+  --chart-4: oklch(0.65 0.13 50); /* Amber */
+  --chart-5: oklch(0.5 0.06 258); /* Slate navy */
 
   --radius: 0.5rem;
 
   /* Sidebar — Dark Navy in light mode too (premium look) */
-  --sidebar: oklch(0.20 0.085 258);      /* Deep Navy */
+  --sidebar: oklch(0.2 0.085 258); /* Deep Navy */
   --sidebar-foreground: oklch(0.95 0.005 90); /* Ivory */
   --sidebar-primary: oklch(0.72 0.12 85);
   --sidebar-primary-foreground: oklch(0.13 0.07 258);
@@ -67,17 +67,17 @@
 
 .dark {
   /* Core Colors - Dark Mode: Deep Navy matching GL icon background */
-  --background: oklch(0.17 0.075 258);   /* Deep Navy #1a2744 */
-  --foreground: oklch(0.95 0.008 85);    /* Warm Ivory */
+  --background: oklch(0.17 0.075 258); /* Deep Navy #1a2744 */
+  --foreground: oklch(0.95 0.008 85); /* Warm Ivory */
 
-  --card: oklch(0.21 0.078 258);         /* Slightly lighter navy */
+  --card: oklch(0.21 0.078 258); /* Slightly lighter navy */
   --card-foreground: oklch(0.95 0.008 85);
 
   --popover: oklch(0.21 0.078 258);
   --popover-foreground: oklch(0.95 0.008 85);
 
   /* Bright Gold — Primary (Dark) */
-  --primary: oklch(0.76 0.13 85);        /* Vivid champagne gold */
+  --primary: oklch(0.76 0.13 85); /* Vivid champagne gold */
   --primary-foreground: oklch(0.13 0.07 258); /* Dark navy on gold */
 
   /* Medium Navy — Secondary (Dark) */
@@ -94,19 +94,19 @@
   --destructive: oklch(0.45 0.18 25);
   --destructive-foreground: oklch(0.95 0 0);
 
-  --border: oklch(0.29 0.075 258);       /* Navy border */
+  --border: oklch(0.29 0.075 258); /* Navy border */
   --input: oklch(0.25 0.072 258);
-  --ring: oklch(0.76 0.13 85);           /* Bright gold ring */
+  --ring: oklch(0.76 0.13 85); /* Bright gold ring */
 
   /* Chart Colors - Dark */
-  --chart-1: oklch(0.76 0.13 85);        /* Bright Gold */
-  --chart-2: oklch(0.50 0.08 258);       /* Slate Navy */
-  --chart-3: oklch(0.60 0.09 200);       /* Teal */
-  --chart-4: oklch(0.68 0.13 50);        /* Amber */
-  --chart-5: oklch(0.55 0.06 258);       /* Medium slate */
+  --chart-1: oklch(0.76 0.13 85); /* Bright Gold */
+  --chart-2: oklch(0.5 0.08 258); /* Slate Navy */
+  --chart-3: oklch(0.6 0.09 200); /* Teal */
+  --chart-4: oklch(0.68 0.13 50); /* Amber */
+  --chart-5: oklch(0.55 0.06 258); /* Medium slate */
 
   /* Sidebar - Dark: Darker navy */
-  --sidebar: oklch(0.14 0.065 258);      /* Darkest Navy */
+  --sidebar: oklch(0.14 0.065 258); /* Darkest Navy */
   --sidebar-foreground: oklch(0.95 0.008 85);
   --sidebar-primary: oklch(0.76 0.13 85);
   --sidebar-primary-foreground: oklch(0.13 0.07 258);

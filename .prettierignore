@@ -34,5 +34,8 @@ pnpm-workspace.yaml
 # Ignore all TypeScript declaration files
 next-env.d.ts
 
+# Ignore GitHub workflows
+.github/
+
 # Ignore Vercel configuration file
 vercel.json
