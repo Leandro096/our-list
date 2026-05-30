@@ -27,9 +27,10 @@ import { createClient } from '@/lib/supabase/client';
 export function useVisibilityRefresh(thresholdMs = 120_000) {
   const router = useRouter();
   const hiddenAtRef = useRef<number | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
 
   useEffect(() => {
+    lastActivityRef.current = Date.now();
     const supabase = createClient();
 
     async function doRefresh() {
