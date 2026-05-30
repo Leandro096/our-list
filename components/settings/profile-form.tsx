@@ -6,7 +6,7 @@ import { Lock, User } from 'lucide-react';
 import { toast } from '@/hooks';
 import { useTranslation } from '@/locales';
 import type { UserWithRoles } from '@/lib';
-import { updateUserProfileAction, updatePasswordAction } from '@/app/dashboard/settings/actions';
+import { updatePasswordAction, updateUserProfileAction } from '@/app/dashboard/settings/actions';
 
 import {
   Card,
@@ -74,7 +74,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     }
     setIsSavingPassword(true);
     try {
-      const error = await updatePasswordAction(newPassword).then(() => null).catch((e) => e);
+      const error = await updatePasswordAction(newPassword)
+        .then(() => null)
+        .catch((err) => err);
       if (error) throw error;
       toast({ title: t('profile.passwordUpdated') });
       setNewPassword('');

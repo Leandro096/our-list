@@ -9,7 +9,10 @@ import { toast } from '@/hooks';
 import type { Role } from '@/lib';
 import { useLocale, useTranslation } from '@/locales';
 import type { UserWithRoleAssignments } from '@/services';
-import { updateUserRolesAction, updateUserSuperAdminAction } from '@/app/dashboard/settings/actions';
+import {
+  updateUserRolesAction,
+  updateUserSuperAdminAction,
+} from '@/app/dashboard/settings/actions';
 
 import {
   Card,

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 import { useVisibilityRefresh } from '@/hooks';
+
 import { useAuth } from '@/components/auth-provider';
 
 import { useSidebar, SidebarProvider } from './sidebar-context';

@@ -181,14 +181,21 @@ function validateRsvpFieldLengths(input: {
   email?: string;
   phone?: string;
   dietaryRestrictions?: string;
-  plusOne?: { firstName: string; lastName: string; email?: string; phone?: string; dietaryRestrictions?: string };
+  plusOne?: {
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    dietaryRestrictions?: string;
+  };
   related?: Array<{ email?: string; phone?: string; dietaryRestrictions?: string }>;
 }): boolean {
   if (
     exceedsLimit(input.email, FIELD_LIMITS.email) ||
     exceedsLimit(input.phone, FIELD_LIMITS.phone) ||
     exceedsLimit(input.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
-  ) return false;
+  )
+    return false;
 
   if (input.plusOne) {
     if (
@@ -197,7 +204,8 @@ function validateRsvpFieldLengths(input: {
       exceedsLimit(input.plusOne.email, FIELD_LIMITS.email) ||
       exceedsLimit(input.plusOne.phone, FIELD_LIMITS.phone) ||
       exceedsLimit(input.plusOne.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
-    ) return false;
+    )
+      return false;
   }
 
   for (const rel of input.related ?? []) {
@@ -205,7 +213,8 @@ function validateRsvpFieldLengths(input: {
       exceedsLimit(rel.email, FIELD_LIMITS.email) ||
       exceedsLimit(rel.phone, FIELD_LIMITS.phone) ||
       exceedsLimit(rel.dietaryRestrictions, FIELD_LIMITS.dietaryRestrictions)
-    ) return false;
+    )
+      return false;
   }
 
   return true;

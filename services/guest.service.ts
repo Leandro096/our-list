@@ -402,12 +402,8 @@ export async function updateGuest(
     if (deleteAttError) throw deleteAttError;
 
     const attendanceRows = [
-      ...(ceremony_attending
-        ? [{ guest_id: id, event_type: 'ceremony', attending: true }]
-        : []),
-      ...(reception_attending
-        ? [{ guest_id: id, event_type: 'reception', attending: true }]
-        : []),
+      ...(ceremony_attending ? [{ guest_id: id, event_type: 'ceremony', attending: true }] : []),
+      ...(reception_attending ? [{ guest_id: id, event_type: 'reception', attending: true }] : []),
     ];
     if (attendanceRows.length > 0) {
       const { error: insertAttError } = await withTimeout(

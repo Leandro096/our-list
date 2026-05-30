@@ -2,18 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { PERMISSIONS } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { requirePermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
-import { PERMISSIONS } from '@/lib/permissions';
+import { ForbiddenError, requirePermission, UnauthorizedError } from '@/lib/server-auth';
 
 import {
-  updateUserProfile,
-  updateUserSuperAdmin,
-  updateUserRoles,
-  createRole,
   updateRole,
   deleteRole,
+  updateUserRoles,
+  updateUserProfile,
+  updateUserSuperAdmin,
   updateRolePermissions,
 } from '@/services';
 
@@ -103,8 +102,7 @@ export async function createRoleAction(
   } catch (err) {
     return {
       id: '',
-      error:
-        err instanceof UnauthorizedError ? 'No autenticado.' : 'Sin permiso para crear roles.',
+      error: err instanceof UnauthorizedError ? 'No autenticado.' : 'Sin permiso para crear roles.',
     };
   }
   const { data, error } = await supabase

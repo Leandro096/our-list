@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:print": "npx eslint --print-config eslint.config.mjs > eslint-show-config.json",
-    "fm:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
-    "fm:fix": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\""
+    "fm:check": "prettier --check \"./**/*.{js,jsx,ts,tsx}\" --ignore-path .gitignore",
+    "fm:fix": "prettier --write \"./**/*.{js,jsx,ts,tsx}\" --ignore-path .gitignore"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

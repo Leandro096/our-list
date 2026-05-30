@@ -134,11 +134,12 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   }, [guests]);
 
   // Cleanup pending debounce timer on unmount to prevent router.push after unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+    },
+    []
+  );
 
   // ---- Navigation helpers ----
 

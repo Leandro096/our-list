@@ -1,9 +1,9 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { requirePermission } from '@/lib/server-auth';
 import { PERMISSIONS } from '@/lib/permissions';
+import { createClient } from '@/lib/supabase/server';
+import { requirePermission } from '@/lib/server-auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 import { assignRole } from '@/services';
 

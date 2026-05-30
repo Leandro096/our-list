@@ -107,11 +107,7 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
     try {
       if (editState.roleId) {
         await Promise.all([
-          updateRoleAction(
-            editState.roleId,
-            editState.name.trim(),
-            editState.description || null
-          ),
+          updateRoleAction(editState.roleId, editState.name.trim(), editState.description || null),
           updateRolePermissionsAction(editState.roleId, editState.permissionIds),
         ]);
       } else {

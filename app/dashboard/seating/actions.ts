@@ -2,16 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { createClient } from '@/lib/supabase/server';
-import { requirePermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
 import { PERMISSIONS } from '@/lib/permissions';
+import { createClient } from '@/lib/supabase/server';
+import { ForbiddenError, requirePermission, UnauthorizedError } from '@/lib/server-auth';
 
 import type { Table } from '@/lib';
 import type {
   AssignSeatInput,
-  AssignSeatFamilyResult,
   CreateTableInput,
   UpdateTableInput,
+  AssignSeatFamilyResult,
 } from '@/services';
 import {
   createTable,
@@ -53,10 +53,7 @@ export async function deleteTableAction(tableId: string): Promise<void> {
   revalidatePath('/dashboard/seating');
 }
 
-export async function updateTableAction(
-  tableId: string,
-  input: UpdateTableInput
-): Promise<Table> {
+export async function updateTableAction(tableId: string, input: UpdateTableInput): Promise<Table> {
   const supabase = await requireSeatingEdit();
   const result = await updateTable(supabase, tableId, input);
   revalidatePath('/dashboard/seating');
