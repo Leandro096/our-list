@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -223,18 +223,22 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right: GL Logo with botanical ring */}
-              <div className="relative flex items-center justify-center">
-                <BotanicalRing />
+              {/* Right: GL Logo with medallion rings */}
+              <div className="relative flex min-h-[320px] items-center justify-center sm:min-h-[380px]">
+                <div className="absolute h-[340px] w-[340px] rounded-full border border-dashed border-primary/15 sm:h-[400px] sm:w-[400px]" />
+                <div className="absolute h-[284px] w-[284px] rounded-full border border-primary/25 sm:h-[334px] sm:w-[334px]" />
+                <div className="absolute h-48 w-48 rounded-full bg-primary/8 blur-3xl sm:h-60 sm:w-60" />
+                <MedallionRing />
                 <div className="relative z-10 rounded-full shadow-[0_24px_80px_-10px_oklch(0.72_0.12_85/0.35)] dark:shadow-[0_24px_80px_-10px_oklch(0.76_0.13_85/0.25)]">
-                  <Image
-                    src="/icon.png"
-                    alt="Guest List App"
-                    width={256}
-                    height={256}
-                    className="h-52 w-52 rounded-full sm:h-64 sm:w-64"
-                    priority
-                  />
+                  <div className="relative h-52 w-52 sm:h-64 sm:w-64">
+                    <Image
+                      src="/icon.png"
+                      alt="Guest List App"
+                      fill
+                      className="rounded-full object-cover"
+                      priority
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -302,52 +306,93 @@ export default function HomePage() {
         </section>
 
         {/* ── CTA — Navy full-width ────────────────────────────────────── */}
-        <section className="relative overflow-hidden bg-[oklch(0.17_0.075_258)] py-20 sm:py-28 dark:bg-[oklch(0.13_0.06_258)]">
+        <section className="relative overflow-hidden bg-[oklch(0.17_0.075_258)] py-24 sm:py-32 dark:bg-[oklch(0.13_0.06_258)]">
+          {/* Dot grid */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ backgroundImage: 'radial-gradient(circle, oklch(0.72 0.12 85 / 0.13) 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+          />
+          {/* GL icon watermark */}
+          <div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center">
+            <div className="relative h-[560px] w-[560px] opacity-[0.05]">
+              <Image src="/icon.png" alt="" fill className="rounded-full object-cover" />
+            </div>
+          </div>
           {/* Gold radial glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_70%_at_50%_50%,oklch(0.72_0.12_85/0.09)_0%,transparent_70%)]" />
-          {/* Top/bottom hairlines */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-          {/* Botanical corners */}
-          <BotanicalCorner className="absolute -left-2 bottom-0 h-44 w-44 rotate-0 text-primary/15" />
-          <BotanicalCorner className="absolute -right-2 top-0 h-44 w-44 rotate-180 text-primary/15" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_65%_80%_at_50%_50%,oklch(0.72_0.12_85/0.08)_0%,transparent_70%)]" />
+          {/* Hairlines */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
 
           <div className="container relative mx-auto px-4 text-center">
-            <div className="mx-auto max-w-2xl">
-              {/* Ornament */}
-              <div className="mb-5 flex items-center justify-center gap-3">
-                <span className="h-px w-10 bg-gradient-to-r from-transparent to-primary/70" />
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="h-px w-10 bg-gradient-to-l from-transparent to-primary/70" />
+            <div className="mx-auto max-w-xl">
+              {/* Ornamental rule */}
+              <div className="mb-8 flex items-center justify-center gap-4">
+                <svg viewBox="0 0 100 8" className="h-2 w-24 text-primary" fill="none" aria-hidden="true">
+                  <path d="M0,4 Q25,1 50,4 Q75,7 100,4" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="0" cy="4" r="1.8" fill="currentColor" />
+                  <circle cx="50" cy="4" r="2.2" fill="currentColor" />
+                  <circle cx="100" cy="4" r="1.8" fill="currentColor" />
+                </svg>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/50 bg-primary/15">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <svg viewBox="0 0 100 8" className="h-2 w-24 -scale-x-100 text-primary" fill="none" aria-hidden="true">
+                  <path d="M0,4 Q25,1 50,4 Q75,7 100,4" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="0" cy="4" r="1.8" fill="currentColor" />
+                  <circle cx="50" cy="4" r="2.2" fill="currentColor" />
+                  <circle cx="100" cy="4" r="1.8" fill="currentColor" />
+                </svg>
               </div>
 
-              <h2 className="font-serif text-2xl font-semibold text-[oklch(0.95_0.008_85)] sm:text-3xl md:text-4xl">
+              <h2 className="font-serif text-3xl font-semibold text-white/95 sm:text-4xl md:text-5xl">
                 {t('home.ctaTitle')}
               </h2>
-              <p className="mt-4 text-sm leading-relaxed text-[oklch(0.72_0.04_258)] sm:text-base">
+              <p className="mt-5 text-base leading-relaxed text-white/55 sm:text-lg">
                 {t('home.ctaDescription')}
               </p>
 
-              {user ? (
-                <Button
-                  size="lg"
-                  asChild
-                  className="mt-8 bg-primary text-primary-foreground shadow-[0_4px_24px_oklch(0.72_0.12_85/0.45)] transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_6px_36px_oklch(0.72_0.12_85/0.65)]"
-                >
-                  <Link href="/dashboard">
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    {t('home.goToDashboard')}
-                  </Link>
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  asChild
-                  className="mt-8 bg-primary text-primary-foreground shadow-[0_4px_24px_oklch(0.72_0.12_85/0.45)] transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_6px_36px_oklch(0.72_0.12_85/0.65)]"
-                >
-                  <Link href="/auth/sign-up">{t('home.getStartedFree')}</Link>
-                </Button>
-              )}
+              <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                {user ? (
+                  <Button
+                    size="lg"
+                    asChild
+                    className="bg-primary text-primary-foreground shadow-[0_4px_28px_oklch(0.72_0.12_85/0.55)] transition-all duration-200 hover:scale-[1.03] hover:bg-primary/90"
+                  >
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      {t('home.goToDashboard')}
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      asChild
+                      className="bg-primary text-primary-foreground shadow-[0_4px_28px_oklch(0.72_0.12_85/0.55)] transition-all duration-200 hover:scale-[1.03] hover:bg-primary/90"
+                    >
+                      <Link href="/auth/sign-up">{t('home.getStartedFree')}</Link>
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      asChild
+                      className="border-white/20 text-white/80 hover:border-primary/60 hover:bg-primary/10 hover:text-white"
+                    >
+                      <Link href="/auth/login">{t('home.signIn')}</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/40">
+                {([t('home.trust1'), t('home.trust2'), t('home.trust3')] as string[]).map((label) => (
+                  <span key={label} className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -414,201 +459,60 @@ function FeatureCard({
 }
 
 /**
- * BotanicalRing — SVG que replica el ornamento botánico del ícono GL:
- * rama curva central con hojas ovales alternas, flores de 5 pétalos y bayas.
- * Gira muy lentamente para dar vida sutil al hero.
+ * MedallionRing — anillo ornamental con simetr\u00eda 4-fold, limpio, sin c\u00e1lculos din\u00e1micos.
+ * 2 anillos circulares + 4 motivos de hojas cardinales + 4 diamantes en diagonal.
  */
-function BotanicalRing() {
-  // Paleta: color gold aplicado vía currentColor (text-primary/30)
-  // Viewbox 500×500, centro 250,250
-  // La rama recorre un arco circular a ~155px del centro
+function MedallionRing() {
   return (
     <svg
       viewBox="0 0 500 500"
       xmlns="http://www.w3.org/2000/svg"
-      className="absolute h-[340px] w-[340px] animate-[spin_120s_linear_infinite] text-primary/35 sm:h-[400px] sm:w-[400px]"
+      className="absolute h-[340px] w-[340px] animate-[spin_120s_linear_infinite] text-primary/30 sm:h-[400px] sm:w-[400px]"
       aria-hidden="true"
     >
-      <defs>
-        {/* Gradiente radial que simula el acabado metálico dorado */}
-        <radialGradient id="goldSheen" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
-          <stop offset="60%" stopColor="currentColor" stopOpacity="0.75" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0.5" />
-        </radialGradient>
-      </defs>
+      {/* Outer dashed ring */}
+      <circle cx="250" cy="250" r="228" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.7" strokeDasharray="2 10" fill="none" />
+      {/* Inner solid ring */}
+      <circle cx="250" cy="250" r="195" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1" fill="none" />
 
-      {/* ── Anillo exterior con guiones decorativos ── */}
-      <circle
-        cx="250" cy="250" r="228"
-        stroke="currentColor" strokeOpacity="0.4"
-        strokeWidth="0.7" strokeDasharray="2 10"
-        fill="none"
-      />
-      {/* ── Anillo interior sólido ── */}
-      <circle
-        cx="250" cy="250" r="195"
-        stroke="currentColor" strokeOpacity="0.55"
-        strokeWidth="1" fill="none"
-      />
-
-      {/* ════════════════════════════════════════════
-          RAMA BOTÁNICA INFERIOR-IZQUIERDA
-          Idéntica a la del ícono GL: tallo curvo,
-          hojas alternas, flores y bayas.
-          ════════════════════════════════════════════ */}
-      <g fill="url(#goldSheen)" stroke="none">
-
-        {/* Tallo principal: curva S desde izq. hasta centro-inferior */}
-        <path
-          d="M 72,310 C 100,295 130,305 158,292 C 186,279 200,268 228,262 C 248,257 258,260 268,258"
-          fill="none"
-          stroke="currentColor" strokeOpacity="0.9"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        {/* Extensión rama derecha */}
-        <path
-          d="M 268,258 C 290,254 308,248 328,243"
-          fill="none"
-          stroke="currentColor" strokeOpacity="0.9"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-
-        {/* ── Hoja 1 — arriba-izq ── */}
-        <g transform="translate(110,288) rotate(-38)">
-          <ellipse cx="0" cy="0" rx="5" ry="13" />
-          <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.6" />
-        </g>
-        {/* ── Hoja 2 — abajo-izq ── */}
-        <g transform="translate(118,306) rotate(28)">
-          <ellipse cx="0" cy="0" rx="4.5" ry="11" />
-        </g>
-
-        {/* ── Hoja 3 — arriba ── */}
-        <g transform="translate(148,278) rotate(-42)">
-          <ellipse cx="0" cy="0" rx="5" ry="14" />
-          <line x1="0" y1="-14" x2="0" y2="14" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.6" />
-        </g>
-        {/* ── Hoja 4 — abajo ── */}
-        <g transform="translate(158,296) rotate(32)">
-          <ellipse cx="0" cy="0" rx="4.5" ry="12" />
-        </g>
-
-        {/* ── Hoja 5 — arriba ── */}
-        <g transform="translate(182,271) rotate(-45)">
-          <ellipse cx="0" cy="0" rx="4.5" ry="13" />
-          <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.6" />
-        </g>
-        {/* ── Hoja 6 — abajo ── */}
-        <g transform="translate(193,283) rotate(35)">
-          <ellipse cx="0" cy="0" rx="4" ry="11" />
-        </g>
-
-        {/* ── Hoja 7 — arriba ── */}
-        <g transform="translate(214,263) rotate(-48)">
-          <ellipse cx="0" cy="0" rx="4" ry="12" />
-          <line x1="0" y1="-12" x2="0" y2="12" stroke="currentColor" strokeOpacity="0.4" strokeWidth="0.6" />
-        </g>
-        {/* ── Hoja 8 — abajo ── */}
-        <g transform="translate(224,272) rotate(38)">
-          <ellipse cx="0" cy="0" rx="4" ry="10" />
-        </g>
-
-        {/* ── Hoja 9 derecha-arriba ── */}
-        <g transform="translate(290,248) rotate(-50)">
-          <ellipse cx="0" cy="0" rx="3.5" ry="10" />
-        </g>
-        {/* ── Hoja 10 derecha-abajo ── */}
-        <g transform="translate(300,257) rotate(40)">
-          <ellipse cx="0" cy="0" rx="3.5" ry="9" />
-        </g>
-        {/* ── Hoja 11 extremo-derecha ── */}
-        <g transform="translate(320,244) rotate(-52)">
-          <ellipse cx="0" cy="0" rx="3" ry="8" />
-        </g>
-
-        {/* ── Flor 1 (5 pétalos) — centro-izquierda ── */}
-        <g transform="translate(94,298)">
-          <circle cx="0" cy="0" r="2.8" />
-          {/* pétalos */}
-          {[0, 72, 144, 216, 288].map((deg) => (
-            <ellipse
-              key={deg}
-              cx={Math.cos((deg * Math.PI) / 180) * 5.5}
-              cy={Math.sin((deg * Math.PI) / 180) * 5.5}
-              rx="2.2"
-              ry="3.5"
-              transform={`rotate(${deg + 90}, ${Math.cos((deg * Math.PI) / 180) * 5.5}, ${Math.sin((deg * Math.PI) / 180) * 5.5})`}
-            />
-          ))}
-        </g>
-
-        {/* ── Flor 2 — centro ── */}
-        <g transform="translate(243,267)">
-          <circle cx="0" cy="0" r="2.5" />
-          {[0, 72, 144, 216, 288].map((deg) => (
-            <ellipse
-              key={deg}
-              cx={Math.cos((deg * Math.PI) / 180) * 5}
-              cy={Math.sin((deg * Math.PI) / 180) * 5}
-              rx="2"
-              ry="3.2"
-              transform={`rotate(${deg + 90}, ${Math.cos((deg * Math.PI) / 180) * 5}, ${Math.sin((deg * Math.PI) / 180) * 5})`}
-            />
-          ))}
-        </g>
-
-        {/* ── Bayas izquierda (racimo pequeño) ── */}
-        <g transform="translate(82,307)">
-          <circle cx="0" cy="0" r="2.2" />
-          <circle cx="5" cy="-3" r="2" />
-          <circle cx="9" cy="2" r="1.8" />
-          {/* tallitos */}
-          <line x1="0" y1="0" x2="4" y2="-6" stroke="currentColor" strokeOpacity="0.7" strokeWidth="0.8" />
-          <line x1="0" y1="0" x2="8" y2="-1" stroke="currentColor" strokeOpacity="0.7" strokeWidth="0.8" />
-        </g>
-
-        {/* ── Bayas derecha ── */}
-        <g transform="translate(315,253)">
-          <circle cx="0" cy="0" r="2" />
-          <circle cx="6" cy="-2" r="1.8" />
-          <line x1="0" y1="0" x2="5" y2="-5" stroke="currentColor" strokeOpacity="0.7" strokeWidth="0.7" />
-        </g>
-
-        {/* ── Baya suelta extremo ── */}
-        <circle cx="332" cy="243" r="2.5" />
-        <circle cx="340" cy="240" r="1.8" />
-
+      {/* TOP (0\u00b0) — leaf motif pointing outward */}
+      <g transform="translate(250,37) rotate(0)" fill="currentColor">
+        <ellipse cx="0" cy="0" rx="4.5" ry="13" />
+        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
+        <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
+        <circle cx="0" cy="-19" r="2.3" />
+      </g>
+      {/* RIGHT (90\u00b0) */}
+      <g transform="translate(463,250) rotate(90)" fill="currentColor">
+        <ellipse cx="0" cy="0" rx="4.5" ry="13" />
+        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
+        <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
+        <circle cx="0" cy="-19" r="2.3" />
+      </g>
+      {/* BOTTOM (180\u00b0) */}
+      <g transform="translate(250,463) rotate(180)" fill="currentColor">
+        <ellipse cx="0" cy="0" rx="4.5" ry="13" />
+        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
+        <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
+        <circle cx="0" cy="-19" r="2.3" />
+      </g>
+      {/* LEFT (270\u00b0) */}
+      <g transform="translate(37,250) rotate(270)" fill="currentColor">
+        <ellipse cx="0" cy="0" rx="4.5" ry="13" />
+        <line x1="0" y1="-13" x2="0" y2="13" stroke="currentColor" strokeOpacity="0.3" strokeWidth="0.8" fill="none" />
+        <ellipse cx="-7" cy="6" rx="3" ry="8" transform="rotate(26,-7,6)" />
+        <ellipse cx="7" cy="6" rx="3" ry="8" transform="rotate(-26,7,6)" />
+        <circle cx="0" cy="-19" r="2.3" />
       </g>
 
-      {/* ════════════════════════════════════════════
-          ESPEJO — rama botánica superior-derecha
-          (la misma rama rotada 180°)
-          ════════════════════════════════════════════ */}
-      <use href="#botanicalBranch" transform="rotate(180, 250, 250)" />
-    </svg>
-  );
-}
-
-/** Botanical branch for decorating corners of the CTA navy section */
-function BotanicalCorner({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 130 130"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M12,118 Q35,65 88,18" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      <ellipse cx="38" cy="80" rx="9" ry="16" transform="rotate(-42,38,80)" />
-      <ellipse cx="55" cy="58" rx="8" ry="14" transform="rotate(-52,55,58)" />
-      <ellipse cx="72" cy="38" rx="7" ry="12" transform="rotate(-58,72,38)" />
-      <circle cx="88" cy="20" r="4.5" />
-      <circle cx="28" cy="96" r="3.5" />
-      <circle cx="18" cy="110" r="2.5" />
+      {/* Diamond ornaments at 45\u00b0 / 135\u00b0 / 225\u00b0 / 315\u00b0 */}
+      <g transform="translate(401,99) rotate(45)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
+      <g transform="translate(401,401) rotate(135)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
+      <g transform="translate(99,401) rotate(225)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
+      <g transform="translate(99,99) rotate(315)" fill="currentColor"><path d="M0,-8 L5,0 L0,8 L-5,0 Z" /></g>
     </svg>
   );
 }
