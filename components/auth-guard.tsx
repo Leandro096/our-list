@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useContext, createContext } from 'react';
+import { use, useMemo, useEffect, createContext } from 'react';
 
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -50,6 +50,11 @@ export function AuthGuard({ children, redirectTo = '/auth/login' }: AuthGuardPro
   const router = useRouter();
   const pathname = usePathname();
 
+  const ctxValue = useMemo(
+    () => ({ user: user!, profile, signOut, refreshProfile }),
+    [user, profile, signOut, refreshProfile]
+  );
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -81,11 +86,7 @@ export function AuthGuard({ children, redirectTo = '/auth/login' }: AuthGuardPro
     return null;
   }
 
-  return (
-    <AuthGuardContext.Provider value={{ user, profile, signOut, refreshProfile }}>
-      {children}
-    </AuthGuardContext.Provider>
-  );
+  return <AuthGuardContext.Provider value={ctxValue}>{children}</AuthGuardContext.Provider>;
 }
 
 // ---- Hook -------------------------------------------------------------------
@@ -98,8 +99,9 @@ export function AuthGuard({ children, redirectTo = '/auth/login' }: AuthGuardPro
  *
  * Must be called inside a component that is a descendant of `<AuthGuard>`.
  */
-export function useAuthGuard(): AuthGuardContextType {
-  const context = useContext(AuthGuardContext);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function useAuthGuard(): AuthGuardContextType {
+  const context = use(AuthGuardContext);
   if (context === undefined) {
     throw new Error('useAuthGuard must be used within an <AuthGuard>');
   }

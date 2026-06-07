@@ -57,7 +57,7 @@ export const DEFAULT_EXPORT_COLUMNS = GUEST_COLUMNS.map((c) => c.key);
  * Common alias headers users might have in their own spreadsheets.
  * Maps lowercase trimmed header → guest column key.
  */
-export const HEADER_ALIASES: Record<string, string> = {
+const HEADER_ALIASES: Record<string, string> = {
   // first_name
   'first name': 'first_name',
   firstname: 'first_name',

@@ -82,7 +82,8 @@ export async function getScanHistory(
  * Looks up the guest, checks for duplicate scan, logs the scan,
  * and returns guest data + updated today stats — all in one round-trip.
  */
-export async function processGuestScan(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function processGuestScan(
   supabase: SupabaseClient,
   invitationGuid: string,
   eventType: 'ceremony' | 'reception',
@@ -154,24 +155,25 @@ export async function processGuestScanByFamily(
   const scannedGuest = guestRow[0] as { id: string; parent_guest_id: string | null };
   const rootId = scannedGuest.parent_guest_id ?? scannedGuest.id;
 
-  // Get all family members (root + children)
-  const { data: children } = await supabase
-    .from('guests')
-    .select('id, first_name, last_name, seating_assignments(tables(number))')
-    .eq('parent_guest_id', rootId);
-
-  // Get root guest full data for scanner display
-  const { data: rootData } = await supabase
-    .from('guests')
-    .select(
-      `
+  // Get family members (root + children) — both queries depend only on rootId,
+  // so fire them in parallel.
+  const [{ data: children }, { data: rootData }] = await Promise.all([
+    supabase
+      .from('guests')
+      .select('id, first_name, last_name, seating_assignments(tables(number))')
+      .eq('parent_guest_id', rootId),
+    supabase
+      .from('guests')
+      .select(
+        `
       id, first_name, last_name, status,
       guest_categories(categories(name, color)),
       seating_assignments(tables(number))
     `
-    )
-    .eq('id', rootId)
-    .single();
+      )
+      .eq('id', rootId)
+      .single(),
+  ]);
 
   if (!rootData) return { found: false };
 
@@ -231,38 +233,38 @@ export async function processGuestScanByFamily(
   today.setHours(0, 0, 0, 0);
   const todayIso = today.toISOString();
 
-  const memberResults: GroupScanMember[] = [];
+  const memberResults: GroupScanMember[] = await Promise.all(
+    allMemberIds.map(async (member) => {
+      const { data: existingScans } = await supabase
+        .from('scan_logs')
+        .select('id')
+        .eq('guest_id', member.id)
+        .eq('event_type', eventType)
+        .eq('is_duplicate', false)
+        .gte('scanned_at', todayIso)
+        .limit(1);
 
-  for (const member of allMemberIds) {
-    const { data: existingScans } = await supabase
-      .from('scan_logs')
-      .select('id')
-      .eq('guest_id', member.id)
-      .eq('event_type', eventType)
-      .eq('is_duplicate', false)
-      .gte('scanned_at', todayIso)
-      .limit(1);
+      const isDuplicate = (existingScans?.length ?? 0) > 0;
 
-    const isDuplicate = (existingScans?.length ?? 0) > 0;
+      await supabase.from('scan_logs').insert({
+        guest_id: member.id,
+        event_type: eventType,
+        scanned_by: scannedBy ?? null,
+        is_duplicate: isDuplicate,
+        scanned_at: new Date().toISOString(),
+      });
 
-    await supabase.from('scan_logs').insert({
-      guest_id: member.id,
-      event_type: eventType,
-      scanned_by: scannedBy ?? null,
-      is_duplicate: isDuplicate,
-      scanned_at: new Date().toISOString(),
-    });
+      return {
+        id: member.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        is_duplicate: isDuplicate,
+        seating: member.seating,
+      };
+    })
+  );
 
-    memberResults.push({
-      id: member.id,
-      first_name: member.first_name,
-      last_name: member.last_name,
-      is_duplicate: isDuplicate,
-      seating: member.seating,
-    });
-  }
-
-  // Recalculate today stats
+  // Recalculate today stats — must run after inserts above so counts include the new scans.
   const [{ data: ceremonyScans }, { data: receptionScans }] = await Promise.all([
     supabase
       .from('scan_logs')

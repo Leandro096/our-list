@@ -40,10 +40,11 @@ export default async function RolesSettingsPage() {
 
   const userPermissions = [
     ...new Set(
-      (profile.user_roles as unknown as Array<{ roles: RoleRow | null }>)
-        ?.flatMap((ur) => ur.roles?.role_permissions ?? [])
-        .map((rp) => rp.permissions?.scope)
-        .filter((scope): scope is string => Boolean(scope)) ?? []
+      (profile.user_roles as unknown as Array<{ roles: RoleRow | null }>)?.flatMap((ur) =>
+        (ur.roles?.role_permissions ?? []).flatMap((rp) =>
+          rp.permissions?.scope ? [rp.permissions.scope] : []
+        )
+      ) ?? []
     ),
   ];
 

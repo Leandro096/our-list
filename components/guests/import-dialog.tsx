@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useReducer, useCallback } from 'react';
 import {
   Upload,
   RotateCcw,
@@ -44,6 +44,13 @@ import {
 
 type Step = 'upload' | 'map' | 'preview' | 'result';
 
+const STEP_PROGRESS: Record<Step, number> = {
+  upload: 25,
+  map: 50,
+  preview: 75,
+  result: 100,
+};
+
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,43 +59,61 @@ interface ImportDialogProps {
 
 const IGNORE_VALUE = '__ignore__';
 
+type State = {
+  step: Step;
+  isDragging: boolean;
+  isLoading: boolean;
+  error: string | null;
+  detectedHeaders: string[];
+  rawRows: Record<string, string>[];
+  columnMap: Record<string, string>;
+  validCount: number;
+  errorRows: Array<{ row: number; error: string }>;
+  importResult: { created: number; errors: Array<{ row: number; error: string }> } | null;
+};
+
+type Action = { type: 'UPDATE'; payload: Partial<State> } | { type: 'RESET' };
+
+const initialState: State = {
+  step: 'upload',
+  isDragging: false,
+  isLoading: false,
+  error: null,
+  detectedHeaders: [],
+  rawRows: [],
+  columnMap: {},
+  validCount: 0,
+  errorRows: [],
+  importResult: null,
+};
+
+function reducer(state: State, action: Action): State {
+  if (action.type === 'RESET') return initialState;
+  return { ...state, ...action.payload };
+}
+
 export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogProps) {
-  const [step, setStep] = useState<Step>('upload');
-  const [isDragging, setIsDragging] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // After parsing the file
-  const [detectedHeaders, setDetectedHeaders] = useState<string[]>([]);
-  const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
-
-  // Column mapping: detectedHeader → guest field key (or IGNORE_VALUE)
-  const [columnMap, setColumnMap] = useState<Record<string, string>>({});
-
-  // After applying mapping
-  const [mappedRows, setMappedRows] = useState<Record<string, string>[]>([]);
-  const [validCount, setValidCount] = useState(0);
-  const [errorRows, setErrorRows] = useState<Array<{ row: number; error: string }>>([]);
-
-  // Final result
-  const [importResult, setImportResult] = useState<{
-    created: number;
-    errors: Array<{ row: number; error: string }>;
-  } | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const {
+    step,
+    isDragging,
+    isLoading,
+    error,
+    detectedHeaders,
+    rawRows,
+    columnMap,
+    validCount,
+    errorRows,
+    importResult,
+  } = state;
 
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mappedRowsRef = useRef<Record<string, string>[]>([]);
 
   function reset() {
-    setStep('upload');
-    setError(null);
-    setDetectedHeaders([]);
-    setRawRows([]);
-    setColumnMap({});
-    setMappedRows([]);
-    setValidCount(0);
-    setErrorRows([]);
-    setImportResult(null);
+    dispatch({ type: 'RESET' });
+    mappedRowsRef.current = [];
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -96,31 +121,29 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
 
   async function handleFile(file: File) {
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      setError(t('guests.importDialog.errorOnlyFormats'));
+      dispatch({ type: 'UPDATE', payload: { error: t('guests.importDialog.errorOnlyFormats') } });
       return;
     }
-    setIsLoading(true);
-    setError(null);
+    dispatch({ type: 'UPDATE', payload: { isLoading: true, error: null } });
     try {
       const { headers, rows } = await parseExcelFile(file);
       if (headers.length === 0 || rows.length === 0) {
-        setError(t('guests.importDialog.errorEmpty'));
+        dispatch({ type: 'UPDATE', payload: { error: t('guests.importDialog.errorEmpty') } });
         return;
       }
-      // Auto-detect column mapping
       const autoMap: Record<string, string> = {};
       headers.forEach((h) => {
         const detected = detectColumnKey(h);
         autoMap[h] = detected ?? IGNORE_VALUE;
       });
-      setDetectedHeaders(headers);
-      setRawRows(rows);
-      setColumnMap(autoMap);
-      setStep('map');
+      dispatch({
+        type: 'UPDATE',
+        payload: { detectedHeaders: headers, rawRows: rows, columnMap: autoMap, step: 'map' },
+      });
     } catch {
-      setError(t('guests.importDialog.errorReadFail'));
+      dispatch({ type: 'UPDATE', payload: { error: t('guests.importDialog.errorReadFail') } });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: 'UPDATE', payload: { isLoading: false } });
     }
   }
 
@@ -132,7 +155,7 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-      setIsDragging(false);
+      dispatch({ type: 'UPDATE', payload: { isDragging: false } });
       const file = e.dataTransfer.files?.[0];
       if (file) handleFile(file);
     },
@@ -143,7 +166,6 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
   // ── Step 2: Map columns ─────────────────────────────────────────────────────
 
   function applyMapping() {
-    // Re-key each row using the mapping
     const remapped = rawRows.map((row) => {
       const newRow: Record<string, string> = {};
       detectedHeaders.forEach((h) => {
@@ -156,42 +178,36 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
     });
 
     const { valid, errors } = validateImportRows(remapped);
-    setMappedRows(remapped);
-    setValidCount(valid.length);
-    setErrorRows([
-      ...errors.map((e) => ({
-        row: e.row,
-        error: e.error ?? 'Validation error',
-      })),
-    ]);
-    setStep('preview');
+    mappedRowsRef.current = remapped;
+    dispatch({
+      type: 'UPDATE',
+      payload: {
+        validCount: valid.length,
+        errorRows: errors.map((e) => ({ row: e.row, error: e.error ?? 'Validation error' })),
+        step: 'preview',
+      },
+    });
   }
 
   // ── Step 4: Import ──────────────────────────────────────────────────────────
 
   async function handleImport() {
-    setIsLoading(true);
-    setError(null);
+    dispatch({ type: 'UPDATE', payload: { isLoading: true, error: null } });
     try {
-      const result = await importGuestsAction(mappedRows);
-      setImportResult(result);
-      setStep('result');
+      const result = await importGuestsAction(mappedRowsRef.current);
+      dispatch({ type: 'UPDATE', payload: { importResult: result, step: 'result' } });
       if (result.created > 0) onImported?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('guests.importDialog.importFailed'));
+      dispatch({
+        type: 'UPDATE',
+        payload: { error: e instanceof Error ? e.message : t('guests.importDialog.importFailed') },
+      });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: 'UPDATE', payload: { isLoading: false } });
     }
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-
-  const stepProgress: Record<Step, number> = {
-    upload: 25,
-    map: 50,
-    preview: 75,
-    result: 100,
-  };
 
   return (
     <Dialog
@@ -207,7 +223,7 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
           <DialogDescription>{t('guests.importDialog.description')}</DialogDescription>
         </DialogHeader>
 
-        <Progress value={stepProgress[step]} className="h-1" />
+        <Progress value={STEP_PROGRESS[step]} className="h-1" />
 
         {error && (
           <Alert variant="destructive">
@@ -255,9 +271,9 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
               }`}
               onDragOver={(e) => {
                 e.preventDefault();
-                setIsDragging(true);
+                dispatch({ type: 'UPDATE', payload: { isDragging: true } });
               }}
-              onDragLeave={() => setIsDragging(false)}
+              onDragLeave={() => dispatch({ type: 'UPDATE', payload: { isDragging: false } })}
               onDrop={onDrop}
             >
               <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
@@ -285,6 +301,7 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
                 ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.xls,.csv"
+                aria-label="Upload guest list file"
                 className="hidden"
                 onChange={onFileInput}
               />
@@ -324,7 +341,10 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
                         <Select
                           value={columnMap[header] ?? IGNORE_VALUE}
                           onValueChange={(val) =>
-                            setColumnMap((prev) => ({ ...prev, [header]: val }))
+                            dispatch({
+                              type: 'UPDATE',
+                              payload: { columnMap: { ...columnMap, [header]: val } },
+                            })
                           }
                         >
                           <SelectTrigger className="h-8 w-48">
@@ -462,7 +482,9 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
           {step !== 'upload' && step !== 'result' && (
             <Button
               variant="outline"
-              onClick={() => setStep(step === 'map' ? 'upload' : 'map')}
+              onClick={() =>
+                dispatch({ type: 'UPDATE', payload: { step: step === 'map' ? 'upload' : 'map' } })
+              }
               disabled={isLoading}
             >
               {t('guests.importDialog.back')}

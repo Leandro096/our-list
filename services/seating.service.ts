@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Guest, Table, SeatingAssignment } from '@/lib/types';
@@ -45,7 +46,7 @@ export type UpdateTableInput = {
 
 // ---- Queries ----
 
-export async function getSeatingData(supabase: SupabaseClient): Promise<SeatingData> {
+async function getSeatingData(supabase: SupabaseClient): Promise<SeatingData> {
   const [{ data: guests }, { data: assignments }, { data: tables }] = await Promise.all([
     supabase
       .from('guests')
@@ -96,7 +97,7 @@ export async function updateTable(
   return data;
 }
 
-export async function assignSeat(supabase: SupabaseClient, input: AssignSeatInput): Promise<void> {
+async function assignSeat(supabase: SupabaseClient, input: AssignSeatInput): Promise<void> {
   const { error } = await supabase.from('seating_assignments').upsert(
     {
       guest_id: input.guest_id,
@@ -108,10 +109,7 @@ export async function assignSeat(supabase: SupabaseClient, input: AssignSeatInpu
   if (error) throw error;
 }
 
-export async function removeSeatAssignment(
-  supabase: SupabaseClient,
-  guestId: string
-): Promise<void> {
+async function removeSeatAssignment(supabase: SupabaseClient, guestId: string): Promise<void> {
   const { error } = await supabase.from('seating_assignments').delete().eq('guest_id', guestId);
 
   if (error) throw error;
@@ -224,16 +222,10 @@ export async function assignSeatWithFamily(
   const memberIds = [rootId, ...(children ?? []).map((c) => c.id)];
 
   // Check table capacity
-  const { data: tableRow } = await supabase
-    .from('tables')
-    .select('capacity')
-    .eq('id', input.table_id)
-    .single();
-
-  const { data: currentAssignments } = await supabase
-    .from('seating_assignments')
-    .select('guest_id')
-    .eq('table_id', input.table_id);
+  const [{ data: tableRow }, { data: currentAssignments }] = await Promise.all([
+    supabase.from('tables').select('capacity').eq('id', input.table_id).single(),
+    supabase.from('seating_assignments').select('guest_id').eq('table_id', input.table_id),
+  ]);
 
   const capacity = tableRow?.capacity ?? 0;
   const currentCount = (currentAssignments ?? []).length;

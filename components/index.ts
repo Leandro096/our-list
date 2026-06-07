@@ -9,6 +9,4 @@ export * from './categories';
 export * from './page-header';
 export * from './auth-provider';
 export * from './theme-provider';
-export * from './permission-guard';
-export * from './unauthorized-page';
 export * from './language-switcher';

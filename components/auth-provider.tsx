@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useContext, useCallback, createContext } from 'react';
+import { use, useMemo, useState, useEffect, useCallback, createContext } from 'react';
 
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -101,14 +101,16 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         .select('permissions(scope)')
         .eq('role_id', roleId);
 
-      return (data ?? [])
-        .flatMap((rp: { permissions: { scope: string }[] | { scope: string } | null }) => {
+      return (data ?? []).flatMap(
+        (rp: { permissions: { scope: string }[] | { scope: string } | null }) => {
           if (!rp.permissions) return [];
           return Array.isArray(rp.permissions)
-            ? rp.permissions.map((p) => p.scope)
-            : [rp.permissions.scope];
-        })
-        .filter((scope): scope is string => Boolean(scope));
+            ? rp.permissions.flatMap((p) => (p.scope ? [p.scope] : []))
+            : rp.permissions.scope
+              ? [rp.permissions.scope]
+              : [];
+        }
+      ) as string[];
     },
     [supabase]
   );
@@ -216,10 +218,11 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
 
       const permissions = [
         ...new Set(
-          (data.user_roles as Array<{ roles: RoleRow | null }>)
-            ?.flatMap((ur) => ur.roles?.role_permissions ?? [])
-            .map((rp) => rp.permissions?.scope)
-            .filter((scope): scope is string => Boolean(scope)) ?? []
+          (data.user_roles as Array<{ roles: RoleRow | null }>)?.flatMap((ur) =>
+            (ur.roles?.role_permissions ?? []).flatMap((rp) =>
+              rp.permissions?.scope ? [rp.permissions.scope] : []
+            )
+          ) ?? []
         ),
       ];
 
@@ -343,7 +346,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     [user, fetchPermissionsForRole]
   );
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     // 1. Limpiar estado local INMEDIATAMENTE (optimista) para que el router
     //    pueda redirigir sin esperar la red. Así el usuario nunca queda colgado.
     if (user) clearActiveRoleStorage(user.id);
@@ -368,28 +371,28 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     } catch (error) {
       console.error('[AuthProvider] signOut error:', error);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        isLoading,
-        activeRole,
-        activePermissions,
-        selectRole,
-        signOut,
-        refreshProfile,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const ctxValue = useMemo(
+    () => ({
+      user,
+      profile,
+      isLoading,
+      activeRole,
+      activePermissions,
+      selectRole,
+      signOut,
+      refreshProfile,
+    }),
+    [user, profile, isLoading, activeRole, activePermissions, selectRole, signOut, refreshProfile]
   );
+
+  return <AuthContext.Provider value={ctxValue}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

@@ -19,6 +19,11 @@ export default async function GuestsPage({
     .map((value) => value.trim())
     .filter((value) => value.length > 0 && value !== 'all');
 
+  const eventTypes = (params.events ?? '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter((v) => v === 'ceremony' || v === 'reception' || v === 'none');
+
   const sortBy = (
     VALID_SORT.includes(params.sort as SortBy) ? params.sort : 'first_name'
   ) as SortBy;
@@ -32,6 +37,7 @@ export default async function GuestsPage({
       search: params.q,
       status: params.status,
       categoryIds,
+      eventTypes,
       sortBy,
       sortOrder,
       page,
@@ -56,6 +62,7 @@ export default async function GuestsPage({
           q: params.q ?? '',
           status: params.status ?? 'all',
           categoryIds,
+          eventTypes,
           sort: sortBy,
           order: sortOrder,
           page,

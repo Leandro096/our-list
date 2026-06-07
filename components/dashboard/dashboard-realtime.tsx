@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -8,7 +9,18 @@ import { toast } from '@/hooks';
 import type { DashboardStats } from '@/lib';
 import { getDashboardStats } from '@/services';
 
-import { DashboardContent } from './dashboard-content';
+import { Spinner } from '@/components/ui/spinner';
+
+const DashboardContent = dynamic(
+  () => import('./dashboard-content').then((m) => m.DashboardContent),
+  {
+    loading: () => (
+      <div className="flex justify-center py-12">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface DashboardRealtimeProps {
   initialStats: DashboardStats;
@@ -32,6 +44,13 @@ export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
     }
   }, [supabase]);
 
+  // Stable ref so subscribe doesn't need refetch as a dep (avoids re-subscription)
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
   const subscribe = useCallback(() => {
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -39,19 +58,23 @@ export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
 
     const channel = supabase
       .channel('dashboard-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, refetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scan_logs' }, refetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, () =>
+        refetchRef.current()
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scan_logs' }, () =>
+        refetchRef.current()
+      )
       .subscribe();
 
     channelRef.current = channel;
-  }, [supabase, refetch]);
+  }, [supabase]);
 
   useEffect(() => {
     subscribe();
 
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
-        refetch();
+        refetchRef.current();
         subscribe();
       }
     }
@@ -64,7 +87,7 @@ export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [subscribe, refetch, supabase]);
+  }, [subscribe, supabase]);
 
   return <DashboardContent stats={stats} />;
 }

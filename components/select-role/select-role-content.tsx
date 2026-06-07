@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Heart, Clock, ShieldCheck } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { cn, type Role } from '@/lib';
 import { useTranslation } from '@/locales';
 
-import { Spinner } from '../ui';
+import { Spinner } from '../ui/spinner';
 import { useAuth } from '../auth-provider';
 
-export function SelectRoleContent() {
+function SelectRoleInner() {
   const { isLoading, profile, activeRole, selectRole } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
@@ -90,6 +90,7 @@ export function SelectRoleContent() {
             const isSelecting = selecting === role.id;
             return (
               <button
+                type="button"
                 key={role.id}
                 onClick={() => handleSelect(role)}
                 disabled={selecting !== null}
@@ -122,5 +123,19 @@ export function SelectRoleContent() {
         <p className="text-center text-xs text-muted-foreground">{t('selectRole.switchHint')}</p>
       </div>
     </div>
+  );
+}
+
+export function SelectRoleContent() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner className="size-8 text-muted-foreground" />
+        </div>
+      }
+    >
+      <SelectRoleInner />
+    </Suspense>
   );
 }

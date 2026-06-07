@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useRef, useState, useEffect, useTransition } from 'react';
+import { useRef, useEffect, useReducer, useTransition } from 'react';
 import {
+  X,
   Eye,
   Users,
   Link2,
+  Filter,
   Search,
   Pencil,
   Trash2,
@@ -27,6 +29,7 @@ import type { GuestListItemWithFamily } from '@/services';
 import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogTitle, DialogHeader, DialogContent } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogTitle,
@@ -71,6 +74,7 @@ export interface GuestFilters {
   q: string;
   status: string;
   categoryIds: string[];
+  eventTypes: string[];
   sort: string;
   order: string;
   page: number;
@@ -92,6 +96,9 @@ const STATUS_OPTIONS = ['all', 'pending', 'confirmed', 'declined', 'tentative'] 
 
 const SORT_OPTIONS = ['first_name', 'last_name', 'status', 'created_at'] as const;
 
+const EVENT_TYPE_OPTIONS = ['all', 'ceremony', 'reception', 'both', 'none'] as const;
+type EventTypeOption = (typeof EVENT_TYPE_OPTIONS)[number];
+
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
   pending: 'outline',
   confirmed: 'default',
@@ -99,7 +106,34 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
   tentative: 'outline',
 };
 
+// ---- Module-scope helpers ----
+
+function SortIcon({ column, sort, order }: { column: string; sort: string; order: string }) {
+  if (sort !== column) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+  return order === 'asc' ? (
+    <ArrowUp className="ml-1 inline h-3 w-3" />
+  ) : (
+    <ArrowDown className="ml-1 inline h-3 w-3" />
+  );
+}
+
 // ---- Component ----
+
+type GuestListState = {
+  searchInput: string;
+  selectedIds: Set<string>;
+  deleteTargetId: string | null;
+  bulkDeleteOpen: boolean;
+  exportOpen: boolean;
+  importOpen: boolean;
+  filtersOpen: boolean;
+};
+
+type GuestListAction = { type: 'UPDATE'; payload: Partial<GuestListState> };
+
+function guestListReducer(state: GuestListState, action: GuestListAction): GuestListState {
+  return { ...state, ...action.payload };
+}
 
 export function GuestList({ guests, categories, totalCount, currentParams }: GuestListProps) {
   const router = useRouter();
@@ -108,32 +142,39 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
-  // Local search state with debounce
-  const [searchInput, setSearchInput] = useState(currentParams.q);
+  const [state, dispatch] = useReducer(guestListReducer, {
+    searchInput: currentParams.q,
+    selectedIds: new Set<string>(),
+    deleteTargetId: null,
+    bulkDeleteOpen: false,
+    exportOpen: false,
+    importOpen: false,
+    filtersOpen: false,
+  });
+
+  const {
+    searchInput,
+    selectedIds,
+    deleteTargetId,
+    bulkDeleteOpen,
+    exportOpen,
+    importOpen,
+    filtersOpen,
+  } = state;
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Selection state
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Dialog state
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-
-  // Export/import
-  const [exportOpen, setExportOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-
-  // Sync search input on external navigation (back/forward)
+  // Sync searchInput with URL param when external navigation changes q
   useEffect(() => {
-    setSearchInput(currentParams.q);
+    dispatch({ type: 'UPDATE', payload: { searchInput: currentParams.q } });
   }, [currentParams.q]);
 
-  // Clear selection when data changes (page change, filter, etc.)
+  // Reset selection when the guest list changes
   useEffect(() => {
-    setSelectedIds(new Set());
+    dispatch({ type: 'UPDATE', payload: { selectedIds: new Set() } });
   }, [guests]);
 
-  // Cleanup pending debounce timer on unmount to prevent router.push after unmount
+  // Cleanup pending debounce timer on unmount
   useEffect(
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -149,6 +190,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
     if (next.q) qs.set('q', next.q);
     if (next.status && next.status !== 'all') qs.set('status', next.status);
     if (next.categoryIds.length > 0) qs.set('category', next.categoryIds.join(','));
+    if (next.eventTypes.length > 0) qs.set('events', next.eventTypes.join(','));
     if (next.sort !== 'first_name') qs.set('sort', next.sort);
     if (next.order !== 'asc') qs.set('order', next.order);
     if (next.page !== 1) qs.set('page', String(next.page));
@@ -160,7 +202,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   }
 
   function handleSearchChange(value: string) {
-    setSearchInput(value);
+    dispatch({ type: 'UPDATE', payload: { searchInput: value } });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => navigate({ q: value, page: 1 }), 400);
   }
@@ -179,16 +221,17 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   const someSelected = selectedIds.size > 0 && !allSelected;
 
   function toggleAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(guests.map((g) => g.id)));
+    dispatch({
+      type: 'UPDATE',
+      payload: { selectedIds: allSelected ? new Set() : new Set(guests.map((g) => g.id)) },
+    });
   }
 
   function toggleRow(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    const next = new Set(selectedIds);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    next.has(id) ? next.delete(id) : next.add(id);
+    dispatch({ type: 'UPDATE', payload: { selectedIds: next } });
   }
 
   // ---- Delete helpers ----
@@ -201,7 +244,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
         toast({ title: 'Error', description: result.error, variant: 'destructive' });
         return;
       }
-      setDeleteTargetId(null);
+      dispatch({ type: 'UPDATE', payload: { deleteTargetId: null } });
     });
   }
 
@@ -212,24 +255,27 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
         toast({ title: 'Error', description: result.error, variant: 'destructive' });
         return;
       }
-      setSelectedIds(new Set());
-      setBulkDeleteOpen(false);
+      dispatch({ type: 'UPDATE', payload: { selectedIds: new Set(), bulkDeleteOpen: false } });
     });
+  }
+
+  // ---- Filter helpers ----
+
+  const hasActiveFilters =
+    currentParams.q !== '' ||
+    currentParams.status !== 'all' ||
+    currentParams.categoryIds.length > 0 ||
+    currentParams.eventTypes.length > 0;
+
+  function handleResetFilters() {
+    dispatch({ type: 'UPDATE', payload: { searchInput: '', filtersOpen: false } });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    navigate({ q: '', status: 'all', categoryIds: [], eventTypes: [], page: 1 });
   }
 
   // ---- Pagination ----
 
   const totalPages = Math.max(1, Math.ceil(totalCount / currentParams.size));
-
-  function SortIcon({ column }: { column: string }) {
-    if (currentParams.sort !== column)
-      return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
-    return currentParams.order === 'asc' ? (
-      <ArrowUp className="ml-1 inline h-3 w-3" />
-    ) : (
-      <ArrowDown className="ml-1 inline h-3 w-3" />
-    );
-  }
 
   function getStatusLabel(value: string) {
     if (value === 'all') return t('guests.allStatus');
@@ -259,6 +305,168 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
     navigate({ categoryIds: nextIds, page: 1 });
   }
 
+  function getEventTypeOption(): EventTypeOption {
+    const types = currentParams.eventTypes;
+    if (types.length === 0) return 'all';
+    if (types.length === 2 && types.includes('ceremony') && types.includes('reception'))
+      return 'both';
+    if (types.length === 1) return types[0] as EventTypeOption;
+    return 'all';
+  }
+
+  function handleEventTypeChange(option: EventTypeOption) {
+    const map: Record<EventTypeOption, string[]> = {
+      all: [],
+      ceremony: ['ceremony'],
+      reception: ['reception'],
+      both: ['ceremony', 'reception'],
+      none: ['none'],
+    };
+    navigate({ eventTypes: map[option], page: 1 });
+  }
+
+  // ---- Shared filter controls (used in both desktop row and mobile dialog) ----
+
+  function FilterControls({ onAfterChange }: { onAfterChange?: () => void }) {
+    return (
+      <>
+        {/* Status filter */}
+        <Select
+          value={currentParams.status}
+          onValueChange={(v) => {
+            navigate({ status: v, page: 1 });
+            onAfterChange?.();
+          }}
+        >
+          <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
+            <SelectValue placeholder={t('guests.status')} />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((o) => (
+              <SelectItem key={o} value={o} className="text-xs">
+                {getStatusLabel(o)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Category filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-between text-xs font-normal leading-none sm:w-[190px]"
+            >
+              <span className="truncate">{getCategoryFilterLabel()}</span>
+              <ChevronRight className="h-3 w-3 rotate-90 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-[260px]">
+            <DropdownMenuCheckboxItem
+              checked={currentParams.categoryIds.length === 0}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => navigate({ categoryIds: [], page: 1 })}
+              className="text-xs"
+            >
+              {t('guests.allCategories')}
+            </DropdownMenuCheckboxItem>
+            {categories.length > 0 && <DropdownMenuSeparator />}
+            {categories.map((cat) => (
+              <DropdownMenuCheckboxItem
+                key={cat.id}
+                checked={currentParams.categoryIds.includes(cat.id)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={() => toggleCategoryFilter(cat.id)}
+                className="text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="truncate">{cat.name}</span>
+                </div>
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Event type filter */}
+        <Select
+          value={getEventTypeOption()}
+          onValueChange={(v) => {
+            handleEventTypeChange(v as EventTypeOption);
+            onAfterChange?.();
+          }}
+        >
+          <SelectTrigger size="sm" className="w-full text-xs sm:w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {EVENT_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt} value={opt} className="text-xs">
+                {t(`guests.eventTypes.${opt}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Sort filter */}
+        <Select
+          value={currentParams.sort}
+          onValueChange={(v) => navigate({ sort: v, order: 'asc', page: 1 })}
+        >
+          <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
+            <SelectValue placeholder={t('guests.sortBy')} />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((o) => (
+              <SelectItem key={o} value={o} className="text-xs">
+                {getSortLabel(o)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Order toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full px-2 text-xs leading-none sm:w-auto"
+          onClick={() => navigate({ order: currentParams.order === 'asc' ? 'desc' : 'asc' })}
+        >
+          {currentParams.order === 'asc' ? (
+            <>
+              <ArrowUp className="mr-1 h-3 w-3" /> {t('guests.asc')}
+            </>
+          ) : (
+            <>
+              <ArrowDown className="mr-1 h-3 w-3" /> {t('guests.desc')}
+            </>
+          )}
+        </Button>
+
+        {/* Page size filter */}
+        <Select
+          value={String(currentParams.size)}
+          onValueChange={(v) => navigate({ size: parseInt(v), page: 1 })}
+        >
+          <SelectTrigger size="sm" className="w-full text-xs sm:w-[110px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZES.map((s) => (
+              <SelectItem key={s} value={String(s)} className="text-xs">
+                {t('guests.perPage', { count: s })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </>
+    );
+  }
+
   // ---- Render ----
 
   return (
@@ -266,13 +474,13 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       {/* Dialogs */}
       <ExportDialog
         open={exportOpen}
-        onOpenChange={setExportOpen}
+        onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { exportOpen: v } })}
         guests={guests}
         categories={categories}
       />
       <ImportDialog
         open={importOpen}
-        onOpenChange={setImportOpen}
+        onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { importOpen: v } })}
         onImported={() => router.refresh()}
       />
 
@@ -280,7 +488,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       <AlertDialog
         open={!!deleteTargetId}
         onOpenChange={(open) => {
-          if (!open) setDeleteTargetId(null);
+          if (!open) dispatch({ type: 'UPDATE', payload: { deleteTargetId: null } });
         }}
       >
         <AlertDialogContent>
@@ -304,7 +512,10 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       </AlertDialog>
 
       {/* Bulk delete confirm */}
-      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+      <AlertDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { bulkDeleteOpen: v } })}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -332,9 +543,37 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Mobile filters dialog */}
+      <Dialog
+        open={filtersOpen}
+        onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { filtersOpen: v } })}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('guests.filtersTitle')}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-2">
+            <FilterControls
+              onAfterChange={() => dispatch({ type: 'UPDATE', payload: { filtersOpen: false } })}
+            />
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground"
+                onClick={handleResetFilters}
+              >
+                <X className="mr-1.5 h-3 w-3" />
+                {t('guests.resetFilters')}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ---- Toolbar ---- */}
       <div className="flex flex-col gap-3">
-        {/* Row 1: search + import/export */}
+        {/* Row 1: search + mobile filter button + import/export */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -345,128 +584,52 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
               className="h-8 pl-9"
             />
           </div>
-          <Button variant="outline" size="sm" className="h-8" onClick={() => setImportOpen(true)}>
+          {/* Mobile: filters button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="relative h-8 sm:hidden"
+            onClick={() => dispatch({ type: 'UPDATE', payload: { filtersOpen: true } })}
+          >
+            <Filter className="h-4 w-4" />
+            {hasActiveFilters && (
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => dispatch({ type: 'UPDATE', payload: { importOpen: true } })}
+          >
             <Upload className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">{t('common.import')}</span>
           </Button>
-          <Button variant="outline" size="sm" className="h-8" onClick={() => setExportOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => dispatch({ type: 'UPDATE', payload: { exportOpen: true } })}
+          >
             <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">{t('common.export')}</span>
           </Button>
         </div>
 
-        {/* Row 2: filters + sort + page size */}
-        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-          {/* Status filter */}
-          <Select
-            value={currentParams.status}
-            onValueChange={(v) => navigate({ status: v, page: 1 })}
-          >
-            <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
-              <SelectValue placeholder={t('guests.status')} />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((o) => (
-                <SelectItem key={o} value={o} className="text-xs">
-                  {getStatusLabel(o)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Category filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-between text-xs font-normal leading-none sm:w-[190px]"
-              >
-                <span className="truncate">{getCategoryFilterLabel()}</span>
-                <ChevronRight className="h-3 w-3 rotate-90 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[260px]">
-              <DropdownMenuCheckboxItem
-                checked={currentParams.categoryIds.length === 0}
-                onSelect={(e) => e.preventDefault()}
-                onCheckedChange={() => navigate({ categoryIds: [], page: 1 })}
-                className="text-xs"
-              >
-                {t('guests.allCategories')}
-              </DropdownMenuCheckboxItem>
-              {categories.length > 0 && <DropdownMenuSeparator />}
-              {categories.map((cat) => (
-                <DropdownMenuCheckboxItem
-                  key={cat.id}
-                  checked={currentParams.categoryIds.includes(cat.id)}
-                  onSelect={(e) => e.preventDefault()}
-                  onCheckedChange={() => toggleCategoryFilter(cat.id)}
-                  className="text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span className="truncate">{cat.name}</span>
-                  </div>
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Sort filter */}
-          <Select
-            value={currentParams.sort}
-            onValueChange={(v) => navigate({ sort: v, order: 'asc', page: 1 })}
-          >
-            <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
-              <SelectValue placeholder={t('guests.sortBy')} />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o} value={o} className="text-xs">
-                  {getSortLabel(o)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Order toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full px-2 text-xs leading-none sm:w-auto"
-            onClick={() => navigate({ order: currentParams.order === 'asc' ? 'desc' : 'asc' })}
-          >
-            {currentParams.order === 'asc' ? (
-              <>
-                <ArrowUp className="mr-1 h-3 w-3" /> {t('guests.asc')}
-              </>
-            ) : (
-              <>
-                <ArrowDown className="mr-1 h-3 w-3" /> {t('guests.desc')}
-              </>
-            )}
-          </Button>
-
-          {/* Page size filter */}
-          <Select
-            value={String(currentParams.size)}
-            onValueChange={(v) => navigate({ size: parseInt(v), page: 1 })}
-          >
-            <SelectTrigger size="sm" className="w-full text-xs sm:w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)} className="text-xs">
-                  {t('guests.perPage', { count: s })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Row 2: filters + sort + page size (desktop only) */}
+        <div className="hidden flex-wrap gap-2 sm:flex">
+          <FilterControls />
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-muted-foreground"
+              onClick={handleResetFilters}
+            >
+              <X className="mr-1 h-3 w-3" />
+              {t('guests.resetFilters')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -482,7 +645,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => setBulkDeleteOpen(true)}
+            onClick={() => dispatch({ type: 'UPDATE', payload: { bulkDeleteOpen: true } })}
             disabled={isDeleting}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -535,18 +698,26 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
               </TableHead>
               <TableHead>
                 <button
+                  type="button"
                   className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
                   onClick={() => handleSort('first_name')}
                 >
-                  {t('guests.fullName')} <SortIcon column="first_name" />
+                  {t('guests.fullName')}{' '}
+                  <SortIcon
+                    column="first_name"
+                    sort={currentParams.sort}
+                    order={currentParams.order}
+                  />
                 </button>
               </TableHead>
               <TableHead>
                 <button
+                  type="button"
                   className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
                   onClick={() => handleSort('status')}
                 >
-                  {t('guests.status')} <SortIcon column="status" />
+                  {t('guests.status')}{' '}
+                  <SortIcon column="status" sort={currentParams.sort} order={currentParams.order} />
                 </button>
               </TableHead>
               <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wide">
@@ -672,7 +843,9 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
-                          onClick={() => setDeleteTargetId(guest.id)}
+                          onClick={() =>
+                            dispatch({ type: 'UPDATE', payload: { deleteTargetId: guest.id } })
+                          }
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
                         </DropdownMenuItem>

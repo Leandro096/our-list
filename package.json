@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "lint:print": "npx eslint --print-config eslint.config.mjs > eslint-show-config.json",
     "fm:check": "prettier --check \"./**/*.{js,jsx,ts,tsx}\" --ignore-path .gitignore",
-    "fm:fix": "prettier --write \"./**/*.{js,jsx,ts,tsx}\" --ignore-path .gitignore"
+    "fm:fix": "prettier --write \"./**/*.{js,jsx,ts,tsx}\" --ignore-path .gitignore",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

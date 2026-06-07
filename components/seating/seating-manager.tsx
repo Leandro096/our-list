@@ -153,25 +153,28 @@ export function SeatingManager({
 
     setIsSubmittingAssign(true);
     try {
-      for (const guestId of selectedGuests) {
-        const result = await assignSeatWithFamilyAction({
-          guest_id: guestId,
-          table_id: selectedTable,
+      const results = await Promise.all(
+        selectedGuests.map((guestId) =>
+          assignSeatWithFamilyAction({
+            guest_id: guestId,
+            table_id: selectedTable,
+          })
+        )
+      );
+      const failedResult = results.find((result) => result.skipped_capacity);
+      if (failedResult) {
+        toast({
+          title: t('common.error'),
+          description: t('seating.capacityExceeded', {
+            needed: String(failedResult.needed ?? 0),
+            available: String(failedResult.available ?? 0),
+          }),
+          variant: 'destructive',
         });
-        if (result.skipped_capacity) {
-          toast({
-            title: t('common.error'),
-            description: t('seating.capacityExceeded', {
-              needed: String(result.needed ?? 0),
-              available: String(result.available ?? 0),
-            }),
-            variant: 'destructive',
-          });
-          setSelectedGuests([]);
-          setSelectedTable('');
-          setIsAssigning(false);
-          return;
-        }
+        setSelectedGuests([]);
+        setSelectedTable('');
+        setIsAssigning(false);
+        return;
       }
       const totalCount = selectedGuests.reduce((sum, id) => {
         const g = unassignedGuests.find((ug) => ug.id === id);
@@ -256,23 +259,26 @@ export function SeatingManager({
     if (!editingTable || !editSelectedGuests.length) return;
     setIsSubmittingEditAssign(true);
     try {
-      for (const guestId of editSelectedGuests) {
-        const result = await assignSeatWithFamilyAction({
-          guest_id: guestId,
-          table_id: editingTable.id,
+      const editResults = await Promise.all(
+        editSelectedGuests.map((guestId) =>
+          assignSeatWithFamilyAction({
+            guest_id: guestId,
+            table_id: editingTable.id,
+          })
+        )
+      );
+      const editFailedResult = editResults.find((result) => result.skipped_capacity);
+      if (editFailedResult) {
+        toast({
+          title: t('common.error'),
+          description: t('seating.capacityExceeded', {
+            needed: String(editFailedResult.needed ?? 0),
+            available: String(editFailedResult.available ?? 0),
+          }),
+          variant: 'destructive',
         });
-        if (result.skipped_capacity) {
-          toast({
-            title: t('common.error'),
-            description: t('seating.capacityExceeded', {
-              needed: String(result.needed ?? 0),
-              available: String(result.available ?? 0),
-            }),
-            variant: 'destructive',
-          });
-          setEditSelectedGuests([]);
-          return;
-        }
+        setEditSelectedGuests([]);
+        return;
       }
       const totalCount = editSelectedGuests.reduce((sum, id) => {
         const g = unassignedGuests.find((ug) => ug.id === id);
@@ -499,13 +505,14 @@ export function SeatingManager({
                 ) : (
                   <ScrollArea className="h-48 rounded-md border">
                     <div className="p-2 space-y-1">
-                      {unassignedGuests
-                        .filter((g) =>
-                          `${g.first_name} ${g.last_name}`
+                      {unassignedGuests.flatMap((guest) => {
+                        if (
+                          !`${guest.first_name} ${guest.last_name}`
                             .toLowerCase()
                             .includes(guestSearch.toLowerCase())
                         )
-                        .map((guest) => (
+                          return [];
+                        return [
                           <label
                             key={guest.id}
                             className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted"
@@ -522,8 +529,9 @@ export function SeatingManager({
                                 </span>
                               )}
                             </span>
-                          </label>
-                        ))}
+                          </label>,
+                        ];
+                      })}
                     </div>
                   </ScrollArea>
                 )}
@@ -816,13 +824,14 @@ export function SeatingManager({
                     </div>
                     <ScrollArea className="h-40 rounded-md border">
                       <div className="p-2 space-y-1">
-                        {unassignedGuests
-                          .filter((g) =>
-                            `${g.first_name} ${g.last_name}`
+                        {unassignedGuests.flatMap((guest) => {
+                          if (
+                            !`${guest.first_name} ${guest.last_name}`
                               .toLowerCase()
                               .includes(editGuestSearch.toLowerCase())
                           )
-                          .map((guest) => (
+                            return [];
+                          return [
                             <label
                               key={guest.id}
                               className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted"
@@ -834,8 +843,9 @@ export function SeatingManager({
                               <span className="text-sm">
                                 {guest.first_name} {guest.last_name}
                               </span>
-                            </label>
-                          ))}
+                            </label>,
+                          ];
+                        })}
                       </div>
                     </ScrollArea>
                     <Button

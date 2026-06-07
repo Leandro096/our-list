@@ -28,6 +28,7 @@ function ButtonGroup({
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof buttonGroupVariants>) {
   return (
+    // eslint-disable-next-line react-doctor/prefer-tag-over-role
     <div
       role="group"
       data-slot="button-group"

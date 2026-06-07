@@ -37,7 +37,7 @@ interface Bucket {
 // in long-running processes (e.g. local dev server or traditional Node hosting).
 const EVICTION_THRESHOLD = 5_000;
 
-export function createRateLimiter({ limit, windowMs }: RateLimiterOptions) {
+function createRateLimiter({ limit, windowMs }: RateLimiterOptions) {
   const buckets = new Map<string, Bucket>();
 
   function evictStale() {

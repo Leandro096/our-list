@@ -165,15 +165,14 @@ export async function parseExcelFile(
   const headers = (raw[0] as string[]).map((h) => String(h ?? '').trim());
   const dataRows = raw.slice(1) as string[][];
 
-  const rows: Record<string, string>[] = dataRows
-    .filter((row) => row.some((cell) => String(cell).trim() !== ''))
-    .map((row) => {
-      const obj: Record<string, string> = {};
-      headers.forEach((h, i) => {
-        obj[h] = String(row[i] ?? '').trim();
-      });
-      return obj;
+  const rows: Record<string, string>[] = dataRows.flatMap((row) => {
+    if (!row.some((cell) => String(cell).trim() !== '')) return [];
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      obj[h] = String(row[i] ?? '').trim();
     });
+    return [obj];
+  });
 
   return { headers, rows };
 }

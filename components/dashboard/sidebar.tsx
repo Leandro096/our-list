@@ -100,7 +100,9 @@ export function DashboardSidebar() {
   const { profile, activePermissions } = useAuth();
   const { t } = useTranslation();
   const { collapsed, setCollapsed, setPageLoading } = useSidebar();
-  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'));
+  const [settingsOpen, setSettingsOpen] = useState(() =>
+    pathname.startsWith('/dashboard/settings')
+  );
 
   const userPermissions = activePermissions;
   const isSuperAdmin = profile?.is_super_admin || false;
@@ -125,6 +127,7 @@ export function DashboardSidebar() {
         <div key={item.nameKey}>
           {/* Group header */}
           <button
+            type="button"
             onClick={() => {
               if (collapsed) {
                 setCollapsed(false);

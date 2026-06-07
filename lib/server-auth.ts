@@ -74,10 +74,11 @@ export async function getServerPermissions(supabase: SupabaseClient): Promise<{
 
   const permissions: string[] = [
     ...new Set(
-      ((profile as unknown as { user_roles?: RoleRow[] } | null)?.user_roles ?? [])
-        .flatMap((ur) => ur.roles?.role_permissions ?? [])
-        .map((rp) => rp.permissions?.scope)
-        .filter((scope): scope is string => Boolean(scope))
+      ((profile as unknown as { user_roles?: RoleRow[] } | null)?.user_roles ?? []).flatMap((ur) =>
+        (ur.roles?.role_permissions ?? []).flatMap((rp) =>
+          rp.permissions?.scope ? [rp.permissions.scope] : []
+        )
+      )
     ),
   ];
 
@@ -90,7 +91,7 @@ export async function getServerPermissions(supabase: SupabaseClient): Promise<{
  * Throws `UnauthorizedError` when not authenticated.
  * Throws `ForbiddenError` when authenticated but lacking the permission.
  */
-export async function requirePermission(
+export async function requireAuth(
   supabase: SupabaseClient,
   permission: string
 ): Promise<{ userId: string; isSuperAdmin: boolean; permissions: string[] }> {

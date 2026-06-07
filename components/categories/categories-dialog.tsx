@@ -9,17 +9,11 @@ import { toast } from '@/hooks';
 import { useTranslation } from '@/locales';
 import { createCategory, updateCategory, type CategoryWithCount } from '@/services';
 
-import {
-  Input,
-  Label,
-  Button,
-  Dialog,
-  Textarea,
-  DialogTitle,
-  DialogHeader,
-  DialogContent,
-  DialogDescription,
-} from '../ui';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+import { Dialog, DialogTitle, DialogHeader, DialogContent, DialogDescription } from '../ui/dialog';
 
 interface CategoriesDialogProps {
   isOpen: boolean;
@@ -51,6 +45,9 @@ export function CategoriesDialog(props: CategoriesDialogProps) {
     description: categoryData?.description || '',
   });
 
+  // Sync form state when the dialog opens or the category being edited changes.
+  // Intentionally omitting categoryData.name/color/description — we only want to
+  // reset when the identity (id) or open state changes, not on every keystroke.
   useEffect(() => {
     setIsSaving(false);
     setFormData({
@@ -112,6 +109,8 @@ export function CategoriesDialog(props: CategoriesDialogProps) {
                   key={color.value}
                   type="button"
                   onClick={() => setFormData({ ...formData, color: color.value })}
+                  aria-label={color.name}
+                  aria-pressed={formData.color === color.value}
                   className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
                     formData.color === color.value
                       ? 'border-foreground scale-110'

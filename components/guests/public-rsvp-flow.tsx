@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/locales';
 import {
@@ -306,11 +306,16 @@ export function PublicRsvpFlow() {
     });
   };
 
-  const formatDateTime = (iso: string) =>
-    new Intl.DateTimeFormat(locale === 'es' ? 'es-DO' : 'en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(iso));
+  // Memoize the Intl formatter so it is not reconstructed on every call.
+  const dateTimeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale === 'es' ? 'es-DO' : 'en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+    [locale]
+  );
+  const formatDateTime = (iso: string) => dateTimeFormatter.format(new Date(iso));
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

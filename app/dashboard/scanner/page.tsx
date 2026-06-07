@@ -1,7 +1,7 @@
 'use client';
 
 import { Html5Qrcode } from 'html5-qrcode';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Users, XCircle, ScanLine, CheckCircle, AlertTriangle } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -42,20 +42,14 @@ type ScanResult = {
 export default function ScannerPage() {
   const { profile } = useAuth();
   const { t } = useTranslation();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [eventType, setEventType] = useState<'ceremony' | 'reception'>('ceremony');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [todayStats, setTodayStats] = useState({ ceremony: 0, reception: 0 });
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
-    fetchTodayStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchTodayStats = async () => {
+  const fetchTodayStats = useCallback(async () => {
     try {
       const stats = await getTodayStats(supabase);
       setTodayStats(stats);
@@ -66,7 +60,11 @@ export default function ScannerPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchTodayStats();
+  }, [fetchTodayStats]);
 
   const handleScan = async (invitationGuid: string) => {
     try {
@@ -318,9 +316,9 @@ export default function ScannerPage() {
                       {/* Categories */}
                       {scanResult.guest.categories.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {scanResult.guest.categories.map((cat, i) => (
+                          {scanResult.guest.categories.map((cat) => (
                             <Badge
-                              key={i}
+                              key={cat.name}
                               variant="outline"
                               style={{
                                 borderColor: cat.color,

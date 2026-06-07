@@ -291,21 +291,24 @@ export async function submitPublicRsvp(input: {
   let plusOneCreated = false;
 
   if (!baseGuest.parent_guest_id && input.related && input.related.length > 0) {
-    for (const relative of input.related) {
-      if (!isUuid(relative.id)) continue;
-
-      await supabase
-        .from('guests')
-        .update({
-          status: relative.status,
-          email: toNullable(relative.email),
-          phone: toNullable(relative.phone),
-          dietary_restrictions: toNullable(relative.dietaryRestrictions),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', relative.id)
-        .eq('parent_guest_id', baseGuest.id);
-    }
+    await Promise.all(
+      input.related.flatMap((relative) => {
+        if (!isUuid(relative.id)) return [];
+        return [
+          supabase
+            .from('guests')
+            .update({
+              status: relative.status,
+              email: toNullable(relative.email),
+              phone: toNullable(relative.phone),
+              dietary_restrictions: toNullable(relative.dietaryRestrictions),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', relative.id)
+            .eq('parent_guest_id', baseGuest.id),
+        ];
+      })
+    );
   }
 
   if (!baseGuest.parent_guest_id && baseGuest.is_plus_one && input.plusOne) {

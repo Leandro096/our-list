@@ -32,7 +32,7 @@ type CarouselContextProps = {
 const CarouselContext = React.createContext<CarouselContextProps | null>(null);
 
 function useCarousel() {
-  const context = React.useContext(CarouselContext);
+  const context = React.use(CarouselContext);
 
   if (!context) {
     throw new Error('useCarousel must be used within a <Carousel />');
@@ -92,41 +92,47 @@ function Carousel({
     setApi(api);
   }, [api, setApi]);
 
+  const onSelectRef = React.useRef(onSelect);
+  onSelectRef.current = onSelect;
+
   React.useEffect(() => {
     if (!api) return;
-    onSelect(api);
-    api.on('reInit', onSelect);
-    api.on('select', onSelect);
+    const handler = (api: CarouselApi) => onSelectRef.current(api);
+    handler(api);
+    api.on('reInit', handler);
+    api.on('select', handler);
 
     return () => {
-      api?.off('reInit', onSelect);
-      api?.off('select', onSelect);
+      api?.off('reInit', handler);
+      api?.off('select', handler);
     };
-  }, [api, onSelect]);
+  }, [api]);
+
+  const carouselValue = React.useMemo(
+    () => ({
+      carouselRef,
+      api,
+      opts,
+      orientation: orientation || (opts?.axis === 'y' ? 'vertical' : 'horizontal'),
+      scrollPrev,
+      scrollNext,
+      canScrollPrev,
+      canScrollNext,
+    }),
+    [carouselRef, api, opts, orientation, scrollPrev, scrollNext, canScrollPrev, canScrollNext]
+  );
 
   return (
-    <CarouselContext.Provider
-      value={{
-        carouselRef,
-        api,
-        opts,
-        orientation: orientation || (opts?.axis === 'y' ? 'vertical' : 'horizontal'),
-        scrollPrev,
-        scrollNext,
-        canScrollPrev,
-        canScrollNext,
-      }}
-    >
-      <div
+    <CarouselContext.Provider value={carouselValue}>
+      <section
         onKeyDownCapture={handleKeyDown}
         className={cn('relative', className)}
-        role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
         {...props}
       >
         {children}
-      </div>
+      </section>
     </CarouselContext.Provider>
   );
 }
@@ -149,7 +155,6 @@ function CarouselItem({ className, ...props }: React.ComponentProps<'div'>) {
 
   return (
     <div
-      role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"
       className={cn(

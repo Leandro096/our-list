@@ -22,78 +22,33 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           fontFamily: 'system-ui, sans-serif',
           background: '#FAFAF8',
           color: '#1C1917',
-          display: 'flex',
-          minHeight: '100svh',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: '2rem',
-          padding: '1.5rem',
-          textAlign: 'center',
         }}
+        className="flex min-h-svh flex-col items-center justify-center gap-8 p-6 text-center"
       >
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: '50%',
-            background: 'rgba(239,68,68,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TriangleAlert style={{ width: 48, height: 48, color: 'rgb(239,68,68)' }} />
+        <div className="flex size-24 items-center justify-center rounded-full bg-red-500/10">
+          <TriangleAlert className="size-12 text-red-500" />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Algo salió mal
-          </h1>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: '#78716C', maxWidth: 360 }}>
+        <div className="flex flex-col gap-2">
+          <h1 className="m-0 text-2xl font-semibold tracking-tight">Algo salió mal</h1>
+          <p className="m-0 max-w-sm text-sm text-stone-500">
             Ocurrió un error crítico en la aplicación. Por favor intenta de nuevo o regresa al
             inicio.
           </p>
-          {error.digest && (
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#A8A29E' }}>#{error.digest}</p>
-          )}
+          {error.digest && <p className="m-0 text-xs text-stone-400">#{error.digest}</p>}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="flex flex-col gap-3">
           <button
+            type="button"
             onClick={reset}
-            style={{
-              padding: '0.5rem 1.5rem',
-              borderRadius: '0.375rem',
-              border: 'none',
-              background: '#1C1917',
-              color: '#FAFAF8',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className="rounded-md border-none bg-stone-900 px-6 py-2 text-sm font-medium text-stone-50 cursor-pointer"
           >
             Intentar de nuevo
           </button>
           <Link
             href="/"
-            style={{
-              padding: '0.5rem 1.5rem',
-              borderRadius: '0.375rem',
-              border: '1px solid #D6D3D1',
-              background: 'transparent',
-              color: '#1C1917',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
+            className="rounded-md border border-stone-300 bg-transparent px-6 py-2 text-sm font-medium text-stone-900 no-underline"
           >
             Volver al inicio
           </Link>

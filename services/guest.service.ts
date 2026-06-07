@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
@@ -83,7 +84,7 @@ export type UpdateGuestInput = Partial<
 
 // ---- Queries ----
 
-export async function getGuests(supabase: SupabaseClient): Promise<GuestListItem[]> {
+async function getGuests(supabase: SupabaseClient): Promise<GuestListItem[]> {
   const { data } = await supabase
     .from('guests')
     .select(
@@ -108,6 +109,7 @@ export interface GuestListParams {
   search?: string;
   status?: string;
   categoryIds?: string[];
+  eventTypes?: string[];
   sortBy?: 'first_name' | 'last_name' | 'status' | 'created_at';
   sortOrder?: 'asc' | 'desc';
   page?: number;
@@ -119,7 +121,7 @@ export interface GuestListResult {
   count: number;
 }
 
-export async function getGuestsPaginated(
+async function getGuestsPaginated(
   supabase: SupabaseClient,
   params: GuestListParams = {}
 ): Promise<GuestListResult> {
@@ -127,71 +129,32 @@ export async function getGuestsPaginated(
     search,
     status,
     categoryIds,
+    eventTypes,
     sortBy = 'first_name',
     sortOrder = 'asc',
     page = 1,
     pageSize = 50,
   } = params;
 
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const { data, error } = await supabase.rpc('get_guests_paginated', {
+    p_search: search ?? null,
+    p_status: status ?? null,
+    p_category_ids: categoryIds?.length ? categoryIds : null,
+    p_event_types: eventTypes?.length ? eventTypes : null,
+    p_sort_by: sortBy,
+    p_sort_order: sortOrder,
+    p_page: page,
+    p_page_size: pageSize,
+  });
 
-  // Pre-filter by category with subset matching:
-  // guests must contain all selected categories (extras are allowed)
-  let guestIds: string[] | null = null;
-  if (categoryIds && categoryIds.length > 0) {
-    const selected = Array.from(new Set(categoryIds));
+  if (error) throw error;
 
-    // Pull category rows for selected categories only, then keep guests
-    // that match every selected category at least once.
-    const { data: catRows } = await supabase
-      .from('guest_categories')
-      .select('guest_id, category_id')
-      .in('category_id', selected);
+  const rows = (data ?? []) as Array<
+    GuestListItem & { has_children: boolean; total_count: number }
+  >;
+  const count = rows[0]?.total_count ?? 0;
 
-    const matchedByGuest = new Map<string, Set<string>>();
-    for (const row of catRows ?? []) {
-      const item = row as { guest_id: string; category_id: string };
-      if (!matchedByGuest.has(item.guest_id)) matchedByGuest.set(item.guest_id, new Set());
-      matchedByGuest.get(item.guest_id)!.add(item.category_id);
-    }
-
-    guestIds = [];
-    for (const [guestId, matchedSet] of matchedByGuest) {
-      if (matchedSet.size === selected.length) {
-        guestIds.push(guestId);
-      }
-    }
-
-    if (guestIds.length === 0) return { data: [], count: 0 };
-  }
-
-  let query = supabase
-    .from('guests')
-    .select(
-      `*, guest_categories(category_id, categories(id, name, color)), event_attendance(*), seating_assignments(*, tables(number))`,
-      { count: 'exact' }
-    );
-
-  if (search) {
-    query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`
-    );
-  }
-
-  if (status && status !== 'all') {
-    query = query.eq('status', status);
-  }
-
-  if (guestIds !== null) {
-    query = query.in('id', guestIds);
-  }
-
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' }).range(from, to);
-
-  const { data, count } = await query;
-
-  return { data: (data ?? []) as GuestListItem[], count: count ?? 0 };
+  return { data: rows as GuestListItem[], count };
 }
 
 export async function getGuestById(
@@ -218,10 +181,7 @@ export async function getGuestById(
   return data ?? null;
 }
 
-export async function getGuestToConfirm(
-  supabase: SupabaseClient,
-  id: string
-): Promise<Guest | null> {
+async function getGuestToConfirm(supabase: SupabaseClient, id: string): Promise<Guest | null> {
   const { data } = await supabase.from('guests').select('*').eq('id', id).single();
 
   return data ?? null;
@@ -509,26 +469,12 @@ export async function getGuestsPaginatedWithFamily(
   supabase: SupabaseClient,
   params: GuestListParams = {}
 ): Promise<GuestListResultWithFamily> {
+  // has_children is now returned directly by the get_guests_paginated RPC
   const { data, count } = await getGuestsPaginated(supabase, params);
-  if (data.length === 0) return { data: [], count };
-
-  const pageIds = data.map((g) => g.id);
-  const { data: childRows } = await supabase
-    .from('guests')
-    .select('parent_guest_id')
-    .in('parent_guest_id', pageIds);
-
-  const parentIds = new Set(
-    (childRows ?? []).map((r: { parent_guest_id: string }) => r.parent_guest_id)
-  );
-
-  return {
-    data: data.map((g) => ({ ...g, has_children: parentIds.has(g.id) })),
-    count,
-  };
+  return { data: data as GuestListItemWithFamily[], count };
 }
 
-export async function getAvailableParentGuests(
+async function getAvailableParentGuests(
   supabase: SupabaseClient,
   excludeId?: string
 ): Promise<Array<Pick<Guest, 'id' | 'first_name' | 'last_name'>>> {
@@ -546,7 +492,7 @@ export async function getAvailableParentGuests(
   return data ?? [];
 }
 
-export async function getGuestChildren(
+async function getGuestChildren(
   supabase: SupabaseClient,
   parentId: string
 ): Promise<GuestFamilyMember[]> {
