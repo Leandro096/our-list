@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { Lock, User } from 'lucide-react';
 
 import { toast } from '@/hooks';
@@ -28,24 +28,45 @@ interface ProfileFormProps {
   profile: UserWithRoles;
 }
 
+type State = {
+  displayName: string;
+  themePreference: 'light' | 'dark' | 'system';
+  isSavingProfile: boolean;
+  newPassword: string;
+  confirmPassword: string;
+  isSavingPassword: boolean;
+};
+
+type Action = { type: 'UPDATE'; payload: Partial<State> };
+
+function reducer(state: State, action: Action): State {
+  return { ...state, ...action.payload };
+}
+
 export function ProfileForm({ profile }: ProfileFormProps) {
   const { t } = useTranslation();
 
-  // --- Profile state ---
-  const [displayName, setDisplayName] = useState(profile.display_name ?? '');
-  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(
-    profile.theme_preference ?? 'system'
-  );
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [state, dispatch] = useReducer(reducer, {
+    displayName: profile.display_name ?? '',
+    themePreference: profile.theme_preference ?? 'system',
+    isSavingProfile: false,
+    newPassword: '',
+    confirmPassword: '',
+    isSavingPassword: false,
+  });
 
-  // --- Password state ---
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const {
+    displayName,
+    themePreference,
+    isSavingProfile,
+    newPassword,
+    confirmPassword,
+    isSavingPassword,
+  } = state;
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSavingProfile(true);
+    dispatch({ type: 'UPDATE', payload: { isSavingProfile: true } });
     try {
       await updateUserProfileAction(profile.id, {
         display_name: displayName || undefined,
@@ -59,7 +80,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         variant: 'destructive',
       });
     } finally {
-      setIsSavingProfile(false);
+      dispatch({ type: 'UPDATE', payload: { isSavingProfile: false } });
     }
   };
 
@@ -72,15 +93,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       });
       return;
     }
-    setIsSavingPassword(true);
+    dispatch({ type: 'UPDATE', payload: { isSavingPassword: true } });
     try {
       const error = await updatePasswordAction(newPassword)
         .then(() => null)
         .catch((err) => err);
       if (error) throw error;
       toast({ title: t('profile.passwordUpdated') });
-      setNewPassword('');
-      setConfirmPassword('');
+      dispatch({ type: 'UPDATE', payload: { newPassword: '', confirmPassword: '' } });
     } catch (err) {
       toast({
         title: t('common.error'),
@@ -88,7 +108,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         variant: 'destructive',
       });
     } finally {
-      setIsSavingPassword(false);
+      dispatch({ type: 'UPDATE', payload: { isSavingPassword: false } });
     }
   };
 
@@ -125,7 +145,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 type="text"
                 placeholder={t('auth.displayNamePlaceholder')}
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) =>
+                  dispatch({ type: 'UPDATE', payload: { displayName: e.target.value } })
+                }
               />
             </div>
 
@@ -134,7 +156,12 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               <Label htmlFor="profile-theme">{t('common.theme')}</Label>
               <Select
                 value={themePreference}
-                onValueChange={(v) => setThemePreference(v as 'light' | 'dark' | 'system')}
+                onValueChange={(v) =>
+                  dispatch({
+                    type: 'UPDATE',
+                    payload: { themePreference: v as 'light' | 'dark' | 'system' },
+                  })
+                }
               >
                 <SelectTrigger id="profile-theme">
                   <SelectValue />
@@ -176,7 +203,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 minLength={6}
                 required
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) =>
+                  dispatch({ type: 'UPDATE', payload: { newPassword: e.target.value } })
+                }
               />
             </div>
 
@@ -188,7 +217,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 minLength={6}
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) =>
+                  dispatch({ type: 'UPDATE', payload: { confirmPassword: e.target.value } })
+                }
               />
               <p className="text-xs text-muted-foreground">{t('auth.passwordMinLength')}</p>
             </div>

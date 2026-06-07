@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Role, User, Permission, UserWithRoles } from '@/lib/types';
@@ -49,11 +50,7 @@ export async function assignRole(
   if (error) throw error;
 }
 
-export async function removeRole(
-  supabase: SupabaseClient,
-  userId: string,
-  roleId: string
-): Promise<void> {
+async function removeRole(supabase: SupabaseClient, userId: string, roleId: string): Promise<void> {
   const { error } = await supabase
     .from('user_roles')
     .delete()
@@ -146,7 +143,7 @@ export async function getAllPermissions(supabase: SupabaseClient): Promise<Permi
   return data ?? [];
 }
 
-export async function createRole(
+async function createRole(
   supabase: SupabaseClient,
   name: string,
   description: string | null
@@ -255,7 +252,6 @@ export async function getInitialProfile(
 
   const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user_roles: _omit, ...userData } = data;
   return { ...userData, roles, permissions } as UserWithRoles;
 }

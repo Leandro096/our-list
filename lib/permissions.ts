@@ -12,18 +12,21 @@ export function hasPermission(
   // Super admins have all permissions
   if (isSuperAdmin) return true;
 
+  // Build a Set for O(1) lookups — avoids O(n) Array.includes inside the loop below.
+  const permSet = new Set(userPermissions);
+
   // Check for exact match first
-  if (userPermissions.includes(requiredPermission)) return true;
+  if (permSet.has(requiredPermission)) return true;
 
   // Check for wildcard match
   // Global wildcard
-  if (userPermissions.includes('*')) return true;
+  if (permSet.has('*')) return true;
 
   // Check nested wildcards (e.g., "guests.*" matches "guests.view")
   const parts = requiredPermission.split('.');
   for (let i = parts.length - 1; i > 0; i--) {
     const wildcardScope = parts.slice(0, i).join('.') + '.*';
-    if (userPermissions.includes(wildcardScope)) return true;
+    if (permSet.has(wildcardScope)) return true;
   }
 
   return false;

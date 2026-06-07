@@ -27,38 +27,41 @@ interface DashboardContentProps {
   stats: DashboardStats;
 }
 
+// ---- Module-scope helpers ----
+
+function ChartTooltipContent({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color?: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground shadow-md">
+      {label && <p className="mb-1 font-medium">{label}</p>}
+      {payload.map((entry) => (
+        <p key={entry.name} style={{ color: entry.color }}>
+          {entry.name}: {entry.value}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  Confirmed: 'var(--chart-2)',
+  Pending: 'var(--chart-1)',
+  Declined: 'var(--chart-5)',
+  Tentative: 'var(--chart-3)',
+};
+
 export function DashboardContent({ stats }: DashboardContentProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const dateFnsLocale = locale === 'es' ? esLocale : undefined;
-  const TooltipContent = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name: string; value: number; color?: string }>;
-    label?: string;
-  }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground shadow-md">
-        {label && <p className="mb-1 font-medium">{label}</p>}
-        {payload.map((entry, i) => (
-          <p key={i} style={{ color: entry.color }}>
-            {entry.name}: {entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  };
-
-  const statusColors: Record<string, string> = {
-    Confirmed: 'var(--chart-2)',
-    Pending: 'var(--chart-1)',
-    Declined: 'var(--chart-5)',
-    Tentative: 'var(--chart-3)',
-  };
 
   return (
     <div className="space-y-8">
@@ -74,6 +77,44 @@ export function DashboardContent({ stats }: DashboardContentProps) {
           <CardContent>
             <div className="text-3xl font-bold">{stats.totalGuests}</div>
             <p className="text-xs text-muted-foreground">{t('dashboard.invitedToWedding')}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t('dashboard.justCeremony')}
+            </CardTitle>
+            <UserCheck className="h-4 w-4 text-sage" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-sage">{stats.justCeremony}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalGuests > 0
+                ? t('dashboard.percentConfirmed', {
+                    percent: Math.round((stats.justCeremony / stats.totalGuests) * 100),
+                  })
+                : t('dashboard.noGuestsYet')}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t('dashboard.justReception')}
+            </CardTitle>
+            <UserCheck className="h-4 w-4 text-sage" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-sage">{stats.justReception}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalGuests > 0
+                ? t('dashboard.percentConfirmed', {
+                    percent: Math.round((stats.justReception / stats.totalGuests) * 100),
+                  })
+                : t('dashboard.noGuestsYet')}
+            </p>
           </CardContent>
         </Card>
 
@@ -187,14 +228,14 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                     nameKey="status"
                     labelLine={false}
                   >
-                    {stats.guestsByStatus.map((entry, index) => (
+                    {stats.guestsByStatus.map((entry) => (
                       <Cell
-                        key={`cell-${index}`}
-                        fill={statusColors[entry.status] || 'var(--chart-5)'}
+                        key={entry.status}
+                        fill={STATUS_COLORS[entry.status] || 'var(--chart-5)'}
                       />
                     ))}
                   </Pie>
-                  <Tooltip content={<TooltipContent />} />
+                  <Tooltip content={<ChartTooltipContent />} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -215,10 +256,10 @@ export function DashboardContent({ stats }: DashboardContentProps) {
                   <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
-                  <Tooltip content={<TooltipContent />} />
+                  <Tooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                    {stats.guestsByCategory.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {stats.guestsByCategory.map((entry) => (
+                      <Cell key={entry.name ?? entry.color} fill={entry.color} />
                     ))}
                   </Bar>
                 </BarChart>

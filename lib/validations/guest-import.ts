@@ -21,7 +21,7 @@ function parseBool(v: unknown, defaultValue: boolean): boolean {
   return defaultValue;
 }
 
-export const importRowSchema = z.object({
+const importRowSchema = z.object({
   first_name: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() : v),
     z.string().min(1, 'First name is required')

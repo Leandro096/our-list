@@ -54,7 +54,7 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
 
   function handleExport() {
     // Preserve column order from GUEST_COLUMNS
-    const ordered = GUEST_COLUMNS.filter((c) => selectedKeys.includes(c.key)).map((c) => c.key);
+    const ordered = GUEST_COLUMNS.flatMap((c) => (selectedKeys.includes(c.key) ? [c.key] : []));
     exportGuestsToExcel(guests, ordered, categories);
     onOpenChange(false);
   }
@@ -80,10 +80,11 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
                 {t(GROUP_TRANSLATION_KEY[group] ?? group)}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {GUEST_COLUMNS.filter((c) => c.group === group).map((col) => {
+                {GUEST_COLUMNS.flatMap((col) => {
+                  if (col.group !== group) return [];
                   const isRequired = REQUIRED_EXPORT_COLUMNS.includes(col.key);
                   const checked = selectedKeys.includes(col.key);
-                  return (
+                  return [
                     <div key={col.key} className="flex items-start gap-2">
                       <Checkbox
                         id={`export-col-${col.key}`}
@@ -105,8 +106,8 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
                         </Label>
                         {col.hint && <p className="text-xs text-muted-foreground">{col.hint}</p>}
                       </div>
-                    </div>
-                  );
+                    </div>,
+                  ];
                 })}
               </div>
               <Separator className="mt-3" />

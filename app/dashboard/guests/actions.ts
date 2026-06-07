@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { validateImportRows } from '@/lib/validations/guest-import';
 import type { ImportRowInput } from '@/lib/validations/guest-import';
 import { mutationLimiter, heavyActionLimiter } from '@/lib/rate-limit';
-import { ForbiddenError, requirePermission, UnauthorizedError } from '@/lib/server-auth';
+import { requireAuth, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
 
 import type { Guest } from '@/lib';
 import type { CreateGuestInput, UpdateGuestInput } from '@/services';
@@ -45,7 +45,7 @@ export async function importGuestsAction(
 
   let userId: string;
   try {
-    const ctx = await requirePermission(supabaseForUser, PERMISSIONS.GUESTS_CREATE);
+    const ctx = await requireAuth(supabaseForUser, PERMISSIONS.GUESTS_CREATE);
     userId = ctx.userId;
   } catch (err) {
     const message =
@@ -128,10 +128,10 @@ export async function importGuestsAction(
 
     // Categories
     if (data.categories) {
-      const names = data.categories
-        .split(',')
-        .map((n) => n.trim())
-        .filter(Boolean);
+      const names = data.categories.split(',').flatMap((n) => {
+        const trimmed = n.trim();
+        return trimmed ? [trimmed] : [];
+      });
 
       const categoryIds = (await Promise.all(names.map((n) => resolveCategoryId(n)))).filter(
         (id): id is string => id !== null
@@ -190,7 +190,7 @@ export async function deleteGuestAction(id: string): Promise<{ error?: string }>
 
   let userId: string;
   try {
-    const ctx = await requirePermission(supabase, PERMISSIONS.GUESTS_DELETE);
+    const ctx = await requireAuth(supabase, PERMISSIONS.GUESTS_DELETE);
     userId = ctx.userId;
   } catch (err) {
     return {
@@ -214,7 +214,7 @@ export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: s
 
   let userId: string;
   try {
-    const ctx = await requirePermission(supabase, PERMISSIONS.GUESTS_DELETE);
+    const ctx = await requireAuth(supabase, PERMISSIONS.GUESTS_DELETE);
     userId = ctx.userId;
   } catch (err) {
     return {
@@ -241,7 +241,7 @@ export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: s
 
 export async function createGuestAction(input: CreateGuestInput): Promise<Guest> {
   const supabase = await createClient();
-  await requirePermission(supabase, PERMISSIONS.GUESTS_CREATE);
+  await requireAuth(supabase, PERMISSIONS.GUESTS_CREATE);
   const result = await createGuest(supabase, input);
   revalidatePath('/dashboard/guests');
   return result;
@@ -249,21 +249,37 @@ export async function createGuestAction(input: CreateGuestInput): Promise<Guest>
 
 export async function updateGuestAction(id: string, input: UpdateGuestInput): Promise<void> {
   const supabase = await createClient();
-  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
   await updateGuest(supabase, id, input);
   revalidatePath('/dashboard/guests');
 }
 
 export async function linkGuestToParentAction(childId: string, parentId: string): Promise<void> {
   const supabase = await createClient();
-  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
   await linkGuestToParent(supabase, childId, parentId);
   revalidatePath('/dashboard/guests');
 }
 
 export async function unlinkGuestFromParentAction(childId: string): Promise<void> {
   const supabase = await createClient();
-  await requirePermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
   await unlinkGuestFromParent(supabase, childId);
   revalidatePath('/dashboard/guests');
+}
+
+export type AvailableGuest = { id: string; first_name: string; last_name: string };
+
+export async function getAvailableGuestsAction(excludeId?: string): Promise<AvailableGuest[]> {
+  const supabase = await createClient();
+  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
+  let query = supabase
+    .from('guests')
+    .select('id, first_name, last_name')
+    .is('parent_guest_id', null)
+    .order('first_name');
+  if (excludeId) query = query.neq('id', excludeId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

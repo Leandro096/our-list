@@ -1,13 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRef, useState, useReducer } from 'react';
 import { X, Plus, Check, Loader2, UserPlus, ArrowLeft, ChevronsUpDown } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
-
-import { createClient } from '@/lib/supabase/client';
 
 import type { Guest, Category } from '@/lib';
 import type { GuestForEdit } from '@/services';
@@ -15,6 +13,7 @@ import {
   createGuestAction,
   updateGuestAction,
   linkGuestToParentAction,
+  getAvailableGuestsAction,
   unlinkGuestFromParentAction,
 } from '@/app/dashboard/guests/actions';
 
@@ -63,76 +62,92 @@ interface GuestFormProps {
   mode?: 'create' | 'edit';
 }
 
+type GuestFormState = {
+  isLoading: boolean;
+  isDialogOpen: boolean;
+  categoriesState: Category[];
+  showNewChildForm: boolean;
+  childMode: 'new' | 'existing';
+  newChildFirst: string;
+  newChildLast: string;
+  relatedComboOpen: boolean;
+  existingRelatedId: string | null;
+  familyMemberIds: string[];
+  familyComboOpen: boolean;
+  availableGuests: Array<{ id: string; first_name: string; last_name: string }>;
+  isLoadingGuests: boolean;
+};
+
+type GuestFormAction = { type: 'UPDATE'; payload: Partial<GuestFormState> };
+
+function guestFormReducer(state: GuestFormState, action: GuestFormAction): GuestFormState {
+  return { ...state, ...action.payload };
+}
+
 export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [categoriesState, setCategoriesState] = useState(categories);
+  const [state, dispatch] = useReducer(guestFormReducer, {
+    isLoading: false,
+    isDialogOpen: false,
+    categoriesState: categories,
+    showNewChildForm: false,
+    childMode: 'new',
+    newChildFirst: '',
+    newChildLast: '',
+    relatedComboOpen: false,
+    existingRelatedId: guest?.children?.length === 1 ? guest.children[0].id : null,
+    familyMemberIds:
+      (guest?.children?.length ?? 0) > 1 ? (guest?.children?.map((c) => c.id) ?? []) : [],
+    familyComboOpen: false,
+    availableGuests: [],
+    isLoadingGuests: false,
+  });
 
-  // Family management state
-  const [showNewChildForm, setShowNewChildForm] = useState(false);
-  const [childMode, setChildMode] = useState<'new' | 'existing'>('new');
-  const [newChildFirst, setNewChildFirst] = useState('');
-  const [newChildLast, setNewChildLast] = useState('');
-  const [newChildIsPlusOne, setNewChildIsPlusOne] = useState(false);
-  const [relatedComboOpen, setRelatedComboOpen] = useState(false);
-
-  // Si solo hay 1 child existente, se muestra en "Agregar Relacionado"; si hay >1, en "Grupo Familiar"
-  const [existingRelatedId, setExistingRelatedId] = useState<string | null>(
-    guest?.children?.length === 1 ? guest.children[0].id : null
-  );
-
-  // Multi-select: IDs de invitados que forman parte del grupo (el invitado actual es el padre)
-  // Solo se inicializa con hijos cuando hay más de 1
-  const [familyMemberIds, setFamilyMemberIds] = useState<string[]>(
-    (guest?.children?.length ?? 0) > 1 ? (guest?.children?.map((c) => c.id) ?? []) : []
-  );
-  const [familyComboOpen, setFamilyComboOpen] = useState(false);
-
-  // Lazy-loaded available guests para el combobox familiar
-  const [availableGuests, setAvailableGuests] = useState<
-    Array<{ id: string; first_name: string; last_name: string }>
-  >([]);
-  const [isLoadingGuests, setIsLoadingGuests] = useState(false);
-  const [guestsFetched, setGuestsFetched] = useState(false);
+  const {
+    isLoading,
+    isDialogOpen,
+    categoriesState,
+    showNewChildForm,
+    childMode,
+    newChildFirst,
+    newChildLast,
+    relatedComboOpen,
+    existingRelatedId,
+    familyMemberIds,
+    familyComboOpen,
+    availableGuests,
+    isLoadingGuests,
+  } = state;
+  const guestsFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
+  const newChildIsPlusOneRef = useRef(false);
 
   const fetchAvailableGuests = async () => {
-    if (guestsFetched || isFetchingRef.current) return;
+    if (guestsFetchedRef.current || isFetchingRef.current) return;
     isFetchingRef.current = true;
-    setIsLoadingGuests(true);
+    dispatch({ type: 'UPDATE', payload: { isLoadingGuests: true } });
     try {
-      const client = createClient();
-      let query = client
-        .from('guests')
-        .select('id, first_name, last_name')
-        .is('parent_guest_id', null)
-        .order('first_name');
-      if (guest?.id) {
-        query = query.neq('id', guest.id);
-      }
-      const { data, error: fetchError } = await query;
-      if (fetchError) throw fetchError;
-      setAvailableGuests(data ?? []);
-      setGuestsFetched(true);
+      const data = await getAvailableGuestsAction(guest?.id);
+      dispatch({ type: 'UPDATE', payload: { availableGuests: data } });
+      guestsFetchedRef.current = true;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       toast({
         title: t('common.error'),
-        description: 'No se pudieron cargar los invitados. Intenta de nuevo.',
+        description: t('guests.fetchError'),
         variant: 'destructive',
       });
     } finally {
       isFetchingRef.current = false;
-      setIsLoadingGuests(false);
+      dispatch({ type: 'UPDATE', payload: { isLoadingGuests: false } });
     }
   };
 
   const handleFamilyComboOpen = async (open: boolean) => {
-    setFamilyComboOpen(open);
+    dispatch({ type: 'UPDATE', payload: { familyComboOpen: open } });
     if (open) await fetchAvailableGuests();
   };
 
@@ -145,15 +160,18 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
   };
 
   const handleOpenDialog = () => {
-    setIsDialogOpen(true);
+    dispatch({ type: 'UPDATE', payload: { isDialogOpen: true } });
   };
 
   const handleSaved = (saved: Category, isNew: boolean) => {
-    setCategoriesState((prev) =>
-      isNew
-        ? [...prev, saved].sort((a, b) => a.name.localeCompare(b.name))
-        : prev.map((c) => (c.id === saved.id ? saved : c))
-    );
+    dispatch({
+      type: 'UPDATE',
+      payload: {
+        categoriesState: isNew
+          ? [...categoriesState, saved].sort((a, b) => a.name.localeCompare(b.name))
+          : categoriesState.map((c) => (c.id === saved.id ? saved : c)),
+      },
+    });
   };
 
   const [formData, setFormData] = useState({
@@ -176,7 +194,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    dispatch({ type: 'UPDATE', payload: { isLoading: true } });
 
     try {
       if (mode === 'create') {
@@ -195,33 +213,32 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           created_by: user?.id ?? null,
         });
 
-        // Vincular invitados seleccionados como miembros del grupo
-        for (const memberId of familyMemberIds) {
-          await linkGuestToParentAction(memberId, createdGuest.id);
-        }
-
-        // Crear el nuevo relacionado (plus one)
-        for (const child of formData.pendingChildren) {
-          if (child.type === 'new') {
-            await createGuestAction({
-              first_name: child.first_name,
-              last_name: child.last_name,
-              email: '',
-              phone: '',
-              status: 'pending',
-              dietary_restrictions: '',
-              notes: '',
-              is_plus_one: child.is_plus_one,
-              selectedCategories: [],
-              ceremony_attending: formData.ceremony_attending,
-              reception_attending: formData.reception_attending,
-              parent_guest_id: createdGuest.id,
-              created_by: user?.id ?? null,
-            });
-          } else if (child.existing_guest_id) {
-            await linkGuestToParentAction(child.existing_guest_id, createdGuest.id);
-          }
-        }
+        // Vincular miembros del grupo y crear relacionados en paralelo
+        await Promise.all([
+          ...familyMemberIds.map((memberId) => linkGuestToParentAction(memberId, createdGuest.id)),
+          ...formData.pendingChildren.map((child) => {
+            if (child.type === 'new') {
+              return createGuestAction({
+                first_name: child.first_name,
+                last_name: child.last_name,
+                email: '',
+                phone: '',
+                status: 'pending',
+                dietary_restrictions: '',
+                notes: '',
+                is_plus_one: child.is_plus_one,
+                selectedCategories: [],
+                ceremony_attending: formData.ceremony_attending,
+                reception_attending: formData.reception_attending,
+                parent_guest_id: createdGuest.id,
+                created_by: user?.id ?? null,
+              });
+            } else if (child.existing_guest_id) {
+              return linkGuestToParentAction(child.existing_guest_id, createdGuest.id);
+            }
+            return Promise.resolve();
+          }),
+        ]);
 
         router.push('/dashboard/guests');
         router.refresh();
@@ -243,46 +260,43 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
         // Sincronizar el child relacionado único (si aplica)
         const originalRelatedId =
           (guest?.children?.length ?? 0) === 1 ? guest!.children[0].id : null;
-        if (originalRelatedId && !existingRelatedId) {
-          await unlinkGuestFromParentAction(originalRelatedId);
-        }
 
         // Sincronizar miembros del grupo familiar (>1 hijos)
         const originalChildIds =
           (guest?.children?.length ?? 0) > 1 ? (guest?.children?.map((c) => c.id) ?? []) : [];
-        for (const id of originalChildIds) {
-          if (!familyMemberIds.includes(id)) {
-            await unlinkGuestFromParentAction(id);
-          }
-        }
-        for (const id of familyMemberIds) {
-          if (!originalChildIds.includes(id)) {
-            await linkGuestToParentAction(id, guest!.id);
-          }
-        }
+        const toUnlink = originalChildIds.filter((id) => !familyMemberIds.includes(id));
+        const toLink = familyMemberIds.filter((id) => !originalChildIds.includes(id));
 
-        // Crear el nuevo relacionado (plus one)
-        for (const child of formData.pendingChildren) {
-          if (child.type === 'new') {
-            await createGuestAction({
-              first_name: child.first_name,
-              last_name: child.last_name,
-              email: '',
-              phone: '',
-              status: 'pending',
-              dietary_restrictions: '',
-              notes: '',
-              is_plus_one: child.is_plus_one,
-              selectedCategories: [],
-              ceremony_attending: formData.ceremony_attending,
-              reception_attending: formData.reception_attending,
-              parent_guest_id: guest!.id,
-              created_by: user?.id ?? null,
-            });
-          } else if (child.existing_guest_id) {
-            await linkGuestToParentAction(child.existing_guest_id, guest!.id);
-          }
-        }
+        // Todas las operaciones de sincronización en paralelo
+        await Promise.all([
+          ...(originalRelatedId && !existingRelatedId
+            ? [unlinkGuestFromParentAction(originalRelatedId)]
+            : []),
+          ...toUnlink.map((id) => unlinkGuestFromParentAction(id)),
+          ...toLink.map((id) => linkGuestToParentAction(id, guest!.id)),
+          ...formData.pendingChildren.map((child) => {
+            if (child.type === 'new') {
+              return createGuestAction({
+                first_name: child.first_name,
+                last_name: child.last_name,
+                email: '',
+                phone: '',
+                status: 'pending',
+                dietary_restrictions: '',
+                notes: '',
+                is_plus_one: child.is_plus_one,
+                selectedCategories: [],
+                ceremony_attending: formData.ceremony_attending,
+                reception_attending: formData.reception_attending,
+                parent_guest_id: guest!.id,
+                created_by: user?.id ?? null,
+              });
+            } else if (child.existing_guest_id) {
+              return linkGuestToParentAction(child.existing_guest_id, guest!.id);
+            }
+            return Promise.resolve();
+          }),
+        ]);
 
         router.push(`/dashboard/guests/${guest!.id}`);
         router.refresh();
@@ -295,7 +309,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: 'UPDATE', payload: { isLoading: false } });
     }
   };
 
@@ -320,15 +334,14 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
             type: 'new' as const,
             first_name: newChildFirst.trim(),
             last_name: newChildLast.trim(),
-            is_plus_one: newChildIsPlusOne,
+            is_plus_one: newChildIsPlusOneRef.current,
           },
         ],
       }));
-      setNewChildFirst('');
-      setNewChildLast('');
-      setNewChildIsPlusOne(false);
+      dispatch({ type: 'UPDATE', payload: { newChildFirst: '', newChildLast: '' } });
+      newChildIsPlusOneRef.current = false;
     }
-    setShowNewChildForm(false);
+    dispatch({ type: 'UPDATE', payload: { showNewChildForm: false } });
   };
 
   return (
@@ -447,7 +460,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => setExistingRelatedId(null)}
+                    onClick={() =>
+                      dispatch({ type: 'UPDATE', payload: { existingRelatedId: null } })
+                    }
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -503,7 +518,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                       type="button"
                       size="sm"
                       variant={childMode === 'new' ? 'default' : 'outline'}
-                      onClick={() => setChildMode('new')}
+                      onClick={() => dispatch({ type: 'UPDATE', payload: { childMode: 'new' } })}
                     >
                       {t('guests.newRelatedGuest')}
                     </Button>
@@ -512,7 +527,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                       size="sm"
                       variant={childMode === 'existing' ? 'default' : 'outline'}
                       onClick={async () => {
-                        setChildMode('existing');
+                        dispatch({ type: 'UPDATE', payload: { childMode: 'existing' } });
                         await fetchAvailableGuests();
                       }}
                     >
@@ -527,7 +542,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                         <Input
                           id="new_child_first"
                           value={newChildFirst}
-                          onChange={(e) => setNewChildFirst(e.target.value)}
+                          onChange={(e) =>
+                            dispatch({ type: 'UPDATE', payload: { newChildFirst: e.target.value } })
+                          }
                         />
                       </div>
                       <div className="space-y-1">
@@ -535,17 +552,27 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                         <Input
                           id="new_child_last"
                           value={newChildLast}
-                          onChange={(e) => setNewChildLast(e.target.value)}
+                          onChange={(e) =>
+                            dispatch({ type: 'UPDATE', payload: { newChildLast: e.target.value } })
+                          }
                         />
                       </div>
                     </div>
                   ) : (
-                    <Popover open={relatedComboOpen} onOpenChange={setRelatedComboOpen}>
+                    <Popover
+                      open={relatedComboOpen}
+                      onOpenChange={(v) =>
+                        dispatch({ type: 'UPDATE', payload: { relatedComboOpen: v } })
+                      }
+                    >
                       <PopoverTrigger asChild>
                         <Button
                           type="button"
                           variant="outline"
                           role="combobox"
+                          aria-expanded={relatedComboOpen}
+                          aria-haspopup="listbox"
+                          aria-controls="related-guest-listbox"
                           className="w-full justify-between font-normal"
                         >
                           {formData.pendingChildren[0]?.existing_guest_id
@@ -564,7 +591,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                       <PopoverContent className="w-full p-0" align="start">
                         <Command>
                           <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
-                          <CommandList>
+                          <CommandList id="related-guest-listbox">
                             {isLoadingGuests ? (
                               <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -576,40 +603,48 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                                   {t('guests.noResults') ?? 'Sin resultados.'}
                                 </CommandEmpty>
                                 <CommandGroup>
-                                  {availableGuests
-                                    .filter((g) => !familyMemberIds.includes(g.id))
-                                    .map((g) => (
-                                      <CommandItem
-                                        key={g.id}
-                                        value={`${g.first_name} ${g.last_name}`}
-                                        onSelect={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            pendingChildren: [
-                                              {
-                                                tempId: crypto.randomUUID(),
-                                                type: 'existing' as const,
-                                                first_name: g.first_name,
-                                                last_name: g.last_name,
-                                                is_plus_one: false,
-                                                existing_guest_id: g.id,
-                                              },
-                                            ],
-                                          }));
-                                          setRelatedComboOpen(false);
-                                          setShowNewChildForm(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={`mr-2 h-4 w-4 ${
-                                            formData.pendingChildren[0]?.existing_guest_id === g.id
-                                              ? 'opacity-100'
-                                              : 'opacity-0'
-                                          }`}
-                                        />
-                                        {g.first_name} {g.last_name}
-                                      </CommandItem>
-                                    ))}
+                                  {availableGuests.flatMap((g) =>
+                                    familyMemberIds.includes(g.id)
+                                      ? []
+                                      : [
+                                          <CommandItem
+                                            key={g.id}
+                                            value={`${g.first_name} ${g.last_name}`}
+                                            onSelect={() => {
+                                              setFormData((prev) => ({
+                                                ...prev,
+                                                pendingChildren: [
+                                                  {
+                                                    tempId: g.id,
+                                                    type: 'existing' as const,
+                                                    first_name: g.first_name,
+                                                    last_name: g.last_name,
+                                                    is_plus_one: false,
+                                                    existing_guest_id: g.id,
+                                                  },
+                                                ],
+                                              }));
+                                              dispatch({
+                                                type: 'UPDATE',
+                                                payload: {
+                                                  relatedComboOpen: false,
+                                                  showNewChildForm: false,
+                                                },
+                                              });
+                                            }}
+                                          >
+                                            <Check
+                                              className={`mr-2 h-4 w-4 ${
+                                                formData.pendingChildren[0]?.existing_guest_id ===
+                                                g.id
+                                                  ? 'opacity-100'
+                                                  : 'opacity-0'
+                                              }`}
+                                            />
+                                            {g.first_name} {g.last_name}
+                                          </CommandItem>,
+                                        ]
+                                  )}
                                 </CommandGroup>
                               </>
                             )}
@@ -634,10 +669,15 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          setShowNewChildForm(false);
-                          setNewChildFirst('');
-                          setNewChildLast('');
-                          setNewChildIsPlusOne(false);
+                          dispatch({
+                            type: 'UPDATE',
+                            payload: {
+                              showNewChildForm: false,
+                              newChildFirst: '',
+                              newChildLast: '',
+                            },
+                          });
+                          newChildIsPlusOneRef.current = false;
                         }}
                       >
                         {t('common.cancel')}
@@ -650,8 +690,10 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setShowNewChildForm(false);
-                        setChildMode('new');
+                        dispatch({
+                          type: 'UPDATE',
+                          payload: { showNewChildForm: false, childMode: 'new' },
+                        });
                       }}
                     >
                       {t('common.cancel')}
@@ -665,7 +707,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowNewChildForm(true)}
+                    onClick={() =>
+                      dispatch({ type: 'UPDATE', payload: { showNewChildForm: true } })
+                    }
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
                     {t('guests.addRelated')}
@@ -749,7 +793,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
 
             <CategoriesDialog
               isOpen={isDialogOpen}
-              onOpenChange={setIsDialogOpen}
+              onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { isDialogOpen: v } })}
               onSave={handleSaved}
             />
           </div>
@@ -785,7 +829,12 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                         type="button"
                         className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
                         onClick={() =>
-                          setFamilyMemberIds((prev) => prev.filter((mid) => mid !== id))
+                          dispatch({
+                            type: 'UPDATE',
+                            payload: {
+                              familyMemberIds: familyMemberIds.filter((mid) => mid !== id),
+                            },
+                          })
                         }
                       >
                         <X className="h-3 w-3" />
@@ -803,6 +852,8 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                     variant="outline"
                     role="combobox"
                     aria-expanded={familyComboOpen}
+                    aria-haspopup="listbox"
+                    aria-controls="family-guest-listbox"
                     className="w-full justify-between font-normal"
                   >
                     <span className="flex items-center gap-2 text-muted-foreground">
@@ -815,7 +866,7 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                 <PopoverContent className="w-full p-0" align="start">
                   <Command>
                     <CommandInput placeholder={t('guests.search') ?? 'Buscar invitado…'} />
-                    <CommandList>
+                    <CommandList id="family-guest-listbox">
                       {isLoadingGuests ? (
                         <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -825,21 +876,28 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                         <>
                           <CommandEmpty>{t('guests.noResults') ?? 'Sin resultados.'}</CommandEmpty>
                           <CommandGroup>
-                            {availableGuests
-                              .filter((g) => !familyMemberIds.includes(g.id))
-                              .map((g) => (
-                                <CommandItem
-                                  key={g.id}
-                                  value={`${g.first_name} ${g.last_name}`}
-                                  onSelect={() => {
-                                    setFamilyMemberIds((prev) => [...prev, g.id]);
-                                    setFamilyComboOpen(false);
-                                  }}
-                                >
-                                  <Check className="mr-2 h-4 w-4 opacity-0" />
-                                  {g.first_name} {g.last_name}
-                                </CommandItem>
-                              ))}
+                            {availableGuests.flatMap((g) =>
+                              familyMemberIds.includes(g.id)
+                                ? []
+                                : [
+                                    <CommandItem
+                                      key={g.id}
+                                      value={`${g.first_name} ${g.last_name}`}
+                                      onSelect={() => {
+                                        dispatch({
+                                          type: 'UPDATE',
+                                          payload: {
+                                            familyMemberIds: [...familyMemberIds, g.id],
+                                            familyComboOpen: false,
+                                          },
+                                        });
+                                      }}
+                                    >
+                                      <Check className="mr-2 h-4 w-4 opacity-0" />
+                                      {g.first_name} {g.last_name}
+                                    </CommandItem>,
+                                  ]
+                            )}
                           </CommandGroup>
                         </>
                       )}

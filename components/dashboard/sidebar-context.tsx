@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useRef, useState, useEffect, useContext, createContext } from 'react';
+import { use, useRef, useMemo, useState, useEffect, createContext } from 'react';
 
 type SidebarContextType = {
   collapsed: boolean;
@@ -20,7 +20,7 @@ const SidebarContext = createContext<SidebarContextType>({
 /** Clears isPageLoading whenever the pathname changes (navigation completed). */
 function NavigationWatcher() {
   const pathname = usePathname();
-  const { setPageLoading } = useContext(SidebarContext);
+  const { setPageLoading } = use(SidebarContext);
   const prevPathname = useRef(pathname);
 
   useEffect(() => {
@@ -37,8 +37,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isPageLoading, setPageLoading] = useState(false);
 
+  const value = useMemo(
+    () => ({ collapsed, setCollapsed, isPageLoading, setPageLoading }),
+    [collapsed, isPageLoading]
+  );
+
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed, isPageLoading, setPageLoading }}>
+    <SidebarContext.Provider value={value}>
       <NavigationWatcher />
       {children}
     </SidebarContext.Provider>
@@ -46,5 +51,5 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useSidebar() {
-  return useContext(SidebarContext);
+  return use(SidebarContext);
 }

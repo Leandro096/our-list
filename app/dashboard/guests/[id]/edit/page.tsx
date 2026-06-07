@@ -8,8 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { GuestForm } from '@/components/guests/guest-form';
 
 export default async function EditGuestPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
+  const [{ id }, supabase] = await Promise.all([params, createClient()]);
   const [guest, categories] = await Promise.all([
     getGuestForEdit(supabase, id),
     getCategories(supabase),

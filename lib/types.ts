@@ -144,6 +144,8 @@ export type RecentActivityItem = ScanLog & {
 // Dashboard stats
 export interface DashboardStats {
   totalGuests: number;
+  justCeremony: number;
+  justReception: number;
   confirmedGuests: number;
   pendingGuests: number;
   declinedGuests: number;

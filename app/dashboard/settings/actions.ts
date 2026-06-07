@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { PERMISSIONS } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { ForbiddenError, requirePermission, UnauthorizedError } from '@/lib/server-auth';
+import { requireAuth, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
 
 import {
   updateRole,
@@ -19,11 +19,15 @@ import {
 // ---- Profile ---------------------------------------------------------------
 
 export async function updateUserProfileAction(
-  userId: string,
+  _userId: string,
   payload: { display_name?: string; theme_preference?: 'light' | 'dark' | 'system' }
 ): Promise<void> {
   const supabase = await createClient();
-  await updateUserProfile(supabase, userId, payload);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado.');
+  await updateUserProfile(supabase, user.id, payload);
   revalidatePath('/dashboard/profile');
 }
 
@@ -52,7 +56,7 @@ export async function updateUserSuperAdminAction(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_USERS);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_USERS);
   } catch (err) {
     return {
       error:
@@ -74,7 +78,7 @@ export async function updateUserRolesAction(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_USERS);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_USERS);
   } catch (err) {
     return {
       error:
@@ -98,7 +102,7 @@ export async function createRoleAction(
 ): Promise<{ id: string; error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_ROLES);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_ROLES);
   } catch (err) {
     return {
       id: '',
@@ -122,7 +126,7 @@ export async function updateRoleAction(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_ROLES);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_ROLES);
   } catch (err) {
     return {
       error:
@@ -137,7 +141,7 @@ export async function updateRoleAction(
 export async function deleteRoleAction(roleId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_ROLES);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_ROLES);
   } catch (err) {
     return {
       error:
@@ -155,7 +159,7 @@ export async function updateRolePermissionsAction(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
-    await requirePermission(supabase, PERMISSIONS.SETTINGS_ROLES);
+    await requireAuth(supabase, PERMISSIONS.SETTINGS_ROLES);
   } catch (err) {
     return {
       error:

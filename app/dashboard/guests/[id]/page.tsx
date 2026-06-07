@@ -7,8 +7,7 @@ import { getGuestByIdWithFamily } from '@/services';
 import { GuestDetail } from '@/components/guests/guest-detail';
 
 export default async function GuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
+  const [{ id }, supabase] = await Promise.all([params, createClient()]);
   const guest = await getGuestByIdWithFamily(supabase, id);
 
   if (!guest) {

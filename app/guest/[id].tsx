@@ -1,16 +1,13 @@
-'use client';
-
 import { notFound } from 'next/navigation';
 
-import { createClient } from '@/lib/supabase/server';
-
-import { getGuestById } from '@/services';
 import { GuestConfirmation } from '@/components';
+
+import { fetchGuestById } from './actions';
 
 export default async function GuestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const guest = await getGuestById(supabase, id);
+
+  const guest = await fetchGuestById(id);
 
   if (!guest) {
     notFound();

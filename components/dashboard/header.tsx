@@ -108,6 +108,16 @@ const navigationItems = [
   },
 ];
 
+function getInitials(name: string | null | undefined) {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export function DashboardHeader() {
   const { profile, signOut, isLoading, activeRole, activePermissions, selectRole } = useAuth();
   const router = useRouter();
@@ -115,7 +125,9 @@ export function DashboardHeader() {
   const pathname = usePathname();
   const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'));
+  const [settingsOpen, setSettingsOpen] = useState(() =>
+    pathname.startsWith('/dashboard/settings')
+  );
   const { setPageLoading } = useSidebar();
 
   const userPermissions = activePermissions;
@@ -137,16 +149,6 @@ export function DashboardHeader() {
     } finally {
       router.push('/auth/login');
     }
-  };
-
-  const getInitials = (name: string | null | undefined) => {
-    if (!name) return 'U';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
@@ -180,6 +182,7 @@ export function DashboardHeader() {
                 return (
                   <div key={item.key}>
                     <button
+                      type="button"
                       onClick={() => setSettingsOpen((prev) => !prev)}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',

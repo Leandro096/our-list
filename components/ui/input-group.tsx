@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
+    // eslint-disable-next-line react-doctor/prefer-tag-over-role
     <div
       data-slot="input-group"
       role="group"
@@ -61,6 +62,7 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // eslint-disable-next-line react-doctor/prefer-tag-over-role
     <div
       role="group"
       data-slot="input-group-addon"
@@ -71,6 +73,12 @@ function InputGroupAddon({
           return;
         }
         e.currentTarget.parentElement?.querySelector('input')?.focus();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          if ((e.target as HTMLElement).closest('button')) return;
+          e.currentTarget.parentElement?.querySelector('input')?.focus();
+        }
       }}
       {...props}
     />

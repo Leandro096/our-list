@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useContext, createContext } from 'react';
+import { use, useMemo, createContext } from 'react';
 
 import { hasPermission, hasAnyPermission, hasAllPermissions } from '@/lib/permissions';
 
@@ -40,14 +40,14 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
  * ```
  */
 export function usePermissions(): PermissionContextType {
-  // First, try to read from a parent PermissionGuard's context (fastest path).
-  const guardContext = useContext(PermissionContext);
-  if (guardContext !== undefined) return guardContext;
-
   // Fall back to building the helpers directly from AuthContext so the hook
   // works globally inside <AuthProvider> without requiring a wrapping guard.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { profile, activePermissions } = useAuth();
+
+  // First, try to read from a parent PermissionGuard's context (fastest path).
+  const guardContext = use(PermissionContext);
+  if (guardContext !== undefined) return guardContext;
+
   const isSuperAdmin = profile?.is_super_admin ?? false;
 
   return {

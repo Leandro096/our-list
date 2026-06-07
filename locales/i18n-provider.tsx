@@ -69,7 +69,7 @@ export function I18nProvider({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = React.useState<Locale>(initialLocale);
-  const [mounted, setMounted] = React.useState(false);
+  const mountedRef = React.useRef(false);
 
   React.useEffect(() => {
     try {
@@ -84,8 +84,7 @@ export function I18nProvider({
         }
       }
     } catch {}
-    const rafId = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(rafId);
+    mountedRef.current = true;
   }, []);
 
   const setLocale = React.useCallback((next: Locale) => {
@@ -98,12 +97,6 @@ export function I18nProvider({
       document.documentElement.lang = next;
     }
   }, []);
-
-  React.useEffect(() => {
-    if (mounted && typeof document !== 'undefined') {
-      document.documentElement.lang = locale;
-    }
-  }, [locale, mounted]);
 
   const value = React.useMemo<I18nContextValue>(() => {
     const dict = DICTIONARIES[locale];
@@ -122,7 +115,7 @@ export function I18nProvider({
 }
 
 export function useI18n() {
-  const ctx = React.useContext(I18nContext);
+  const ctx = React.use(I18nContext);
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
 }

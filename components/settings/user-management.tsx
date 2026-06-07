@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import { User, Crown, Pencil, Shield, UserPlus } from 'lucide-react';
@@ -45,38 +45,75 @@ interface UserManagementProps {
   roles: Role[];
 }
 
+function getRoleIcon(roleName: string) {
+  switch (roleName.toLowerCase()) {
+    case 'admin':
+      return <Shield className="h-3 w-3" />;
+    default:
+      return <User className="h-3 w-3" />;
+  }
+}
+
+type State = {
+  editingUser: UserWithRoleAssignments | null;
+  editIsSuperAdmin: boolean;
+  editRoleIds: string[];
+  isSaving: boolean;
+  inviteOpen: boolean;
+};
+
+type Action = { type: 'UPDATE'; payload: Partial<State> } | { type: 'TOGGLE_ROLE'; roleId: string };
+
+function reducer(state: State, action: Action): State {
+  if (action.type === 'TOGGLE_ROLE') {
+    const ids = state.editRoleIds.includes(action.roleId)
+      ? state.editRoleIds.filter((id) => id !== action.roleId)
+      : [...state.editRoleIds, action.roleId];
+    return { ...state, editRoleIds: ids };
+  }
+  return { ...state, ...action.payload };
+}
+
 export function UserManagement({ users, roles }: UserManagementProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const dateFnsLocale = locale === 'es' ? esLocale : undefined;
 
-  const [editingUser, setEditingUser] = useState<UserWithRoleAssignments | null>(null);
-  const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false);
-  const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [state, dispatch] = useReducer(reducer, {
+    editingUser: null,
+    editIsSuperAdmin: false,
+    editRoleIds: [],
+    isSaving: false,
+    inviteOpen: false,
+  });
+
+  const { editingUser, editIsSuperAdmin, editRoleIds, isSaving, inviteOpen } = state;
 
   const openEdit = (user: UserWithRoleAssignments) => {
-    setEditingUser(user);
-    setEditIsSuperAdmin(user.is_super_admin);
-    setEditRoleIds(user.user_roles.map((ur) => ur.role_id));
+    dispatch({
+      type: 'UPDATE',
+      payload: {
+        editingUser: user,
+        editIsSuperAdmin: user.is_super_admin,
+        editRoleIds: user.user_roles.map((ur) => ur.role_id),
+      },
+    });
   };
 
   const closeEdit = () => {
-    setEditingUser(null);
-    setEditIsSuperAdmin(false);
-    setEditRoleIds([]);
+    dispatch({
+      type: 'UPDATE',
+      payload: { editingUser: null, editIsSuperAdmin: false, editRoleIds: [] },
+    });
   };
 
   const toggleRole = (roleId: string) => {
-    setEditRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-    );
+    dispatch({ type: 'TOGGLE_ROLE', roleId });
   };
 
   const handleSave = async () => {
     if (!editingUser) return;
-    setIsSaving(true);
+    dispatch({ type: 'UPDATE', payload: { isSaving: true } });
     try {
       await Promise.all([
         updateUserSuperAdminAction(editingUser.id, editIsSuperAdmin),
@@ -91,28 +128,26 @@ export function UserManagement({ users, roles }: UserManagementProps) {
         variant: 'destructive',
       });
     } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const getRoleIcon = (roleName: string) => {
-    switch (roleName.toLowerCase()) {
-      case 'admin':
-        return <Shield className="h-3 w-3" />;
-      default:
-        return <User className="h-3 w-3" />;
+      dispatch({ type: 'UPDATE', payload: { isSaving: false } });
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Users Table */}
-      <InviteUserDialog roles={roles} open={inviteOpen} onOpenChange={setInviteOpen} />
+      <InviteUserDialog
+        roles={roles}
+        open={inviteOpen}
+        onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { inviteOpen: v } })}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t('settings.users_section.staffMembers')}</CardTitle>
-          <Button size="sm" onClick={() => setInviteOpen(true)}>
+          <Button
+            size="sm"
+            onClick={() => dispatch({ type: 'UPDATE', payload: { inviteOpen: true } })}
+          >
             <UserPlus className="mr-2 h-4 w-4" />
             {t('settings.users_section.inviteUser')}
           </Button>
@@ -298,7 +333,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
               <Switch
                 id="super-admin-switch"
                 checked={editIsSuperAdmin}
-                onCheckedChange={setEditIsSuperAdmin}
+                onCheckedChange={(v) =>
+                  dispatch({ type: 'UPDATE', payload: { editIsSuperAdmin: !!v } })
+                }
               />
             </div>
 
