@@ -152,6 +152,10 @@ export interface GuestWithRelations extends Guest {
 export interface UserWithRoles extends User {
   roles?: Role[];
   permissions?: string[];
+  /** Resolved server-side by getInitialProfile — the tenant the user currently operates in. */
+  active_tenant_id?: string | null;
+  /** Resolved server-side by getInitialProfile — the first active event for the active tenant. */
+  active_event_id?: string | null;
 }
 
 export type RecentActivityItem = ScanLog & {

@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 import { validateImportRows } from '@/lib/validations/guest-import';
 import type { ImportRowInput } from '@/lib/validations/guest-import';
 import { mutationLimiter, heavyActionLimiter } from '@/lib/rate-limit';
-import { requireAuth, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
+import { requireAuth, requireTenantPermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
+import { assertGuestQuota, assertEventEditable, LimitError } from '@/lib/limits';
 
 import type { Guest } from '@/lib';
 import type { CreateGuestInput, UpdateGuestInput } from '@/services';
@@ -44,16 +45,21 @@ export async function importGuestsAction(
   const supabaseForUser = await createClient();
 
   let userId: string;
+  let eventId: string;
   try {
-    const ctx = await requireAuth(supabaseForUser, PERMISSIONS.GUESTS_CREATE);
+    const ctx = await requireTenantPermission(supabaseForUser, PERMISSIONS.GUESTS_CREATE);
     userId = ctx.userId;
+    eventId = ctx.eventId;
+    await assertEventEditable(supabaseForUser, eventId);
   } catch (err) {
     const message =
       err instanceof UnauthorizedError
         ? 'No autenticado.'
         : err instanceof ForbiddenError
           ? 'No tienes permiso para importar invitados.'
-          : 'Error de autorización.';
+          : err instanceof LimitError
+            ? err.message
+            : 'Error de autorización.';
     return { created: 0, errors: [{ row: 0, error: message }] };
   }
 
@@ -81,10 +87,13 @@ export async function importGuestsAction(
 
   if (valid.length === 0) return result;
 
-  const supabase = await createClient();
+  const supabase = supabaseForUser;
 
   // ---- Resolve / create categories ----------------------------------------
-  const { data: existingCategories } = await supabase.from('categories').select('id, name');
+  const { data: existingCategories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .eq('event_id', eventId);
 
   const categoryMap = new Map<string, string>( // lowercase name → id
     (existingCategories ?? []).map((c: { id: string; name: string }) => [
@@ -100,7 +109,7 @@ export async function importGuestsAction(
 
     const { data, error } = await supabase
       .from('categories')
-      .insert({ name: name.trim(), color: '#9ca3af', description: null })
+      .insert({ name: name.trim(), color: '#9ca3af', description: null, event_id: eventId })
       .select('id')
       .single();
 
@@ -111,7 +120,7 @@ export async function importGuestsAction(
 
   // ---- Insert each guest row -----------------------------------------------
   for (const { row, data } of valid) {
-    const guestFields = buildGuestFields(data);
+    const guestFields = { ...buildGuestFields(data), event_id: eventId };
 
     const { data: newGuest, error: insertError } = await supabase
       .from('guests')
@@ -241,29 +250,40 @@ export async function bulkDeleteGuestsAction(ids: string[]): Promise<{ error?: s
 
 export async function createGuestAction(input: CreateGuestInput): Promise<Guest> {
   const supabase = await createClient();
-  await requireAuth(supabase, PERMISSIONS.GUESTS_CREATE);
-  const result = await createGuest(supabase, input);
+  const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_CREATE);
+  await assertGuestQuota(supabase, ctx.eventId);
+  await assertEventEditable(supabase, ctx.eventId);
+  const result = await createGuest(supabase, { ...input, event_id: ctx.eventId });
   revalidatePath('/dashboard/guests');
   return result;
 }
 
-export async function updateGuestAction(id: string, input: UpdateGuestInput): Promise<void> {
+export async function updateGuestAction(id: string, input: UpdateGuestInput): Promise<{ error?: string }> {
   const supabase = await createClient();
-  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
-  await updateGuest(supabase, id, input);
-  revalidatePath('/dashboard/guests');
+  try {
+    const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_EDIT);
+    await assertEventEditable(supabase, ctx.eventId);
+    await updateGuest(supabase, id, input);
+    revalidatePath('/dashboard/guests');
+    return {};
+  } catch (err) {
+    if (err instanceof LimitError) return { error: err.message };
+    throw err;
+  }
 }
 
 export async function linkGuestToParentAction(childId: string, parentId: string): Promise<void> {
   const supabase = await createClient();
-  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
+  const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await assertEventEditable(supabase, ctx.eventId);
   await linkGuestToParent(supabase, childId, parentId);
   revalidatePath('/dashboard/guests');
 }
 
 export async function unlinkGuestFromParentAction(childId: string): Promise<void> {
   const supabase = await createClient();
-  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
+  const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_EDIT);
+  await assertEventEditable(supabase, ctx.eventId);
   await unlinkGuestFromParent(supabase, childId);
   revalidatePath('/dashboard/guests');
 }
@@ -272,11 +292,12 @@ export type AvailableGuest = { id: string; first_name: string; last_name: string
 
 export async function getAvailableGuestsAction(excludeId?: string): Promise<AvailableGuest[]> {
   const supabase = await createClient();
-  await requireAuth(supabase, PERMISSIONS.GUESTS_EDIT);
+  const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_EDIT);
   let query = supabase
     .from('guests')
     .select('id, first_name, last_name')
     .is('parent_guest_id', null)
+    .eq('event_id', ctx.eventId)
     .order('first_name');
   if (excludeId) query = query.neq('id', excludeId);
   const { data, error } = await query;

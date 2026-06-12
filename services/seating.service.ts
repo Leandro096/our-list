@@ -34,6 +34,8 @@ export type CreateTableInput = {
   notes?: string | null;
   capacity: number;
   created_by?: string | null;
+  /** Phase 1+: scopes the table to a specific event. */
+  event_id?: string | null;
 };
 
 export type UpdateTableInput = {
@@ -147,20 +149,28 @@ export type AssignSeatFamilyResult = {
 // ---- Family queries ----
 
 export async function getSeatingDataWithFamily(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  eventId?: string | null
 ): Promise<SeatingDataWithFamily> {
+  let guestsQuery = supabase
+    .from('guests')
+    .select('id, first_name, last_name, status, seating_assignments(id, table_id)')
+    .is('parent_guest_id', null)
+    .eq('status', 'confirmed')
+    .order('last_name');
+
+  if (eventId) guestsQuery = guestsQuery.eq('event_id', eventId);
+
+  let tablesQuery = supabase.from('tables').select('*').order('number');
+  if (eventId) tablesQuery = tablesQuery.eq('event_id', eventId);
+
   const [{ data: parents }, { data: assignments }, { data: tables }] = await Promise.all([
-    supabase
-      .from('guests')
-      .select('id, first_name, last_name, status, seating_assignments(id, table_id)')
-      .is('parent_guest_id', null)
-      .eq('status', 'confirmed')
-      .order('last_name'),
+    guestsQuery,
     supabase
       .from('seating_assignments')
       .select('*, guests(id, first_name, last_name, parent_guest_id), tables(id, name, number)')
       .order('table_id'),
-    supabase.from('tables').select('*').order('number'),
+    tablesQuery,
   ]);
 
   if (!parents || parents.length === 0) {

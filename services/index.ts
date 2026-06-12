@@ -4,3 +4,5 @@ export * from './seating.service';
 export * from './scanner.service';
 export * from './category.service';
 export * from './dashboard.service';
+export * from './tenant.service';
+export * from './event.service';

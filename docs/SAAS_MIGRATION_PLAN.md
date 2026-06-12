@@ -27,7 +27,7 @@ Wedding List es una app **single-tenant**: toda la base de datos representa **un
 | L5 | RBAC global (un solo set de roles para todos los usuarios) | `user_roles`, `lib/server-auth.ts` | **Resuelto en Fase 0** |
 | L6 | `permissions` no tiene columna `name` (solo `scope` + `description`) | `schema.sql` `permissions` | **Resuelto en Fase 0** |
 | L7 | `is_super_admin` es un booleano suelto, sin roles de plataforma | `schema.sql` `users` | **Resuelto en Fase 0** |
-| L8 | Funciones `SECURITY DEFINER` no filtran por tenant/evento → fuga de datos | `lib/db/functions.sql` | Pendiente Fase 1 |
+| L8 | Funciones `SECURITY DEFINER` no filtran por tenant/evento → fuga de datos | `lib/db/functions.sql` | **Resuelto en Fase 1** (migración 002) |
 | L9 | Tipos TS con uniones literales para status/event_type | `lib/types.ts` | **Resuelto en Fase 0** |
 
 ### 1.3. Objetivo
@@ -348,45 +348,51 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ---
 
-### Fase 1 — Scoping del backend 🔲
+### Fase 1 — Scoping del backend ✅
 
 **Objetivo:** la app funciona sobre el tenant/evento activo; funciones SQL seguras por tenant.
 
 #### server-auth.ts
-- [ ] `getActiveTenant(supabase)`: resuelve el tenant activo del usuario autenticado (desde `tenant_members`).
-- [ ] `getServerPermissions(supabase)`: ahora lee roles vía `tenant_members` (no `user_roles` global).
-- [ ] `getPlatformPermissions(supabase)`: resuelve permisos de plataforma desde `platform_user_roles`.
-- [ ] `requireTenantPermission(supabase, scope)`: combina auth + tenant scope check.
-- [ ] `requirePlatformPermission(supabase, scope)`: para acciones de backoffice.
+- [x] `getActiveContext(supabase)`: resuelve `{ userId, tenantId, eventId, permissions }` desde `tenant_members` + `events`.
+- [x] `getServerPermissions(supabase)`: kept for backward compat; reads from `user_roles`.
+- [x] `getPlatformContext(supabase)`: resuelve permisos de plataforma desde `platform_user_roles`.
+- [x] `requireTenantPermission(supabase, scope)`: combina auth + tenant scope check; lanza `ForbiddenError`.
+- [x] `requirePlatformPermission(supabase, scope)`: para acciones de backoffice `/admin`.
 
 #### lib/limits.ts (nuevo)
-- [ ] `assertCanCreateEvent(supabase, tenantId)`: valida `max_events` del plan.
-- [ ] `assertGuestQuota(supabase, eventId)`: valida `max_guests_per_event`.
-- [ ] `assertCanAddMember(supabase, tenantId)`: valida `max_members`.
-- [ ] `assertCanChangeEventDate(supabase, eventId)`: valida `date_changes_used` vs `max_free_date_changes`.
-- [ ] `assertEventEditable(supabase, eventId)`: lanza error si `is_locked = true`.
+- [x] `assertCanCreateEvent(supabase, tenantId)`: valida `max_events` del plan.
+- [x] `assertGuestQuota(supabase, eventId)`: valida `max_guests_per_event`.
+- [x] `assertCanAddMember(supabase, tenantId)`: valida `max_members`.
+- [x] `assertCanChangeEventDate(supabase, eventId)`: valida `date_changes_used` vs `max_free_date_changes`.
+- [x] `assertEventEditable(supabase, eventId)`: lanza `LimitError` si `is_locked = true` o `status ≠ active`.
 
-#### Funciones SQL — añadir `p_event_id` / `p_tenant_id`
-- [ ] `get_guests_paginated`: `+p_event_id` obligatorio; filtrar por `guests.event_id`.
-- [ ] `get_dashboard_stats`: `+p_event_id`; todos los conteos filtrados por evento.
-- [ ] `create_guest_full`: `+p_event_id`; insertar con `event_id`.
-- [ ] `update_guest_with_categories`: `+p_event_id`; validar que el guest pertenece al evento.
-- [ ] `process_guest_scan`: `+p_event_id`; lookup y log filtrado por evento.
-- [ ] Cambiar `SECURITY DEFINER` → `SECURITY INVOKER` donde sea posible; en los que deben ser DEFINER, añadir validación explícita de `p_tenant_id`.
+#### Funciones SQL — migración `002_saas_phase1_functions.sql`
+- [x] `get_guests_paginated`: `+p_event_id DEFAULT NULL`; filtrar `filtered` CTE por `guests.event_id`.
+- [x] `get_dashboard_stats`: `+p_event_id DEFAULT NULL`; todos los conteos y recentActivity filtrados.
+- [x] `create_guest_full`: `+p_event_id DEFAULT NULL`, `+p_created_by DEFAULT NULL`; insertar con `event_id`.
+- [x] `process_guest_scan`: `+p_event_id DEFAULT NULL`; duplicate-check y today-stats scoped al evento.
+- [ ] `update_guest_with_categories`: sin cambios requeridos (updates by id, event_id no relevante).
+- [ ] Revisar `SECURITY DEFINER` → `SECURITY INVOKER` donde sea posible (backlog Fase 1b).
 
 #### Services y Server Actions
-- [ ] `guest.service.ts`: todas las queries con `event_id`.
-- [ ] `seating.service.ts`: todas las queries con `event_id`.
-- [ ] `scanner.service.ts`: todas las queries con `event_id`.
-- [ ] `category.service.ts`: todas las queries con `event_id`.
-- [ ] `dashboard.service.ts`: todas las queries con `event_id`.
-- [ ] `user.service.ts`: scoping a `tenant_id`.
-- [ ] Nuevos services: `tenant.service.ts`, `plan.service.ts`, `billing.service.ts`, `event.service.ts`.
-- [ ] Todos los Server Actions: añadir `requireTenantPermission` antes de mutar.
+- [x] `guest.service.ts`: `GuestListParams.eventId`, `p_event_id` en RPC, `event_id` en `createGuest`.
+- [x] `seating.service.ts`: `getSeatingDataWithFamily(eventId)`, `CreateTableInput.event_id`.
+- [x] `scanner.service.ts`: `getTodayStats(eventId)`, `getScanHistory(eventId)`, `processGuestScanByFamily(eventId)`.
+- [x] `category.service.ts`: `getCategories(eventId)`, `getCategoriesWithGuestCount(eventId)`, `createCategory(event_id)`.
+- [x] `dashboard.service.ts`: `getDashboardStats(eventId)` → `p_event_id`.
+- [x] `user.service.ts`: `getInitialProfile` resuelve `active_tenant_id` + `active_event_id` en paralelo.
+- [x] Nuevos services: `tenant.service.ts`, `event.service.ts` (plan/billing pendiente Fase 2).
+- [x] Server Actions guests: `requireTenantPermission` + `assertGuestQuota` + `assertEventEditable`.
+- [x] Server Actions seating: `requireTenantPermission` + `assertEventEditable`.
+
+#### Auth Context
+- [x] `UserWithRoles.active_tenant_id` + `UserWithRoles.active_event_id` (lib/types.ts).
+- [x] `AuthProvider`: expone `activeEventId` y `activeTenantId` derivados del profile SSR.
+- [x] Dashboard pages (dashboard, guests, seating): usan `getActiveContext` para scoping.
 
 #### Rutas públicas
 - [ ] Revisar `app/rsvp` y `app/guest` con `createAdminClient` (service-role): confirmar que no exponen datos de otros tenants.
-- [ ] Lookup por `invitation_guid` es único globalmente → ok, pero el log de scan debe incluir `event_id`.
+- [x] Lookup por `invitation_guid` es único globalmente → ok; `processGuestScanByFamily` ahora incluye `event_id` en los inserts de `scan_logs`.
 
 ---
 

@@ -53,6 +53,10 @@ interface AuthContextType {
   activeRole: Role | null;
   /** Resolved permission scopes for the active role only. */
   activePermissions: string[];
+  /** Phase 1+: active tenant id resolved server-side via getInitialProfile. */
+  activeTenantId: string | null;
+  /** Phase 1+: active event id resolved server-side via getInitialProfile. */
+  activeEventId: string | null;
   /** Selects a role, fetches its permissions from DB, and persists to localStorage. */
   selectRole: (role: Role) => Promise<void>;
   signOut: () => Promise<void>;
@@ -381,6 +385,8 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
       isLoading,
       activeRole,
       activePermissions,
+      activeTenantId: profile?.active_tenant_id ?? null,
+      activeEventId: profile?.active_event_id ?? null,
       selectRole,
       signOut,
       refreshProfile,

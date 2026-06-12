@@ -194,36 +194,50 @@ export async function updateRolePermissions(
 }
 
 /**
- * Fetches the full user profile with roles and their permissions embedded.
+ * Fetches the full user profile with roles, permissions, and active tenant/event.
  *
  * Designed for **server-side usage** (RSC layouts, server actions) so the
  * result can be passed as `initialProfile` to `<AuthProvider>`. This allows
  * the client to skip ALL Supabase calls on initial mount, avoiding the Web
  * Lock contention that causes the 8-second loading spinner on page refresh.
+ *
+ * Phase 1: also resolves `active_tenant_id` and `active_event_id` from
+ * `tenant_members` + `events` so client components can read them via `useAuth()`.
  */
 export async function getInitialProfile(
   supabase: SupabaseClient,
   userId: string
 ): Promise<UserWithRoles | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select(
-      `
-      *,
-      user_roles!user_roles_user_id_fkey(
-        roles(
-          id,
-          name,
-          description,
-          role_permissions(
-            permissions(id, scope, description)
+  // Run the user/roles query and the tenant membership query in parallel.
+  const [{ data, error }, { data: membershipData }] = await Promise.all([
+    supabase
+      .from('users')
+      .select(
+        `
+        *,
+        user_roles!user_roles_user_id_fkey(
+          roles(
+            id,
+            name,
+            description,
+            role_permissions(
+              permissions(id, scope, description)
+            )
           )
         )
+      `
       )
-    `
-    )
-    .eq('id', userId)
-    .single();
+      .eq('id', userId)
+      .single(),
+    supabase
+      .from('tenant_members')
+      .select('tenant_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at')
+      .limit(1)
+      .single(),
+  ]);
 
   if (error || !data) return null;
 
@@ -252,6 +266,28 @@ export async function getInitialProfile(
 
   const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
 
+  const activeTenantId = (membershipData as { tenant_id: string } | null)?.tenant_id ?? null;
+
+  // Resolve the first active event for the tenant (only if we have a tenant).
+  let activeEventId: string | null = null;
+  if (activeTenantId) {
+    const { data: eventData } = await supabase
+      .from('events')
+      .select('id')
+      .eq('tenant_id', activeTenantId)
+      .eq('status', 'active')
+      .order('created_at')
+      .limit(1)
+      .single();
+    activeEventId = (eventData as { id: string } | null)?.id ?? null;
+  }
+
   const { user_roles: _omit, ...userData } = data;
-  return { ...userData, roles, permissions } as UserWithRoles;
+  return {
+    ...userData,
+    roles,
+    permissions,
+    active_tenant_id: activeTenantId,
+    active_event_id: activeEventId,
+  } as UserWithRoles;
 }

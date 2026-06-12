@@ -31,24 +31,36 @@ export type ScanHistoryItem = ScanLog & {
 
 // ---- Queries ----
 
-export async function getTodayStats(supabase: SupabaseClient): Promise<TodayStats> {
+export async function getTodayStats(
+  supabase: SupabaseClient,
+  eventId?: string | null
+): Promise<TodayStats> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayIso = today.toISOString();
 
+  let ceremonyQuery = supabase
+    .from('scan_logs')
+    .select('guest_id')
+    .eq('event_type', 'ceremony')
+    .eq('is_duplicate', false)
+    .gte('scanned_at', todayIso);
+
+  let receptionQuery = supabase
+    .from('scan_logs')
+    .select('guest_id')
+    .eq('event_type', 'reception')
+    .eq('is_duplicate', false)
+    .gte('scanned_at', todayIso);
+
+  if (eventId) {
+    ceremonyQuery = ceremonyQuery.eq('event_id', eventId);
+    receptionQuery = receptionQuery.eq('event_id', eventId);
+  }
+
   const [{ data: ceremony }, { data: reception }] = await Promise.all([
-    supabase
-      .from('scan_logs')
-      .select('guest_id')
-      .eq('event_type', 'ceremony')
-      .eq('is_duplicate', false)
-      .gte('scanned_at', todayIso),
-    supabase
-      .from('scan_logs')
-      .select('guest_id')
-      .eq('event_type', 'reception')
-      .eq('is_duplicate', false)
-      .gte('scanned_at', todayIso),
+    ceremonyQuery,
+    receptionQuery,
   ]);
 
   return {
@@ -59,9 +71,10 @@ export async function getTodayStats(supabase: SupabaseClient): Promise<TodayStat
 
 export async function getScanHistory(
   supabase: SupabaseClient,
-  limit = 100
+  limit = 100,
+  eventId?: string | null
 ): Promise<ScanHistoryItem[]> {
-  const { data } = await supabase
+  let query = supabase
     .from('scan_logs')
     .select(
       `
@@ -73,6 +86,9 @@ export async function getScanHistory(
     .order('scanned_at', { ascending: false })
     .limit(limit);
 
+  if (eventId) query = query.eq('event_id', eventId);
+
+  const { data } = await query;
   return data ?? [];
 }
 
@@ -141,7 +157,8 @@ export async function processGuestScanByFamily(
   supabase: SupabaseClient,
   invitationGuid: string,
   eventType: 'ceremony' | 'reception',
-  scannedBy: string | undefined
+  scannedBy: string | undefined,
+  eventId?: string | null
 ): Promise<ProcessGroupScanResult> {
   // Find guest by guid
   const { data: guestRow } = await supabase
@@ -235,7 +252,7 @@ export async function processGuestScanByFamily(
 
   const memberResults: GroupScanMember[] = await Promise.all(
     allMemberIds.map(async (member) => {
-      const { data: existingScans } = await supabase
+      let dupQuery = supabase
         .from('scan_logs')
         .select('id')
         .eq('guest_id', member.id)
@@ -244,6 +261,9 @@ export async function processGuestScanByFamily(
         .gte('scanned_at', todayIso)
         .limit(1);
 
+      if (eventId) dupQuery = dupQuery.eq('event_id', eventId);
+
+      const { data: existingScans } = await dupQuery;
       const isDuplicate = (existingScans?.length ?? 0) > 0;
 
       await supabase.from('scan_logs').insert({
@@ -252,6 +272,7 @@ export async function processGuestScanByFamily(
         scanned_by: scannedBy ?? null,
         is_duplicate: isDuplicate,
         scanned_at: new Date().toISOString(),
+        event_id: eventId ?? null,
       });
 
       return {
@@ -265,19 +286,27 @@ export async function processGuestScanByFamily(
   );
 
   // Recalculate today stats — must run after inserts above so counts include the new scans.
+  let finalCeremonyQ = supabase
+    .from('scan_logs')
+    .select('guest_id')
+    .eq('event_type', 'ceremony')
+    .eq('is_duplicate', false)
+    .gte('scanned_at', todayIso);
+  let finalReceptionQ = supabase
+    .from('scan_logs')
+    .select('guest_id')
+    .eq('event_type', 'reception')
+    .eq('is_duplicate', false)
+    .gte('scanned_at', todayIso);
+
+  if (eventId) {
+    finalCeremonyQ = finalCeremonyQ.eq('event_id', eventId);
+    finalReceptionQ = finalReceptionQ.eq('event_id', eventId);
+  }
+
   const [{ data: ceremonyScans }, { data: receptionScans }] = await Promise.all([
-    supabase
-      .from('scan_logs')
-      .select('guest_id')
-      .eq('event_type', 'ceremony')
-      .eq('is_duplicate', false)
-      .gte('scanned_at', todayIso),
-    supabase
-      .from('scan_logs')
-      .select('guest_id')
-      .eq('event_type', 'reception')
-      .eq('is_duplicate', false)
-      .gte('scanned_at', todayIso),
+    finalCeremonyQ,
+    finalReceptionQ,
   ]);
 
   const todayStats: TodayStats = {
