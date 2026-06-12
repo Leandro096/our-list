@@ -20,7 +20,7 @@ function parseAttendance(
   attendance: GuestListItem['event_attendance'],
   eventType: 'ceremony' | 'reception'
 ): string {
-  const entry = attendance.find((a) => a.event_type === eventType || a.event_type === 'both');
+  const entry = attendance.find((a) => a.event_type === eventType);
   if (!entry) return '';
   return boolToCell(entry.attending);
 }
