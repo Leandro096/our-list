@@ -1,7 +1,7 @@
 # Plan de migración a SaaS multi-tenant — Wedding List
 
 > **Documento de trabajo.** Marca cada checkbox `[ ]` → `[x]` a medida que se implementa y verifica cada feature.
-> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`)
+> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅
 
 ---
 
@@ -174,8 +174,8 @@ payments(
 - Visibilidad de `events`: owners/admins del tenant ven todos; miembros con otros roles solo los que tienen en `event_members`.
 - **RLS de plataforma** en `platform_*`, `plans`, `features`, y operaciones admin de `payments`/`tenants`.
 - **Funciones helper** en SQL: `is_tenant_member(p_tenant_id)`, `is_tenant_admin(p_tenant_id)`, `has_platform_permission(p_scope)` — todas `SECURITY DEFINER STABLE`.
-- **Auditar funciones `SECURITY DEFINER`** (`get_guests_paginated`, `get_dashboard_stats`, `create_guest_full`, `update_guest_with_categories`, `process_guest_scan`): añadir y validar `p_event_id`/`p_tenant_id`. **Riesgo #1: fuga de datos entre tenants.** (Pendiente Fase 1)
-- Revisar ruta pública RSVP (`app/rsvp`, `app/guest`) y `createAdminClient` (service-role) para no saltar el aislamiento. (Pendiente Fase 1)
+- **Funciones `SECURITY DEFINER` auditadas** (`get_guests_paginated`, `get_dashboard_stats`, `create_guest_full`, `process_guest_scan`): todas aceptan `p_event_id` y filtran los datos al evento activo. ✅ **Resuelto en Fase 1** (migración `002`).
+- Ruta pública RSVP (`app/rsvp`, `app/guest`) y `createAdminClient` (service-role): lookup por `invitation_guid` es globalmente único (seguro); `scan_logs` ya incluye `event_id`. Pendiente revisión exhaustiva antes de Fase 2.
 
 ---
 
@@ -398,7 +398,17 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ### Fase 2 — Planes, límites y billing manual 🔲
 
-- [ ] Integrar `lib/limits.ts` en todos los server actions que mutan datos (crear guest, crear evento, cambiar fecha, añadir miembro).
+#### Limits ya integrados (Fase 1)
+- [x] `assertGuestQuota` + `assertEventEditable` en `createGuestAction`, `updateGuestAction`, `importGuestsAction`.
+- [x] `assertEventEditable` en todas las Server Actions de seating (`createTable`, `updateTable`, `deleteTable`, `assignSeat`, `removeSeat`).
+
+#### Limits pendientes
+- [ ] `assertCanCreateEvent` al crear un nuevo evento desde la UI.
+- [ ] `assertCanChangeEventDate`: validar y registrar `date_changes_used++` al actualizar `event_date`.
+- [ ] `assertCanAddMember` al invitar un nuevo miembro al tenant.
+- [ ] Bloqueo automático `is_locked=true` cuando `event_date` pasa (cron o trigger en Supabase Edge Function).
+
+#### Billing manual
 - [ ] Cambio de fecha: incrementar `date_changes_used`; bloquear si supera `max_free_date_changes` sin pago adicional.
 - [ ] Bloqueo automático `is_locked=true` cuando `event_date` pasa (cron o trigger en Supabase).
 - [ ] Crear bucket `payment-proofs` en Supabase Storage con RLS.
@@ -491,7 +501,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 | # | Riesgo | Mitigación |
 |---|---|---|
-| R1 | **Fuga de datos entre tenants** vía funciones `SECURITY DEFINER` sin filtro de `event_id` | Máxima prioridad Fase 1; auditoría completa de las 5 funciones |
+| R1 | ~~**Fuga de datos entre tenants** vía funciones `SECURITY DEFINER` sin filtro de `event_id`~~ **RESUELTO Fase 1** | Migración `002` añade `p_event_id` a las 4 funciones críticas; `getActiveContext` siempre pasa el `eventId` activo |
 | R2 | Migración status/event_type text→FK — pérdida de datos si la transacción falla | Migración idempotente y transaccional; verificar conteos antes y después |
 | R3 | RLS mal configurada rompe funciones `SECURITY DEFINER` o el RSVP público | Testear con 2 tenants + usuario anónimo antes de pasar a Fase 2 |
 | R4 | Mezcla de permisos de plataforma con permisos de tenant | Dos catálogos separados; `requirePlatformPermission` nunca lee `tenant_members` |
