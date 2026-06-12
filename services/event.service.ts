@@ -74,7 +74,7 @@ export async function createEvent(
 export async function updateEvent(
   supabase: SupabaseClient,
   eventId: string,
-  payload: Partial<Pick<WeddingEvent, 'name' | 'event_date'>>
+  payload: Partial<Pick<WeddingEvent, 'name'>>
 ): Promise<void> {
   const { error } = await supabase
     .from('events')
@@ -82,4 +82,23 @@ export async function updateEvent(
     .eq('id', eventId);
 
   if (error) throw error;
+}
+
+/**
+ * Atomically updates event_date and increments date_changes_used.
+ * Callers MUST run assertCanChangeEventDate() before calling this.
+ * Returns the new date_changes_used count.
+ */
+export async function updateEventDate(
+  supabase: SupabaseClient,
+  eventId: string,
+  newDate: string
+): Promise<number> {
+  const { data, error } = await supabase.rpc('increment_date_changes_used', {
+    p_event_id: eventId,
+    p_new_date: newDate,
+  });
+
+  if (error) throw error;
+  return (data as { date_changes_used: number }).date_changes_used;
 }

@@ -1,0 +1,195 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Payment, PaymentEvent, Subscription } from '@/lib/types';
+
+// ---- Return types ----
+
+export type PaymentWithTenant = Payment & {
+  tenants: { name: string } | null;
+  plans: { name: string; code: string } | null;
+};
+
+export type SubscriptionWithDetails = Subscription & {
+  plans: { name: string; code: string; billing_type: string } | null;
+};
+
+// ---- Queries ----
+
+export async function getPaymentsForTenant(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<Payment[]> {
+  const { data } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('submitted_at', { ascending: false });
+
+  return (data as Payment[]) ?? [];
+}
+
+export async function getPaymentById(
+  supabase: SupabaseClient,
+  paymentId: string
+): Promise<Payment | null> {
+  const { data } = await supabase.from('payments').select('*').eq('id', paymentId).single();
+  return (data as Payment | null) ?? null;
+}
+
+export async function getPendingPayments(
+  supabase: SupabaseClient
+): Promise<PaymentWithTenant[]> {
+  const { data } = await supabase
+    .from('payments')
+    .select('*, tenants(name), plans(name, code)')
+    .eq('status', 'pending')
+    .order('submitted_at');
+
+  return (data as unknown as PaymentWithTenant[]) ?? [];
+}
+
+export async function getAllPayments(
+  supabase: SupabaseClient,
+  limit = 100
+): Promise<PaymentWithTenant[]> {
+  const { data } = await supabase
+    .from('payments')
+    .select('*, tenants(name), plans(name, code)')
+    .order('submitted_at', { ascending: false })
+    .limit(limit);
+
+  return (data as unknown as PaymentWithTenant[]) ?? [];
+}
+
+export async function getPaymentEvents(
+  supabase: SupabaseClient,
+  paymentId: string
+): Promise<PaymentEvent[]> {
+  const { data } = await supabase
+    .from('payment_events')
+    .select('*')
+    .eq('payment_id', paymentId)
+    .order('created_at');
+
+  return (data as PaymentEvent[]) ?? [];
+}
+
+export async function getActiveSubscription(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<SubscriptionWithDetails | null> {
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('*, plans(name, code, billing_type)')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  return (data as unknown as SubscriptionWithDetails | null) ?? null;
+}
+
+// ---- Mutations ----
+
+export type SubmitPaymentInput = {
+  tenantId: string;
+  subscriptionId: string;
+  planId: string;
+  amount: number;
+  currency: string;
+  method: 'bank_transfer' | 'card' | 'manual';
+  proofUrl: string;
+  reference: string | null;
+  submittedBy: string;
+};
+
+export async function createPendingPayment(
+  supabase: SupabaseClient,
+  input: SubmitPaymentInput
+): Promise<Payment> {
+  const { data, error } = await supabase
+    .from('payments')
+    .insert({
+      tenant_id:       input.tenantId,
+      subscription_id: input.subscriptionId,
+      plan_id:         input.planId,
+      amount:          input.amount,
+      currency:        input.currency,
+      method:          input.method,
+      status:          'pending',
+      proof_url:       input.proofUrl,
+      reference:       input.reference,
+      submitted_by:    input.submittedBy,
+      submitted_at:    new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Payment;
+}
+
+/**
+ * Atomically confirms a payment, activates the subscription, and logs to
+ * payment_events — all via the `confirm_payment` SQL function.
+ */
+export async function confirmPayment(
+  supabase: SupabaseClient,
+  paymentId: string,
+  reviewedBy: string,
+  notes: string | null
+): Promise<{ ok: boolean; error?: string; subscription_id?: string }> {
+  const { data, error } = await supabase.rpc('confirm_payment', {
+    p_payment_id:  paymentId,
+    p_reviewed_by: reviewedBy,
+    p_notes:       notes ?? null,
+  });
+
+  if (error) throw error;
+  return data as { ok: boolean; error?: string; subscription_id?: string };
+}
+
+/**
+ * Marks a payment as rejected and logs to payment_events.
+ */
+export async function rejectPayment(
+  supabase: SupabaseClient,
+  paymentId: string,
+  reviewedBy: string,
+  notes: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc('reject_payment', {
+    p_payment_id:  paymentId,
+    p_reviewed_by: reviewedBy,
+    p_notes:       notes,
+  });
+
+  if (error) throw error;
+  return data as { ok: boolean; error?: string };
+}
+
+/**
+ * Creates a pending subscription for a tenant+plan.
+ * Used during the payment proof submission flow before the payment is confirmed.
+ */
+export async function createPendingSubscription(
+  supabase: SupabaseClient,
+  tenantId: string,
+  planId: string,
+  billingType: 'one_time' | 'recurring'
+): Promise<Subscription> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .insert({
+      tenant_id:    tenantId,
+      plan_id:      planId,
+      billing_type: billingType,
+      status:       'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Subscription;
+}

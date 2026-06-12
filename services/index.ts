@@ -6,3 +6,5 @@ export * from './category.service';
 export * from './dashboard.service';
 export * from './tenant.service';
 export * from './event.service';
+export * from './plan.service';
+export * from './billing.service';

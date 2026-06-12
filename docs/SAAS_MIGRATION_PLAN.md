@@ -1,7 +1,7 @@
 # Plan de migración a SaaS multi-tenant — Wedding List
 
 > **Documento de trabajo.** Marca cada checkbox `[ ]` → `[x]` a medida que se implementa y verifica cada feature.
-> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅
+> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅ · Fase 2 (backend) ✅
 
 ---
 
@@ -396,27 +396,35 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ---
 
-### Fase 2 — Planes, límites y billing manual 🔲
+### Fase 2 — Planes, límites y billing manual ✅ (backend)
 
 #### Limits ya integrados (Fase 1)
 - [x] `assertGuestQuota` + `assertEventEditable` en `createGuestAction`, `updateGuestAction`, `importGuestsAction`.
 - [x] `assertEventEditable` en todas las Server Actions de seating (`createTable`, `updateTable`, `deleteTable`, `assignSeat`, `removeSeat`).
 
-#### Limits pendientes
-- [ ] `assertCanCreateEvent` al crear un nuevo evento desde la UI.
-- [ ] `assertCanChangeEventDate`: validar y registrar `date_changes_used++` al actualizar `event_date`.
-- [ ] `assertCanAddMember` al invitar un nuevo miembro al tenant.
-- [ ] Bloqueo automático `is_locked=true` cuando `event_date` pasa (cron o trigger en Supabase Edge Function).
+#### Limits backend
+- [x] `assertCanCreateEvent` implementado en `lib/limits.ts` (pendiente wiring en UI — Fase 3).
+- [x] `assertCanChangeEventDate` + `updateEventDate` → llama a `increment_date_changes_used` RPC (atómico).
+- [x] `assertCanAddMember` implementado en `lib/limits.ts` (pendiente wiring en UI — Fase 3).
+- [x] Bloqueo automático `is_locked=true`: `lock_past_events()` + trigger `trg_auto_lock_event` en migración `003`.
 
-#### Billing manual
-- [ ] Cambio de fecha: incrementar `date_changes_used`; bloquear si supera `max_free_date_changes` sin pago adicional.
-- [ ] Bloqueo automático `is_locked=true` cuando `event_date` pasa (cron o trigger en Supabase).
-- [ ] Crear bucket `payment-proofs` en Supabase Storage con RLS.
-- [ ] Server Action `submitPaymentProof(tenantId, planId, amount, proofFile, reference)`: optimizar imagen con `sharp`, subir a Storage, crear `payment` en `pending`.
-- [ ] Server Action `confirmPayment(paymentId, notes)`: requiere `platform.billing.confirm`; activa `subscription`, registra en `payment_events`.
-- [ ] Server Action `rejectPayment(paymentId, notes)`: requiere `platform.billing.reject`; registra en `payment_events`.
-- [ ] Añadir `sharp` como dependencia de producción (`pnpm add sharp`).
-- [ ] `payment_events`: registrar cada transición de estado (manual y futuro Stripe).
+#### Billing manual — SQL (migración `003_saas_phase2_billing.sql`)
+- [x] `lock_past_events()` — lock manual/cron de eventos pasados.
+- [x] Trigger `trg_auto_lock_event` — lock inmediato si `event_date < CURRENT_DATE` al insertar/actualizar.
+- [x] `confirm_payment(payment_id, reviewed_by, notes)` — atómico: confirma pago + activa subscription + log.
+- [x] `reject_payment(payment_id, reviewed_by, notes)` — marca rechazado + log en `payment_events`.
+- [x] `increment_date_changes_used(event_id, new_date)` — atómico: actualiza fecha + incrementa contador.
+- [x] Políticas RLS de Storage para bucket `payment-proofs` (3 políticas idempotentes).
+- [ ] Crear bucket `payment-proofs` en Supabase Dashboard (paso manual, privado).
+
+#### Billing manual — Services y Server Actions
+- [x] `services/plan.service.ts`: `getPlans`, `getTenantPlan`, `getPlanWithFeatures`, `getAllPlansWithFeatures`.
+- [x] `services/billing.service.ts`: `createPendingPayment`, `confirmPayment`, `rejectPayment`, `createPendingSubscription`, queries de pagos/subscriptions.
+- [x] `app/dashboard/settings/billing/actions.ts` — `submitPaymentProofAction`: optimiza con `sharp`, sube a Storage, crea payment + subscription pending.
+- [x] `app/admin/billing/actions.ts` — `confirmPaymentAction` + `rejectPaymentAction` (requieren `platform.billing.confirm` / `.reject`).
+- [x] `lib/image-optimizer.ts` — validación + compresión JPEG con `sharp`; PDFs pass-through.
+- [x] `sharp` instalado como dependencia de producción (`pnpm add sharp`).
+- [x] `services/index.ts` exporta `plan.service` y `billing.service`.
 
 ---
 
