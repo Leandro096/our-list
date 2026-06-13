@@ -1,7 +1,7 @@
 # Plan de migración a SaaS multi-tenant — Wedding List
 
 > **Documento de trabajo.** Marca cada checkbox `[ ]` → `[x]` a medida que se implementa y verifica cada feature.
-> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅ · Fase 2 (backend) ✅
+> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅ · Fase 2 ✅ · Fase 3 (parcial) ✅ · Fase 4 ✅
 
 ---
 
@@ -449,34 +449,38 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ---
 
-### Fase 3 — UI multi-tenant + portal `/admin` 🔲
+### Fase 3 — UI multi-tenant + portal `/admin` ✅ (parcial)
 
 #### Onboarding y autenticación
 
-- [ ] `app/auth/sign-up`: elegir tipo de cuenta (individual/organización) + nombre del tenant.
-- [ ] Crear tenant + iniciar flujo de pago al registrarse.
+- [x] `app/auth/sign-up`: wizard 2 pasos — credenciales → tipo de cuenta (individual/organización) + nombre del workspace (`sign-up-client.tsx`).
+- [x] Provisión automática de tenant + evento por defecto en `app/auth/callback/route.ts` al primer login (lee `user_metadata.tenant_type` y `workspace_name`).
 
 #### Contexto de tenant/evento
 
 - [ ] Selector de tenant activo en `app/dashboard/layout.tsx` (si el usuario pertenece a varios tenants).
 - [ ] Selector de evento activo (si el tenant tiene más de un evento).
-- [ ] Contexto de servidor del tenant activo en todo el layout del dashboard.
+- [x] Contexto de servidor del tenant activo en todo el layout del dashboard (`getActiveContext` en cada page/action).
 
 #### Gestión del tenant
 
-- [ ] Pantalla de miembros: invitar, asignar rol, revocar acceso (con validación de seats).
+- [x] Pantalla de miembros `/dashboard/settings/members`: invitar por email (`inviteUserByEmail`), asignar rol, revocar acceso; validación de seats pendiente de wiring con `assertCanAddMember`.
 - [ ] Asignación de miembros a eventos (`event_members`).
-- [ ] Pantalla de plan/uso: progreso de `max_guests_per_event`, `max_events`, `max_members`, `date_changes_used`.
-- [ ] Pantalla de billing: plan actual, historial de pagos, formulario de envío de comprobante.
+- [x] Pantalla de plan/uso `/dashboard/settings/billing`: barras de progreso `max_guests_per_event`, `max_events`, `max_members`.
+- [x] Pantalla de billing: plan actual, historial de pagos, formulario de comprobante bancario + selector de planes Stripe.
 - [ ] Gestión de estados personalizados del evento.
 - [ ] Gestión de sesiones personalizadas del evento.
 
+#### Navegación del dashboard
+
+- [x] `components/dashboard/header.tsx`: enlace **Miembros** y **Facturación** en menú de ajustes; enlace **Portal Admin** visible solo para `is_super_admin`.
+
 #### Portal de plataforma `/admin`
 
-- [ ] Protección de ruta: `requirePlatformPermission('platform.tenants.view')`.
-- [ ] `/admin/tenants`: listado con filtros; ver/suspender/reactivar tenant; cambiar plan.
+- [x] Protección de ruta: `requirePlatformPermission('platform.tenants.view')` en `app/admin/layout.tsx`.
+- [x] `/admin/tenants`: listado de todos los tenants con badge de tipo y estado. _(filtros, suspender/reactivar, cambiar plan — pendiente §3b)_
 - [ ] `/admin/plans`: CRUD del catálogo de planes y features.
-- [ ] `/admin/billing`: bandeja de pagos pendientes; confirmar/rechazar con nota; ver comprobante del bucket.
+- [x] `/admin/billing`: bandeja de pagos pendientes; confirmar (activa subscription) / rechazar con nota; enlace al comprobante en bucket.
 - [ ] `/admin/globals`: editar statuses y sessions globales.
 - [ ] `/admin/roles`: CRUD de roles y permisos de plataforma; asignar rol a usuario.
 
@@ -486,15 +490,43 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Mantener refresh de sesión Supabase SSR dentro del mismo middleware.
 - [ ] Configurar wildcard domain en Vercel + DNS `*.dominio.com`.
 
+##### Pendiente Fase 3b (backlog)
+
+- [ ] Selector de tenant/evento activo en el header del dashboard.
+- [ ] Wiring de `assertCanAddMember` en `inviteMemberAction`.
+- [ ] Asignación de miembros a eventos (`event_members`).
+- [ ] Gestión de estados y sesiones personalizadas del evento.
+- [ ] `/admin/tenants` acciones: suspender, reactivar, cambiar plan.
+- [ ] `/admin/plans`: CRUD completo.
+- [ ] `/admin/globals` y `/admin/roles`.
+
 ---
 
-### Fase 4 — Stripe (posterior) 🔲
+### Fase 4 — Stripe ✅
 
-- [ ] Checkout Session de Stripe para `org_starter`, `org_pro`, `org_elite`.
-- [ ] Customer Portal de Stripe para upgrade/downgrade/cancelación.
-- [ ] Webhook handler: `checkout.session.completed`, `invoice.payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted` → actualizar `subscriptions` y crear `payment_events` con `raw_payload` completo.
-- [ ] Mapear `stripe_price_id` en planes, `stripe_subscription_id` en subscriptions, `stripe_payment_intent_id` en payments.
-- [ ] `invoice.payment_failed` → `subscription.status = 'past_due'`.
+- [x] `lib/stripe.ts`: singleton `Stripe` con `apiVersion` fijada; usa `STRIPE_SECRET_KEY`.
+- [x] `lib/db/migrations/004_saas_phase4_stripe.sql`: `ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT UNIQUE` (idempotente).
+- [x] `lib/types.ts`: `Tenant.stripe_customer_id` añadido.
+- [x] `services/billing.service.ts`: `getStripeCustomerId`, `saveStripeCustomerId`, `activateSubscriptionFromStripe`, `createStripePayment`, `logStripeEvent`.
+- [x] `createCheckoutSessionAction(planId)`: crea/recupera Customer de Stripe, crea Checkout Session (`payment` o `subscription` según `billing_type`); pasa `metadata.{tenant_id, plan_id, user_id}`.
+- [x] `createPortalSessionAction()`: crea sesión del Customer Portal de Stripe (gestión de upgrade/downgrade/cancelación/método de pago).
+- [x] `app/api/stripe/webhook/route.ts`: verifica firma con `STRIPE_WEBHOOK_SECRET`; maneja:
+  - `checkout.session.completed` → activa subscription + crea payment confirmado.
+  - `invoice.payment_succeeded` → actualiza `current_period_end`.
+  - `invoice.payment_failed` → `subscription.status = 'past_due'`.
+  - `customer.subscription.updated` → sincroniza status y `current_period_end`.
+  - `customer.subscription.deleted` → `subscription.status = 'canceled'`.
+  - Todos los eventos se loguean en `payment_events` con `raw_payload` completo.
+- [x] `components/settings/stripe-plan-selector.tsx`: tarjetas por plan con precio, límites y features; plan activo resaltado; botón "Seleccionar" → Checkout; botón "Gestionar suscripción" → Customer Portal (visible si ya hay `stripe_customer_id`).
+- [x] `app/dashboard/settings/billing/page.tsx`: integra `StripePlanSelector` + filtra planes por tipo de tenant.
+- [x] `.env.example` documentado con `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+
+##### Pendiente para producción
+
+- [ ] Crear productos y precios en el dashboard de Stripe y actualizar `plans.stripe_price_id` en Supabase.
+- [ ] Configurar Customer Portal en Stripe Dashboard (qué acciones se permiten).
+- [ ] Registrar el webhook en Stripe Dashboard apuntando a `https://dominio.com/api/stripe/webhook`.
+- [ ] Activar `invoice.payment_failed` → notificación por email al tenant.
 
 ---
 
