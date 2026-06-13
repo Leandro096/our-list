@@ -8,9 +8,11 @@ import { getActiveContext } from '@/lib/server-auth';
 import { PERMISSIONS, hasPermission } from '@/lib/permissions';
 
 import { getTenantById } from '@/services/tenant.service';
+import { getAllPlansWithFeatures } from '@/services/plan.service';
 import { getPaymentsForTenant, getActiveSubscription } from '@/services/billing.service';
 
 import { BillingProofForm } from '@/components/settings/billing-proof-form';
+import { StripePlanSelector } from '@/components/settings/stripe-plan-selector';
 import {
   Card,
   Badge,
@@ -86,10 +88,11 @@ export default async function BillingPage() {
     redirect('/dashboard');
   }
 
-  const [subscription, payments, tenant] = await Promise.all([
+  const [subscription, payments, tenant, allPlans] = await Promise.all([
     getActiveSubscription(supabase, ctx.tenantId),
     getPaymentsForTenant(supabase, ctx.tenantId),
     getTenantById(supabase, ctx.tenantId),
+    getAllPlansWithFeatures(supabase),
   ]);
 
   const plan = subscription?.plans as
@@ -112,6 +115,13 @@ export default async function BillingPage() {
     PERMISSIONS.SETTINGS_BILLING_SUBMIT_PROOF,
     ctx.isSuperAdmin
   );
+
+  const currentPlanCode = (subscription?.plans as { code?: string } | null)?.code ?? null;
+  const hasStripeCustomer = Boolean(tenant?.stripe_customer_id);
+
+  // Show plans that match the tenant type (individual plans for individuals, org plans for orgs).
+  const tenantType = tenant?.type ?? 'individual';
+  const visiblePlans = allPlans.filter((p) => p.scope === tenantType || p.scope === 'individual');
 
   return (
     <div className="space-y-6">
@@ -168,7 +178,16 @@ export default async function BillingPage() {
         )}
       </Card>
 
-      {/* Submit proof */}
+      {/* Stripe plan selector — always show so tenants can upgrade / switch */}
+      {canSubmitProof && visiblePlans.length > 0 && (
+        <StripePlanSelector
+          plans={visiblePlans}
+          currentPlanCode={currentPlanCode}
+          hasStripeCustomer={hasStripeCustomer}
+        />
+      )}
+
+      {/* Manual bank-transfer proof — fallback / alternative */}
       {canSubmitProof && (
         <BillingProofForm
           tenantId={ctx.tenantId}

@@ -1,3 +1,5 @@
+import type Stripe from 'stripe';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Payment, PaymentEvent, Subscription } from '@/lib/types';
@@ -165,6 +167,154 @@ export async function rejectPayment(
 
   if (error) throw error;
   return data as { ok: boolean; error?: string };
+}
+
+// ---- Stripe helpers ----
+
+/** Reads the Stripe customer ID stored on the tenant row. */
+export async function getStripeCustomerId(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('tenants')
+    .select('stripe_customer_id')
+    .eq('id', tenantId)
+    .single();
+  return (data as { stripe_customer_id: string | null } | null)?.stripe_customer_id ?? null;
+}
+
+/** Persists the Stripe customer ID on the tenant row after creation. */
+export async function saveStripeCustomerId(
+  supabase: SupabaseClient,
+  tenantId: string,
+  customerId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('tenants')
+    .update({ stripe_customer_id: customerId })
+    .eq('id', tenantId);
+  if (error) throw error;
+}
+
+/**
+ * Activates (or upserts) the tenant subscription after a successful Stripe
+ * webhook event (checkout.session.completed / invoice.payment_succeeded).
+ */
+export async function activateSubscriptionFromStripe(
+  supabase: SupabaseClient,
+  tenantId: string,
+  planId: string,
+  billingType: 'one_time' | 'recurring',
+  stripeSubscriptionId: string | null,
+  periodStart: string | null,
+  periodEnd: string | null
+): Promise<Subscription> {
+  // Try to find an existing pending subscription for this tenant+plan.
+  const { data: existing } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('plan_id', planId)
+    .in('status', ['pending', 'active'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        stripe_subscription_id: stripeSubscriptionId,
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', (existing as Subscription).id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Subscription;
+  }
+
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .insert({
+      tenant_id: tenantId,
+      plan_id: planId,
+      billing_type: billingType,
+      status: 'active',
+      stripe_subscription_id: stripeSubscriptionId,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Subscription;
+}
+
+/** Logs a Stripe webhook event to `payment_events` for full audit trail. */
+export async function logStripeEvent(
+  supabase: SupabaseClient,
+  tenantId: string | null,
+  paymentId: string | null,
+  eventType: string,
+  rawPayload: Stripe.Event
+): Promise<void> {
+  await supabase.from('payment_events').insert({
+    tenant_id: tenantId,
+    payment_id: paymentId,
+    source: 'stripe',
+    event_type: eventType,
+    raw_payload: rawPayload as unknown as Record<string, unknown>,
+  });
+}
+
+/**
+ * Creates a confirmed payment record for a Stripe card charge.
+ * Called from the webhook after checkout.session.completed.
+ */
+export async function createStripePayment(
+  supabase: SupabaseClient,
+  {
+    tenantId,
+    subscriptionId,
+    planId,
+    amount,
+    currency,
+    submittedBy,
+    stripePaymentIntentId,
+  }: {
+    tenantId: string;
+    subscriptionId: string;
+    planId: string;
+    amount: number;
+    currency: string;
+    submittedBy: string | null;
+    stripePaymentIntentId: string | null;
+  }
+): Promise<Payment> {
+  const { data, error } = await supabase
+    .from('payments')
+    .insert({
+      tenant_id: tenantId,
+      subscription_id: subscriptionId,
+      plan_id: planId,
+      amount,
+      currency: currency.toUpperCase(),
+      method: 'card',
+      status: 'confirmed',
+      submitted_by: submittedBy,
+      submitted_at: new Date().toISOString(),
+      reviewed_at: new Date().toISOString(),
+      stripe_payment_intent_id: stripePaymentIntentId,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Payment;
 }
 
 /**

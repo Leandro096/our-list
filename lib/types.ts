@@ -234,6 +234,7 @@ export interface Tenant {
   name: string;
   owner_id: string;
   subdomain: string | null;
+  stripe_customer_id: string | null;
   status: TenantStatus;
   created_at: string;
   updated_at: string;

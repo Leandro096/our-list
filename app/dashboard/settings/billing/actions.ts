@@ -2,12 +2,20 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { stripe } from '@/lib/stripe';
 import { LimitError } from '@/lib/limits';
 import { createClient } from '@/lib/supabase/server';
 import { optimizeProof, ProofValidationError } from '@/lib/image-optimizer';
 import { ForbiddenError, UnauthorizedError, requireTenantPermission } from '@/lib/server-auth';
 
-import { createPendingPayment, createPendingSubscription } from '@/services/billing.service';
+import { getPlanById } from '@/services/plan.service';
+import { getTenantById } from '@/services/tenant.service';
+import {
+  getStripeCustomerId,
+  createPendingPayment,
+  saveStripeCustomerId,
+  createPendingSubscription,
+} from '@/services/billing.service';
 
 export type SubmitProofInput = {
   planId: string;
@@ -130,4 +138,104 @@ export async function submitPaymentProofAction(
 
   revalidatePath('/dashboard/settings/billing');
   return { paymentId };
+}
+
+// ---- Stripe actions ----
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+export type StripeSessionResult = { url?: string; error?: string };
+
+/**
+ * Creates a Stripe Checkout Session for the given plan.
+ * Redirects the user to Stripe's hosted checkout page.
+ * On success Stripe redirects to /dashboard/settings/billing?stripe=success.
+ */
+export async function createCheckoutSessionAction(planId: string): Promise<StripeSessionResult> {
+  const supabase = await createClient();
+
+  let ctx: Awaited<ReturnType<typeof requireTenantPermission>>;
+  try {
+    ctx = await requireTenantPermission(supabase, 'tenant.billing.submit');
+  } catch (err) {
+    return {
+      error:
+        err instanceof UnauthorizedError
+          ? 'No autenticado.'
+          : err instanceof ForbiddenError
+            ? 'Sin permiso.'
+            : 'Error de autorización.',
+    };
+  }
+
+  const plan = await getPlanById(supabase, planId);
+  if (!plan) return { error: 'Plan no encontrado.' };
+  if (!plan.stripe_price_id) return { error: 'Este plan no tiene precio de Stripe configurado.' };
+
+  const tenant = await getTenantById(supabase, ctx.tenantId);
+  if (!tenant) return { error: 'Tenant no encontrado.' };
+
+  // Get or create Stripe Customer
+  let customerId = await getStripeCustomerId(supabase, ctx.tenantId);
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: undefined,
+      name: tenant.name,
+      metadata: { tenant_id: ctx.tenantId },
+    });
+    customerId = customer.id;
+    await saveStripeCustomerId(supabase, ctx.tenantId, customerId);
+  }
+
+  const mode = plan.billing_type === 'one_time' ? 'payment' : 'subscription';
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode,
+      line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+      success_url: `${SITE_URL}/dashboard/settings/billing?stripe=success`,
+      cancel_url: `${SITE_URL}/dashboard/settings/billing?stripe=cancel`,
+      metadata: { tenant_id: ctx.tenantId, plan_id: planId, user_id: ctx.userId },
+      allow_promotion_codes: true,
+    });
+
+    return { url: session.url ?? undefined };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error al crear sesión de Stripe.';
+    return { error: msg };
+  }
+}
+
+/**
+ * Creates a Stripe Customer Portal session so the tenant can manage their
+ * subscription (upgrade, downgrade, cancel, update payment method).
+ */
+export async function createPortalSessionAction(): Promise<StripeSessionResult> {
+  const supabase = await createClient();
+
+  let ctx: Awaited<ReturnType<typeof requireTenantPermission>>;
+  try {
+    ctx = await requireTenantPermission(supabase, 'tenant.billing.submit');
+  } catch (err) {
+    return {
+      error: err instanceof UnauthorizedError ? 'No autenticado.' : 'Error de autorización.',
+    };
+  }
+
+  const customerId = await getStripeCustomerId(supabase, ctx.tenantId);
+  if (!customerId) {
+    return { error: 'No hay cuenta de Stripe vinculada. Suscríbete a un plan primero.' };
+  }
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${SITE_URL}/dashboard/settings/billing`,
+    });
+    return { url: session.url };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error al abrir el portal de facturación.';
+    return { error: msg };
+  }
 }
