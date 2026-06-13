@@ -71,10 +71,7 @@ export async function assertCanCreateEvent(
  * Assert the event hasn't reached its max_guests_per_event limit.
  * Call before inserting a new guest.
  */
-export async function assertGuestQuota(
-  supabase: SupabaseClient,
-  eventId: string
-): Promise<void> {
+export async function assertGuestQuota(supabase: SupabaseClient, eventId: string): Promise<void> {
   const { data: event } = await supabase
     .from('events')
     .select('tenant_id')
@@ -181,9 +178,6 @@ export async function assertEventEditable(
   }
 
   if (e.status !== 'active') {
-    throw new LimitError(
-      `This event is ${e.status} and cannot be modified.`,
-      'EVENT_LOCKED'
-    );
+    throw new LimitError(`This event is ${e.status} and cannot be modified.`, 'EVENT_LOCKED');
   }
 }

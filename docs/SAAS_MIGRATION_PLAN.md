@@ -18,21 +18,22 @@ Wedding List es una app **single-tenant**: toda la base de datos representa **un
 
 ### 1.2. Limitaciones que bloquean el SaaS
 
-| # | Limitación actual | Ubicación | Estado |
-|---|---|---|---|
-| L1 | Ninguna tabla tiene `tenant_id` ni `event_id` → no hay aislamiento de datos | todo `lib/db/schema.sql` | **Resuelto en Fase 0** |
-| L2 | Estados de invitado hardcodeados en `CHECK` (`pending/confirmed/declined/tentative`) | `schema.sql` `guests.status` | **Resuelto en Fase 0** |
-| L3 | Tipos de evento hardcodeados en `CHECK` (`ceremony/reception/both`) | `schema.sql` `event_attendance.event_type`, `scan_logs.event_type` | **Resuelto en Fase 0** |
-| L4 | `UNIQUE` globales (`categories.name`, `tables.number`) rompen con multi-tenant | `schema.sql` | Pendiente Fase 0b |
-| L5 | RBAC global (un solo set de roles para todos los usuarios) | `user_roles`, `lib/server-auth.ts` | **Resuelto en Fase 0** |
-| L6 | `permissions` no tiene columna `name` (solo `scope` + `description`) | `schema.sql` `permissions` | **Resuelto en Fase 0** |
-| L7 | `is_super_admin` es un booleano suelto, sin roles de plataforma | `schema.sql` `users` | **Resuelto en Fase 0** |
-| L8 | Funciones `SECURITY DEFINER` no filtran por tenant/evento → fuga de datos | `lib/db/functions.sql` | **Resuelto en Fase 1** (migración 002) |
-| L9 | Tipos TS con uniones literales para status/event_type | `lib/types.ts` | **Resuelto en Fase 0** |
+| #   | Limitación actual                                                                    | Ubicación                                                          | Estado                                 |
+| --- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------- |
+| L1  | Ninguna tabla tiene `tenant_id` ni `event_id` → no hay aislamiento de datos          | todo `lib/db/schema.sql`                                           | **Resuelto en Fase 0**                 |
+| L2  | Estados de invitado hardcodeados en `CHECK` (`pending/confirmed/declined/tentative`) | `schema.sql` `guests.status`                                       | **Resuelto en Fase 0**                 |
+| L3  | Tipos de evento hardcodeados en `CHECK` (`ceremony/reception/both`)                  | `schema.sql` `event_attendance.event_type`, `scan_logs.event_type` | **Resuelto en Fase 0**                 |
+| L4  | `UNIQUE` globales (`categories.name`, `tables.number`) rompen con multi-tenant       | `schema.sql`                                                       | Pendiente Fase 0b                      |
+| L5  | RBAC global (un solo set de roles para todos los usuarios)                           | `user_roles`, `lib/server-auth.ts`                                 | **Resuelto en Fase 0**                 |
+| L6  | `permissions` no tiene columna `name` (solo `scope` + `description`)                 | `schema.sql` `permissions`                                         | **Resuelto en Fase 0**                 |
+| L7  | `is_super_admin` es un booleano suelto, sin roles de plataforma                      | `schema.sql` `users`                                               | **Resuelto en Fase 0**                 |
+| L8  | Funciones `SECURITY DEFINER` no filtran por tenant/evento → fuga de datos            | `lib/db/functions.sql`                                             | **Resuelto en Fase 1** (migración 002) |
+| L9  | Tipos TS con uniones literales para status/event_type                                | `lib/types.ts`                                                     | **Resuelto en Fase 0**                 |
 
 ### 1.3. Objetivo
 
 Convertir la app en un **SaaS multi-tenant** con:
+
 - Cuentas **individuales** (workspace personal, 1 owner, one-time por evento, sin tier gratis) y de **organización** (multi-usuario, nº de miembros según plan, suscripción recurrente).
 - Jerarquía **tenant → evento (proyecto) → sesión (ceremonia/recepción/…)**.
 - **Estados y sesiones dinámicos** por tenant/evento, con un conjunto **global** sembrado por la plataforma.
@@ -42,18 +43,18 @@ Convertir la app en un **SaaS multi-tenant** con:
 
 ### 1.4. Decisiones confirmadas
 
-| Tema | Decisión |
-|---|---|
-| Concepto "evento" | **Dos niveles**: proyecto (boda, con `event_date`) → sesiones dinámicas. El límite 1-2 aplica a *proyectos*. |
-| Límite de invitados | **Por evento** (`max_guests_per_event`). |
-| Individual | One-time por evento; datos **persisten en solo-lectura** tras pasar `event_date` (`is_locked=true`). Sin tier gratis. Para otro evento se paga de nuevo o se convierte a org. |
-| Organización | Multi-usuario; seats según plan; **un rol por tenant** en `tenant_members`; asignación a eventos solo controla visibilidad. |
-| Billing (Fases 0-3) | Confirmación manual por admin de plataforma con rol de cobros; soporta **transferencia bancaria** con comprobante subido a Supabase Storage (optimizado con `sharp`). |
-| Stripe | Fase 4, sobre el mismo modelo de datos; guardar **todos** los payloads de webhooks en `payment_events`. |
-| Portal de admin | Backoffice `/admin` con RBAC de plataforma independiente del RBAC de tenant. |
-| Permisos | Siempre con `scope` + `name` + `description`, en ambos niveles. Granulares hasta el botón (`module.resource.action`). |
-| Subdominio wildcard | `org.dominio.com` para el plan máximo de org (`org_elite`), gateado por feature `custom_subdomain`. Vía `middleware.ts` + DNS wildcard en Vercel. |
-| Datos existentes | **Hay datos en producción** → migrar a un tenant + evento por defecto, sin pérdida. |
+| Tema                | Decisión                                                                                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Concepto "evento"   | **Dos niveles**: proyecto (boda, con `event_date`) → sesiones dinámicas. El límite 1-2 aplica a _proyectos_.                                                                  |
+| Límite de invitados | **Por evento** (`max_guests_per_event`).                                                                                                                                      |
+| Individual          | One-time por evento; datos **persisten en solo-lectura** tras pasar `event_date` (`is_locked=true`). Sin tier gratis. Para otro evento se paga de nuevo o se convierte a org. |
+| Organización        | Multi-usuario; seats según plan; **un rol por tenant** en `tenant_members`; asignación a eventos solo controla visibilidad.                                                   |
+| Billing (Fases 0-3) | Confirmación manual por admin de plataforma con rol de cobros; soporta **transferencia bancaria** con comprobante subido a Supabase Storage (optimizado con `sharp`).         |
+| Stripe              | Fase 4, sobre el mismo modelo de datos; guardar **todos** los payloads de webhooks en `payment_events`.                                                                       |
+| Portal de admin     | Backoffice `/admin` con RBAC de plataforma independiente del RBAC de tenant.                                                                                                  |
+| Permisos            | Siempre con `scope` + `name` + `description`, en ambos niveles. Granulares hasta el botón (`module.resource.action`).                                                         |
+| Subdominio wildcard | `org.dominio.com` para el plan máximo de org (`org_elite`), gateado por feature `custom_subdomain`. Vía `middleware.ts` + DNS wildcard en Vercel.                             |
+| Datos existentes    | **Hay datos en producción** → migrar a un tenant + evento por defecto, sin pérdida.                                                                                           |
 
 ---
 
@@ -81,10 +82,10 @@ tenant  (type: 'individual' | 'organization', subdomain?)
 
 ### 2.2. Dos niveles de RBAC (no mezclar)
 
-| Nivel | Para qué | Tablas |
-|---|---|---|
+| Nivel          | Para qué                                                    | Tablas                                                                                       |
+| -------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | **Plataforma** | Administrar todo el SaaS (tenants, planes, pagos, globales) | `platform_roles`, `platform_permissions`, `platform_role_permissions`, `platform_user_roles` |
-| **Tenant** | Cada org/individual administra su workspace | `roles`, `permissions`, `role_permissions`, `tenant_members` |
+| **Tenant**     | Cada org/individual administra su workspace                 | `roles`, `permissions`, `role_permissions`, `tenant_members`                                 |
 
 `users.is_super_admin` se sustituye por el rol de plataforma `platform_superadmin` sembrado por defecto.
 
@@ -98,40 +99,41 @@ Evento individual queda `is_locked=true` cuando pasa `event_date` (o periodo de 
 
 ### 3.1. Tablas nuevas
 
-| Tabla | Descripción |
-|---|---|
-| `plans` | `id, code (unique), name, description, scope (individual\|organization), billing_type (one_time\|recurring), max_events, max_guests_per_event, max_members, max_free_date_changes, price_amount, price_currency, stripe_price_id nullable, is_active` |
-| `features` | Catálogo de flags booleanos: `id, key (unique), name, description`. Ejemplos: `custom_subdomain`, `excel_export`, `white_label`, `priority_support`. |
-| `plan_features` | `(plan_id, feature_id, enabled)` — qué flags incluye cada plan. |
-| `tenants` | `id, type (individual\|organization), name, owner_id→users, subdomain unique nullable, status (active\|suspended\|cancelled), timestamps` |
-| `subscriptions` | `id, tenant_id, plan_id, billing_type, status (pending\|active\|past_due\|canceled\|expired), current_period_start, current_period_end nullable, stripe_subscription_id nullable` |
-| `payments` | Ver §3.4. |
-| `payment_events` | `id, payment_id nullable, tenant_id, source (stripe\|manual), event_type, raw_payload jsonb, created_at` — auditoría total de webhooks Stripe y acciones manuales. |
-| `tenant_members` | `id, tenant_id, user_id, role_id→roles, invited_by, status (invited\|active), timestamps` — reemplaza `user_roles` para el dominio de tenant. |
-| `event_members` | `id, event_id, tenant_member_id, created_by, created_at` — restringe visibilidad; owners/admins ven todos los eventos. |
-| `events` | `id, tenant_id, name, event_date date, date_changes_used int default 0, is_locked bool default false, status, subscription_id→subscriptions, created_by, timestamps` |
-| `event_sessions` | `id, event_id nullable, key, label, sort_order, is_global bool`. `event_id IS NULL + is_global=true` → globales de plataforma. |
-| `statuses` | `id, tenant_id nullable, event_id nullable, key, label, color, sort_order, is_global bool`. Mismo patrón que `event_sessions`. |
-| `platform_roles` | `id, name (unique), description, timestamps` |
-| `platform_permissions` | `id, scope (unique), name, description, created_at` |
-| `platform_role_permissions` | `(role_id, permission_id)` |
-| `platform_user_roles` | `(user_id, role_id, assigned_by, assigned_at)` |
+| Tabla                       | Descripción                                                                                                                                                                                                                                           |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plans`                     | `id, code (unique), name, description, scope (individual\|organization), billing_type (one_time\|recurring), max_events, max_guests_per_event, max_members, max_free_date_changes, price_amount, price_currency, stripe_price_id nullable, is_active` |
+| `features`                  | Catálogo de flags booleanos: `id, key (unique), name, description`. Ejemplos: `custom_subdomain`, `excel_export`, `white_label`, `priority_support`.                                                                                                  |
+| `plan_features`             | `(plan_id, feature_id, enabled)` — qué flags incluye cada plan.                                                                                                                                                                                       |
+| `tenants`                   | `id, type (individual\|organization), name, owner_id→users, subdomain unique nullable, status (active\|suspended\|cancelled), timestamps`                                                                                                             |
+| `subscriptions`             | `id, tenant_id, plan_id, billing_type, status (pending\|active\|past_due\|canceled\|expired), current_period_start, current_period_end nullable, stripe_subscription_id nullable`                                                                     |
+| `payments`                  | Ver §3.4.                                                                                                                                                                                                                                             |
+| `payment_events`            | `id, payment_id nullable, tenant_id, source (stripe\|manual), event_type, raw_payload jsonb, created_at` — auditoría total de webhooks Stripe y acciones manuales.                                                                                    |
+| `tenant_members`            | `id, tenant_id, user_id, role_id→roles, invited_by, status (invited\|active), timestamps` — reemplaza `user_roles` para el dominio de tenant.                                                                                                         |
+| `event_members`             | `id, event_id, tenant_member_id, created_by, created_at` — restringe visibilidad; owners/admins ven todos los eventos.                                                                                                                                |
+| `events`                    | `id, tenant_id, name, event_date date, date_changes_used int default 0, is_locked bool default false, status, subscription_id→subscriptions, created_by, timestamps`                                                                                  |
+| `event_sessions`            | `id, event_id nullable, key, label, sort_order, is_global bool`. `event_id IS NULL + is_global=true` → globales de plataforma.                                                                                                                        |
+| `statuses`                  | `id, tenant_id nullable, event_id nullable, key, label, color, sort_order, is_global bool`. Mismo patrón que `event_sessions`.                                                                                                                        |
+| `platform_roles`            | `id, name (unique), description, timestamps`                                                                                                                                                                                                          |
+| `platform_permissions`      | `id, scope (unique), name, description, created_at`                                                                                                                                                                                                   |
+| `platform_role_permissions` | `(role_id, permission_id)`                                                                                                                                                                                                                            |
+| `platform_user_roles`       | `(user_id, role_id, assigned_by, assigned_at)`                                                                                                                                                                                                        |
 
 ### 3.2. Tablas modificadas
 
-| Tabla | Cambio | Estado |
-|---|---|---|
-| `guests` | `+event_id` (nullable → NOT NULL en 0b); `status text` → `+status_id→statuses` (nullable → NOT NULL en 0b) | Columnas añadidas ✓; NOT NULL pendiente Fase 0b |
-| `categories` | `+event_id`; `UNIQUE(name)` → `UNIQUE(event_id, name)` | Columna añadida ✓; UNIQUE pendiente Fase 0b |
-| `tables` | `+event_id`; `UNIQUE(number)` → `UNIQUE(event_id, number)` | Columna añadida ✓; UNIQUE pendiente Fase 0b |
-| `event_attendance` | `event_type text` → `+session_id→event_sessions`; filas 'both' divididas en ceremony+reception | Columna añadida y datos migrados ✓ |
-| `scan_logs` | `+event_id`; `event_type text` → `+session_id→event_sessions` | Columnas añadidas ✓ |
-| `permissions` | `+name text` (NOT NULL en 0b) | Columna añadida y poblada ✓ |
-| `users` | Deprecar `is_super_admin` (migrado a `platform_user_roles`) | Migrado ✓; columna aún presente hasta Fase 0b |
+| Tabla              | Cambio                                                                                                     | Estado                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `guests`           | `+event_id` (nullable → NOT NULL en 0b); `status text` → `+status_id→statuses` (nullable → NOT NULL en 0b) | Columnas añadidas ✓; NOT NULL pendiente Fase 0b |
+| `categories`       | `+event_id`; `UNIQUE(name)` → `UNIQUE(event_id, name)`                                                     | Columna añadida ✓; UNIQUE pendiente Fase 0b     |
+| `tables`           | `+event_id`; `UNIQUE(number)` → `UNIQUE(event_id, number)`                                                 | Columna añadida ✓; UNIQUE pendiente Fase 0b     |
+| `event_attendance` | `event_type text` → `+session_id→event_sessions`; filas 'both' divididas en ceremony+reception             | Columna añadida y datos migrados ✓              |
+| `scan_logs`        | `+event_id`; `event_type text` → `+session_id→event_sessions`                                              | Columnas añadidas ✓                             |
+| `permissions`      | `+name text` (NOT NULL en 0b)                                                                              | Columna añadida y poblada ✓                     |
+| `users`            | Deprecar `is_super_admin` (migrado a `platform_user_roles`)                                                | Migrado ✓; columna aún presente hasta Fase 0b   |
 
 ### 3.3. Estados y sesiones dinámicos + globales
 
 `tenant_id IS NULL AND event_id IS NULL` → **global** sembrado por la plataforma (no editable por tenants):
+
 - Statuses globales: `pending`, `confirmed`, `declined`, `tentative`.
 - Sessions globales: `ceremony`, `reception`.
 
@@ -155,6 +157,7 @@ payments(
 ```
 
 **Flujo transferencia bancaria:**
+
 1. Tenant elige plan → sube comprobante optimizado con `sharp` + referencia → `payment.status = 'pending'`, `subscription.status = 'pending'`.
 2. Admin de plataforma con `platform.billing.confirm` revisa en `/admin/billing`.
 3. **Confirma** → activa subscription, fija `current_period_end`; o **Rechaza** con nota.
@@ -232,28 +235,29 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ### 5.3. Roles sembrados
 
-| Tipo | Rol | Permisos |
-|---|---|---|
-| Plataforma | `platform_superadmin` | Todos los `platform.*` |
-| Plataforma | `platform_billing` | `platform.billing.*` + `platform.tenants.view` |
-| Plataforma | `platform_support` | `platform.tenants.view` + `platform.users.manage` |
-| Tenant | `owner` | Todo (`*`) |
-| Tenant | `admin` | Invitados, seating, scanner, categorías, sesiones, estados, miembros |
-| Tenant | `coordinator` | Invitados, seating, scanner (sin configuración) |
-| Tenant | `viewer` | Solo lectura |
+| Tipo       | Rol                   | Permisos                                                             |
+| ---------- | --------------------- | -------------------------------------------------------------------- |
+| Plataforma | `platform_superadmin` | Todos los `platform.*`                                               |
+| Plataforma | `platform_billing`    | `platform.billing.*` + `platform.tenants.view`                       |
+| Plataforma | `platform_support`    | `platform.tenants.view` + `platform.users.manage`                    |
+| Tenant     | `owner`               | Todo (`*`)                                                           |
+| Tenant     | `admin`               | Invitados, seating, scanner, categorías, sesiones, estados, miembros |
+| Tenant     | `coordinator`         | Invitados, seating, scanner (sin configuración)                      |
+| Tenant     | `viewer`              | Solo lectura                                                         |
 
 ---
 
 ## 6. Planes disponibles
 
-| Código | Alcance | Tipo | Eventos | Invitados/evento | Miembros | Cambios de fecha | Precio |
-|---|---|---|---|---|---|---|---|
-| `individual` | individual | one_time | 1 | 150 | 1 | 1 | $49 |
-| `org_starter` | organization | recurring | 3 | 200 | 5 | 2 | $29/mes |
-| `org_pro` | organization | recurring | 10 | 500 | 20 | 3 | $79/mes |
-| `org_elite` | organization | recurring | ∞ | 1000 | 100 | 5 | $149/mes |
+| Código        | Alcance      | Tipo      | Eventos | Invitados/evento | Miembros | Cambios de fecha | Precio   |
+| ------------- | ------------ | --------- | ------- | ---------------- | -------- | ---------------- | -------- |
+| `individual`  | individual   | one_time  | 1       | 150              | 1        | 1                | $49      |
+| `org_starter` | organization | recurring | 3       | 200              | 5        | 2                | $29/mes  |
+| `org_pro`     | organization | recurring | 10      | 500              | 20       | 3                | $79/mes  |
+| `org_elite`   | organization | recurring | ∞       | 1000             | 100      | 5                | $149/mes |
 
 **Features por plan:**
+
 - `org_starter`: `excel_export`
 - `org_pro`: `excel_export`, `white_label`, `priority_support`
 - `org_elite`: todos + `custom_subdomain`
@@ -277,11 +281,13 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 **Archivo:** `lib/db/migrations/001_saas_phase0_schema.sql` (idempotente, transaccional)
 
 #### A — Tablas nuevas
+
 - [x] Tablas de plataforma: `platform_roles`, `platform_permissions`, `platform_role_permissions`, `platform_user_roles`.
 - [x] Tablas de plan/billing: `plans`, `features`, `plan_features`, `tenants`, `subscriptions`, `payments`, `payment_events`.
 - [x] Jerarquía de eventos: `events`, `event_sessions`, `statuses`, `tenant_members`, `event_members`.
 
 #### B — Columnas en tablas existentes (nullable)
+
 - [x] `permissions.name` (se pobla con `scope` si es NULL).
 - [x] `guests.event_id`, `guests.status_id`.
 - [x] `categories.event_id`.
@@ -290,6 +296,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] `scan_logs.event_id`, `scan_logs.session_id`.
 
 #### C — Seed de datos globales
+
 - [x] Sessions globales: `ceremony`, `reception`.
 - [x] Statuses globales: `pending`, `confirmed`, `declined`, `tentative`.
 - [x] Planes: `individual`, `org_starter`, `org_pro`, `org_elite`.
@@ -299,6 +306,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] Roles de plataforma y tenant (§5.3) con sus asignaciones de permisos.
 
 #### D — Migración de datos de producción
+
 - [x] Tenant + subscription por defecto (org_pro, activa) para los datos existentes.
 - [x] Evento por defecto (`Mi Boda`, fecha = hoy + 1 año como placeholder).
 - [x] Todos los usuarios existentes → `tenant_members` (super_admin → rol owner; resto → admin).
@@ -310,16 +318,19 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] `is_super_admin = true` → `platform_user_roles` rol `platform_superadmin`.
 
 #### E — RLS
+
 - [x] RLS habilitada en las 16 tablas nuevas.
 - [x] Funciones helper: `is_tenant_member()`, `is_tenant_admin()`, `has_platform_permission()`.
 - [x] Políticas SELECT/INSERT/UPDATE para `tenants`, `subscriptions`, `events`, `event_sessions`, `statuses`, `tenant_members`, `event_members`, `payments`, `payment_events`, `plans`, `features`, `plan_features`, tablas de plataforma.
 
 #### F — Tipos TypeScript y permisos
+
 - [x] `lib/types.ts`: todas las nuevas interfaces (`Tenant`, `Plan`, `Feature`, `Subscription`, `Payment`, `WeddingEvent`, `EventSession`, `GuestStatus`, `TenantMember`, `EventMember`, tipos de plataforma, `TenantContext`, `PlatformContext`). Tipos existentes backward-compatible.
 - [x] `lib/permissions.ts`: convención granular `module.resource.action`; `PLATFORM_PERMISSIONS`; `hasPlatformPermission()`; aliases legacy mantenidos.
 - [x] `lib/excel/guest-excel.ts`: fix TS error por remoción de `'both'` en la unión `EventAttendance.event_type`.
 
 #### G — Verificación de Fase 0
+
 - [ ] Ejecutar `001_saas_phase0_schema.sql` en una copia de la BD de producción.
 - [ ] Verificar conteos idénticos pre/post para `guests`, `categories`, `scan_logs`.
 - [ ] Confirmar que `status_id` resuelve a los statuses globales correctos.
@@ -353,6 +364,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 **Objetivo:** la app funciona sobre el tenant/evento activo; funciones SQL seguras por tenant.
 
 #### server-auth.ts
+
 - [x] `getActiveContext(supabase)`: resuelve `{ userId, tenantId, eventId, permissions }` desde `tenant_members` + `events`.
 - [x] `getServerPermissions(supabase)`: kept for backward compat; reads from `user_roles`.
 - [x] `getPlatformContext(supabase)`: resuelve permisos de plataforma desde `platform_user_roles`.
@@ -360,6 +372,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] `requirePlatformPermission(supabase, scope)`: para acciones de backoffice `/admin`.
 
 #### lib/limits.ts (nuevo)
+
 - [x] `assertCanCreateEvent(supabase, tenantId)`: valida `max_events` del plan.
 - [x] `assertGuestQuota(supabase, eventId)`: valida `max_guests_per_event`.
 - [x] `assertCanAddMember(supabase, tenantId)`: valida `max_members`.
@@ -367,6 +380,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] `assertEventEditable(supabase, eventId)`: lanza `LimitError` si `is_locked = true` o `status ≠ active`.
 
 #### Funciones SQL — migración `002_saas_phase1_functions.sql`
+
 - [x] `get_guests_paginated`: `+p_event_id DEFAULT NULL`; filtrar `filtered` CTE por `guests.event_id`.
 - [x] `get_dashboard_stats`: `+p_event_id DEFAULT NULL`; todos los conteos y recentActivity filtrados.
 - [x] `create_guest_full`: `+p_event_id DEFAULT NULL`, `+p_created_by DEFAULT NULL`; insertar con `event_id`.
@@ -375,6 +389,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Revisar `SECURITY DEFINER` → `SECURITY INVOKER` donde sea posible (backlog Fase 1b).
 
 #### Services y Server Actions
+
 - [x] `guest.service.ts`: `GuestListParams.eventId`, `p_event_id` en RPC, `event_id` en `createGuest`.
 - [x] `seating.service.ts`: `getSeatingDataWithFamily(eventId)`, `CreateTableInput.event_id`.
 - [x] `scanner.service.ts`: `getTodayStats(eventId)`, `getScanHistory(eventId)`, `processGuestScanByFamily(eventId)`.
@@ -386,11 +401,13 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [x] Server Actions seating: `requireTenantPermission` + `assertEventEditable`.
 
 #### Auth Context
+
 - [x] `UserWithRoles.active_tenant_id` + `UserWithRoles.active_event_id` (lib/types.ts).
 - [x] `AuthProvider`: expone `activeEventId` y `activeTenantId` derivados del profile SSR.
 - [x] Dashboard pages (dashboard, guests, seating): usan `getActiveContext` para scoping.
 
 #### Rutas públicas
+
 - [ ] Revisar `app/rsvp` y `app/guest` con `createAdminClient` (service-role): confirmar que no exponen datos de otros tenants.
 - [x] Lookup por `invitation_guid` es único globalmente → ok; `processGuestScanByFamily` ahora incluye `event_id` en los inserts de `scan_logs`.
 
@@ -399,16 +416,19 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 ### Fase 2 — Planes, límites y billing manual ✅ (backend)
 
 #### Limits ya integrados (Fase 1)
+
 - [x] `assertGuestQuota` + `assertEventEditable` en `createGuestAction`, `updateGuestAction`, `importGuestsAction`.
 - [x] `assertEventEditable` en todas las Server Actions de seating (`createTable`, `updateTable`, `deleteTable`, `assignSeat`, `removeSeat`).
 
 #### Limits backend
+
 - [x] `assertCanCreateEvent` implementado en `lib/limits.ts` (pendiente wiring en UI — Fase 3).
 - [x] `assertCanChangeEventDate` + `updateEventDate` → llama a `increment_date_changes_used` RPC (atómico).
 - [x] `assertCanAddMember` implementado en `lib/limits.ts` (pendiente wiring en UI — Fase 3).
 - [x] Bloqueo automático `is_locked=true`: `lock_past_events()` + trigger `trg_auto_lock_event` en migración `003`.
 
 #### Billing manual — SQL (migración `003_saas_phase2_billing.sql`)
+
 - [x] `lock_past_events()` — lock manual/cron de eventos pasados.
 - [x] Trigger `trg_auto_lock_event` — lock inmediato si `event_date < CURRENT_DATE` al insertar/actualizar.
 - [x] `confirm_payment(payment_id, reviewed_by, notes)` — atómico: confirma pago + activa subscription + log.
@@ -418,6 +438,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Crear bucket `payment-proofs` en Supabase Dashboard (paso manual, privado).
 
 #### Billing manual — Services y Server Actions
+
 - [x] `services/plan.service.ts`: `getPlans`, `getTenantPlan`, `getPlanWithFeatures`, `getAllPlansWithFeatures`.
 - [x] `services/billing.service.ts`: `createPendingPayment`, `confirmPayment`, `rejectPayment`, `createPendingSubscription`, queries de pagos/subscriptions.
 - [x] `app/dashboard/settings/billing/actions.ts` — `submitPaymentProofAction`: optimiza con `sharp`, sube a Storage, crea payment + subscription pending.
@@ -431,15 +452,18 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 ### Fase 3 — UI multi-tenant + portal `/admin` 🔲
 
 #### Onboarding y autenticación
+
 - [ ] `app/auth/sign-up`: elegir tipo de cuenta (individual/organización) + nombre del tenant.
 - [ ] Crear tenant + iniciar flujo de pago al registrarse.
 
 #### Contexto de tenant/evento
+
 - [ ] Selector de tenant activo en `app/dashboard/layout.tsx` (si el usuario pertenece a varios tenants).
 - [ ] Selector de evento activo (si el tenant tiene más de un evento).
 - [ ] Contexto de servidor del tenant activo en todo el layout del dashboard.
 
 #### Gestión del tenant
+
 - [ ] Pantalla de miembros: invitar, asignar rol, revocar acceso (con validación de seats).
 - [ ] Asignación de miembros a eventos (`event_members`).
 - [ ] Pantalla de plan/uso: progreso de `max_guests_per_event`, `max_events`, `max_members`, `date_changes_used`.
@@ -448,6 +472,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Gestión de sesiones personalizadas del evento.
 
 #### Portal de plataforma `/admin`
+
 - [ ] Protección de ruta: `requirePlatformPermission('platform.tenants.view')`.
 - [ ] `/admin/tenants`: listado con filtros; ver/suspender/reactivar tenant; cambiar plan.
 - [ ] `/admin/plans`: CRUD del catálogo de planes y features.
@@ -456,6 +481,7 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] `/admin/roles`: CRUD de roles y permisos de plataforma; asignar rol a usuario.
 
 #### Middleware de subdominio
+
 - [ ] `middleware.ts`: si `host` coincide con `*.dominio.com`, resolver tenant por `subdomain` e inyectar en headers.
 - [ ] Mantener refresh de sesión Supabase SSR dentro del mismo middleware.
 - [ ] Configurar wildcard domain en Vercel + DNS `*.dominio.com`.
@@ -475,17 +501,20 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 ## 9. Verificación por fase
 
 ### Fase 0
+
 - [ ] Ejecutar script en una copia de la BD de producción; conteos de `guests`, `categories`, `scan_logs` idénticos antes y después.
 - [ ] `status_id` / `session_id` resuelven a las globales correctas en todas las filas.
 - [ ] La app actual sigue funcionando (columnas legacy aún presentes).
 - [ ] `pnpm build` pasa sin errores en la rama.
 
 ### Fase 1 — Aislamiento (RLS)
+
 - [ ] Con 2 tenants de prueba, las funciones `SECURITY DEFINER` y los services NO devuelven datos del otro tenant.
 - [ ] Miembro sin entrada en `event_members` no puede ver el evento.
 - [ ] RSVP público (`invitation_guid`) funciona sin exponer otros tenants.
 
 ### Fase 2 — Límites y billing
+
 - [ ] Superar `max_guests_per_event` → bloqueado con mensaje claro.
 - [ ] Crear evento extra en plan individual → bloqueado.
 - [ ] Exceder `max_free_date_changes` → bloqueado o redirigido a compra.
@@ -494,12 +523,14 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Rechazar pago → subscription sigue `pending`.
 
 ### Fase 3 — RBAC granular y subdominio
+
 - [ ] Usuario con subset de scopes ve/oculta los botones correctos (`anyPermission`/`allPermission`).
 - [ ] Admin de plataforma accede a `/admin`; tenant normal obtiene 403.
 - [ ] `org.dominio.local` resuelve al tenant correcto vía middleware.
 - [ ] Tenant sin feature `custom_subdomain` no tiene entrada en `tenants.subdomain`.
 
 ### Regresión continua
+
 - [ ] Flujos existentes (RSVP, scanner, seating) funcionan sobre el evento activo.
 - [ ] `pnpm build` y `eslint` pasan en cada fase antes de hacer PR.
 
@@ -507,26 +538,26 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 
 ## 10. Riesgos y puntos críticos
 
-| # | Riesgo | Mitigación |
-|---|---|---|
-| R1 | ~~**Fuga de datos entre tenants** vía funciones `SECURITY DEFINER` sin filtro de `event_id`~~ **RESUELTO Fase 1** | Migración `002` añade `p_event_id` a las 4 funciones críticas; `getActiveContext` siempre pasa el `eventId` activo |
-| R2 | Migración status/event_type text→FK — pérdida de datos si la transacción falla | Migración idempotente y transaccional; verificar conteos antes y después |
-| R3 | RLS mal configurada rompe funciones `SECURITY DEFINER` o el RSVP público | Testear con 2 tenants + usuario anónimo antes de pasar a Fase 2 |
-| R4 | Mezcla de permisos de plataforma con permisos de tenant | Dos catálogos separados; `requirePlatformPermission` nunca lee `tenant_members` |
-| R5 | Coherencia event_id: guest sentado en mesa de otro evento | Validar en service/action que `table.event_id = guest.event_id` |
-| R6 | Phase 0b ejecutada antes de que el código lea las nuevas columnas | Sección K comentada en el SQL; requiere despliegue explícito de Fase 1 primero |
+| #   | Riesgo                                                                                                            | Mitigación                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| R1  | ~~**Fuga de datos entre tenants** vía funciones `SECURITY DEFINER` sin filtro de `event_id`~~ **RESUELTO Fase 1** | Migración `002` añade `p_event_id` a las 4 funciones críticas; `getActiveContext` siempre pasa el `eventId` activo |
+| R2  | Migración status/event_type text→FK — pérdida de datos si la transacción falla                                    | Migración idempotente y transaccional; verificar conteos antes y después                                           |
+| R3  | RLS mal configurada rompe funciones `SECURITY DEFINER` o el RSVP público                                          | Testear con 2 tenants + usuario anónimo antes de pasar a Fase 2                                                    |
+| R4  | Mezcla de permisos de plataforma con permisos de tenant                                                           | Dos catálogos separados; `requirePlatformPermission` nunca lee `tenant_members`                                    |
+| R5  | Coherencia event_id: guest sentado en mesa de otro evento                                                         | Validar en service/action que `table.event_id = guest.event_id`                                                    |
+| R6  | Phase 0b ejecutada antes de que el código lea las nuevas columnas                                                 | Sección K comentada en el SQL; requiere despliegue explícito de Fase 1 primero                                     |
 
 ---
 
 ## 11. Glosario
 
-| Término | Definición |
-|---|---|
-| **Tenant / workspace** | Cuenta (individual u organización) que aísla todos los datos. |
-| **Evento (proyecto)** | Una boda/celebración con su propia lista, fecha y configuración. Límite 1-2 en plan individual. |
-| **Sesión** | Sub-evento dentro de un proyecto (ceremonia, recepción, cocktail…); dinámico y configurable. |
-| **Estado** | Estado de un invitado (confirmed, pending…); global de plataforma o personalizado por tenant/evento. |
-| **Plan** | Define los límites por evento y número de miembros; puede ser `one_time` o `recurring`. |
-| **Feature** | Flag booleano adicional al plan (subdominio, white label, etc.); asignado en `plan_features`. |
-| **Plataforma** | El SaaS en sí; su backoffice `/admin` y su RBAC propio (tablas `platform_*`). |
-| **Fase 0b** | Bloque de constraints diferido (NOT NULL, UNIQUE scoped, drop columnas viejas); solo se ejecuta tras desplegar Fase 1. |
+| Término                | Definición                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Tenant / workspace** | Cuenta (individual u organización) que aísla todos los datos.                                                          |
+| **Evento (proyecto)**  | Una boda/celebración con su propia lista, fecha y configuración. Límite 1-2 en plan individual.                        |
+| **Sesión**             | Sub-evento dentro de un proyecto (ceremonia, recepción, cocktail…); dinámico y configurable.                           |
+| **Estado**             | Estado de un invitado (confirmed, pending…); global de plataforma o personalizado por tenant/evento.                   |
+| **Plan**               | Define los límites por evento y número de miembros; puede ser `one_time` o `recurring`.                                |
+| **Feature**            | Flag booleano adicional al plan (subdominio, white label, etc.); asignado en `plan_features`.                          |
+| **Plataforma**         | El SaaS en sí; su backoffice `/admin` y su RBAC propio (tablas `platform_*`).                                          |
+| **Fase 0b**            | Bloque de constraints diferido (NOT NULL, UNIQUE scoped, drop columnas viejas); solo se ejecuta tras desplegar Fase 1. |

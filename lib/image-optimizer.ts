@@ -10,8 +10,8 @@
 
 // Limits
 const MAX_PROOF_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB raw upload cap
-const MAX_OUTPUT_WIDTH     = 2000;              // px — enough for A4 scans
-const JPEG_QUALITY         = 80;               // %
+const MAX_OUTPUT_WIDTH = 2000; // px — enough for A4 scans
+const JPEG_QUALITY = 80; // %
 
 const ALLOWED_IMAGE_TYPES = new Set([
   'image/jpeg',
@@ -73,7 +73,7 @@ export async function optimizeProof(file: File): Promise<OptimizedProof> {
     const inputBuffer = Buffer.from(await file.arrayBuffer());
 
     const outputBuffer = await sharp(inputBuffer)
-      .rotate()                    // honour EXIF orientation
+      .rotate() // honour EXIF orientation
       .resize({ width: MAX_OUTPUT_WIDTH, withoutEnlargement: true })
       .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
       .toBuffer();

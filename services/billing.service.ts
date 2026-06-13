@@ -36,9 +36,7 @@ export async function getPaymentById(
   return (data as Payment | null) ?? null;
 }
 
-export async function getPendingPayments(
-  supabase: SupabaseClient
-): Promise<PaymentWithTenant[]> {
+export async function getPendingPayments(supabase: SupabaseClient): Promise<PaymentWithTenant[]> {
   const { data } = await supabase
     .from('payments')
     .select('*, tenants(name), plans(name, code)')
@@ -111,17 +109,17 @@ export async function createPendingPayment(
   const { data, error } = await supabase
     .from('payments')
     .insert({
-      tenant_id:       input.tenantId,
+      tenant_id: input.tenantId,
       subscription_id: input.subscriptionId,
-      plan_id:         input.planId,
-      amount:          input.amount,
-      currency:        input.currency,
-      method:          input.method,
-      status:          'pending',
-      proof_url:       input.proofUrl,
-      reference:       input.reference,
-      submitted_by:    input.submittedBy,
-      submitted_at:    new Date().toISOString(),
+      plan_id: input.planId,
+      amount: input.amount,
+      currency: input.currency,
+      method: input.method,
+      status: 'pending',
+      proof_url: input.proofUrl,
+      reference: input.reference,
+      submitted_by: input.submittedBy,
+      submitted_at: new Date().toISOString(),
     })
     .select()
     .single();
@@ -141,9 +139,9 @@ export async function confirmPayment(
   notes: string | null
 ): Promise<{ ok: boolean; error?: string; subscription_id?: string }> {
   const { data, error } = await supabase.rpc('confirm_payment', {
-    p_payment_id:  paymentId,
+    p_payment_id: paymentId,
     p_reviewed_by: reviewedBy,
-    p_notes:       notes ?? null,
+    p_notes: notes ?? null,
   });
 
   if (error) throw error;
@@ -160,9 +158,9 @@ export async function rejectPayment(
   notes: string
 ): Promise<{ ok: boolean; error?: string }> {
   const { data, error } = await supabase.rpc('reject_payment', {
-    p_payment_id:  paymentId,
+    p_payment_id: paymentId,
     p_reviewed_by: reviewedBy,
-    p_notes:       notes,
+    p_notes: notes,
   });
 
   if (error) throw error;
@@ -182,10 +180,10 @@ export async function createPendingSubscription(
   const { data, error } = await supabase
     .from('subscriptions')
     .insert({
-      tenant_id:    tenantId,
-      plan_id:      planId,
+      tenant_id: tenantId,
+      plan_id: planId,
       billing_type: billingType,
-      status:       'pending',
+      status: 'pending',
     })
     .select()
     .single();

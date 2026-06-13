@@ -2,11 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { createClient } from '@/lib/supabase/server';
-import { requireTenantPermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
-import { optimizeProof, ProofValidationError } from '@/lib/image-optimizer';
 import { LimitError } from '@/lib/limits';
-import { createPendingSubscription, createPendingPayment } from '@/services/billing.service';
+import { createClient } from '@/lib/supabase/server';
+import { optimizeProof, ProofValidationError } from '@/lib/image-optimizer';
+import { ForbiddenError, UnauthorizedError, requireTenantPermission } from '@/lib/server-auth';
+
+import { createPendingPayment, createPendingSubscription } from '@/services/billing.service';
 
 export type SubmitProofInput = {
   planId: string;

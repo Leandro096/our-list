@@ -184,7 +184,7 @@ export interface DashboardStats {
 // ---- Plans & Features ----
 
 export type BillingType = 'one_time' | 'recurring';
-export type PlanScope   = 'individual' | 'organization';
+export type PlanScope = 'individual' | 'organization';
 
 export interface Plan {
   id: string;
@@ -225,7 +225,7 @@ export interface PlanWithFeatures extends Plan {
 
 // ---- Tenants ----
 
-export type TenantType   = 'individual' | 'organization';
+export type TenantType = 'individual' | 'organization';
 export type TenantStatus = 'active' | 'suspended' | 'cancelled';
 
 export interface Tenant {

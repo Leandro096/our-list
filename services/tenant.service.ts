@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Tenant, TenantMember, TenantMemberWithUser } from '@/lib/types';
+import type { Tenant, TenantType, TenantMember, TenantMemberWithUser } from '@/lib/types';
 
 // ---- Queries ----
 
@@ -62,7 +62,30 @@ export async function getTenantMembership(
   return (data as TenantMember | null) ?? null;
 }
 
+export async function getAllTenants(supabase: SupabaseClient): Promise<Tenant[]> {
+  const { data } = await supabase
+    .from('tenants')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return (data as Tenant[]) ?? [];
+}
+
 // ---- Mutations ----
+
+export async function createTenant(
+  supabase: SupabaseClient,
+  payload: { name: string; type: TenantType; ownerId: string }
+): Promise<Tenant> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .insert({ name: payload.name, type: payload.type, owner_id: payload.ownerId, status: 'active' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Tenant;
+}
 
 export async function updateTenant(
   supabase: SupabaseClient,
@@ -74,5 +97,36 @@ export async function updateTenant(
     .update({ ...payload, updated_at: new Date().toISOString() })
     .eq('id', tenantId);
 
+  if (error) throw error;
+}
+
+export async function inviteTenantMember(
+  supabase: SupabaseClient,
+  tenantId: string,
+  userId: string,
+  roleId: string,
+  invitedBy: string
+): Promise<TenantMember> {
+  const { data, error } = await supabase
+    .from('tenant_members')
+    .insert({
+      tenant_id: tenantId,
+      user_id: userId,
+      role_id: roleId,
+      invited_by: invitedBy,
+      status: 'invited',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as TenantMember;
+}
+
+export async function removeTenantMember(
+  supabase: SupabaseClient,
+  memberId: string
+): Promise<void> {
+  const { error } = await supabase.from('tenant_members').delete().eq('id', memberId);
   if (error) throw error;
 }

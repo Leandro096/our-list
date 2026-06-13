@@ -7,8 +7,13 @@ import { createClient } from '@/lib/supabase/server';
 import { validateImportRows } from '@/lib/validations/guest-import';
 import type { ImportRowInput } from '@/lib/validations/guest-import';
 import { mutationLimiter, heavyActionLimiter } from '@/lib/rate-limit';
-import { requireAuth, requireTenantPermission, ForbiddenError, UnauthorizedError } from '@/lib/server-auth';
-import { assertGuestQuota, assertEventEditable, LimitError } from '@/lib/limits';
+import { LimitError, assertGuestQuota, assertEventEditable } from '@/lib/limits';
+import {
+  requireAuth,
+  ForbiddenError,
+  UnauthorizedError,
+  requireTenantPermission,
+} from '@/lib/server-auth';
 
 import type { Guest } from '@/lib';
 import type { CreateGuestInput, UpdateGuestInput } from '@/services';
@@ -258,7 +263,10 @@ export async function createGuestAction(input: CreateGuestInput): Promise<Guest>
   return result;
 }
 
-export async function updateGuestAction(id: string, input: UpdateGuestInput): Promise<{ error?: string }> {
+export async function updateGuestAction(
+  id: string,
+  input: UpdateGuestInput
+): Promise<{ error?: string }> {
   const supabase = await createClient();
   try {
     const ctx = await requireTenantPermission(supabase, PERMISSIONS.GUESTS_EDIT);

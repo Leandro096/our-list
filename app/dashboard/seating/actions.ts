@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache';
 
 import { PERMISSIONS } from '@/lib/permissions';
-import { requireTenantPermission } from '@/lib/server-auth';
 import { assertEventEditable } from '@/lib/limits';
 import { createClient } from '@/lib/supabase/server';
+import { requireTenantPermission } from '@/lib/server-auth';
 
 import type { Table } from '@/lib';
 import type {

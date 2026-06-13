@@ -50,96 +50,96 @@ export function hasAllPermissions(
 
 export const PERMISSIONS = {
   // ---- Dashboard ----
-  DASHBOARD_VIEW:  'dashboard.view',
+  DASHBOARD_VIEW: 'dashboard.view',
   DASHBOARD_STATS: 'dashboard.stats',
-  DASHBOARD_ALL:   'dashboard.*',
+  DASHBOARD_ALL: 'dashboard.*',
 
   // ---- Guest list ----
-  GUESTS_LIST_VIEW:    'guests.list.view',
+  GUESTS_LIST_VIEW: 'guests.list.view',
   GUESTS_LIST_FILTERS: 'guests.list.filters',
-  GUESTS_LIST_CREATE:  'guests.list.create',
-  GUESTS_LIST_EXPORT:  'guests.list.export',
-  GUESTS_LIST_ALL:     'guests.list.*',
+  GUESTS_LIST_CREATE: 'guests.list.create',
+  GUESTS_LIST_EXPORT: 'guests.list.export',
+  GUESTS_LIST_ALL: 'guests.list.*',
 
   // ---- Guest detail ----
-  GUESTS_DETAIL_VIEW:   'guests.detail.view',
-  GUESTS_DETAIL_EDIT:   'guests.detail.edit',
+  GUESTS_DETAIL_VIEW: 'guests.detail.view',
+  GUESTS_DETAIL_EDIT: 'guests.detail.edit',
   GUESTS_DETAIL_DELETE: 'guests.detail.delete',
-  GUESTS_DETAIL_QR:     'guests.detail.qr',
-  GUESTS_DETAIL_ALL:    'guests.detail.*',
+  GUESTS_DETAIL_QR: 'guests.detail.qr',
+  GUESTS_DETAIL_ALL: 'guests.detail.*',
 
   // Wildcard for all guest scopes
   GUESTS_ALL: 'guests.*',
 
   // ---- Seating ----
-  SEATING_BOARD_VIEW:   'seating.board.view',
+  SEATING_BOARD_VIEW: 'seating.board.view',
   SEATING_BOARD_ASSIGN: 'seating.board.assign',
   SEATING_TABLES_CREATE: 'seating.tables.create',
-  SEATING_ALL:           'seating.*',
+  SEATING_ALL: 'seating.*',
 
   // ---- Scanner ----
-  SCANNER_SCAN_USE:     'scanner.scan.use',
+  SCANNER_SCAN_USE: 'scanner.scan.use',
   SCANNER_HISTORY_VIEW: 'scanner.history.view',
-  SCANNER_ALL:          'scanner.*',
+  SCANNER_ALL: 'scanner.*',
 
   // ---- Categories ----
   CATEGORIES_MANAGE_CREATE: 'categories.manage.create',
-  CATEGORIES_MANAGE_EDIT:   'categories.manage.edit',
+  CATEGORIES_MANAGE_EDIT: 'categories.manage.edit',
   CATEGORIES_MANAGE_DELETE: 'categories.manage.delete',
-  CATEGORIES_ALL:            'categories.*',
+  CATEGORIES_ALL: 'categories.*',
 
   // ---- Statuses ----
   STATUSES_MANAGE_CREATE: 'statuses.manage.create',
-  STATUSES_MANAGE_EDIT:   'statuses.manage.edit',
+  STATUSES_MANAGE_EDIT: 'statuses.manage.edit',
   STATUSES_MANAGE_DELETE: 'statuses.manage.delete',
-  STATUSES_ALL:            'statuses.*',
+  STATUSES_ALL: 'statuses.*',
 
   // ---- Event Sessions ----
   SESSIONS_MANAGE_CREATE: 'sessions.manage.create',
-  SESSIONS_MANAGE_EDIT:   'sessions.manage.edit',
+  SESSIONS_MANAGE_EDIT: 'sessions.manage.edit',
   SESSIONS_MANAGE_DELETE: 'sessions.manage.delete',
-  SESSIONS_ALL:            'sessions.*',
+  SESSIONS_ALL: 'sessions.*',
 
   // ---- Events / projects ----
-  EVENTS_CREATE:         'events.create',
-  EVENTS_EDIT_DATE:      'events.edit.date',
+  EVENTS_CREATE: 'events.create',
+  EVENTS_EDIT_DATE: 'events.edit.date',
   EVENTS_MEMBERS_ASSIGN: 'events.members.assign',
-  EVENTS_ALL:            'events.*',
+  EVENTS_ALL: 'events.*',
 
   // ---- Settings ----
-  SETTINGS_MEMBERS_INVITE:       'settings.members.invite',
-  SETTINGS_ROLES_EDIT:           'settings.roles.edit',
-  SETTINGS_BILLING_VIEW:         'settings.billing.view',
+  SETTINGS_MEMBERS_INVITE: 'settings.members.invite',
+  SETTINGS_ROLES_EDIT: 'settings.roles.edit',
+  SETTINGS_BILLING_VIEW: 'settings.billing.view',
   SETTINGS_BILLING_SUBMIT_PROOF: 'settings.billing.submit_proof',
-  SETTINGS_ALL:                  'settings.*',
+  SETTINGS_ALL: 'settings.*',
 
   // ---- Legacy aliases (kept for backward compat; map to new scopes) ----
   /** @deprecated use GUESTS_LIST_VIEW */
-  GUESTS_VIEW:    'guests.list.view',
+  GUESTS_VIEW: 'guests.list.view',
   /** @deprecated use GUESTS_LIST_CREATE */
-  GUESTS_CREATE:  'guests.list.create',
+  GUESTS_CREATE: 'guests.list.create',
   /** @deprecated use GUESTS_DETAIL_EDIT */
-  GUESTS_EDIT:    'guests.detail.edit',
+  GUESTS_EDIT: 'guests.detail.edit',
   /** @deprecated use GUESTS_DETAIL_DELETE */
-  GUESTS_DELETE:  'guests.detail.delete',
+  GUESTS_DELETE: 'guests.detail.delete',
   /** @deprecated use GUESTS_LIST_EXPORT */
-  GUESTS_EXPORT:  'guests.list.export',
+  GUESTS_EXPORT: 'guests.list.export',
   /** @deprecated use GUESTS_DETAIL_QR */
-  GUESTS_QR:      'guests.detail.qr',
+  GUESTS_QR: 'guests.detail.qr',
   /** @deprecated use SCANNER_SCAN_USE */
-  SCANNER_USE:     'scanner.scan.use',
+  SCANNER_USE: 'scanner.scan.use',
   /** @deprecated use SCANNER_HISTORY_VIEW */
   SCANNER_HISTORY: 'scanner.history.view',
   /** @deprecated use SEATING_BOARD_VIEW */
-  SEATING_VIEW:    'seating.board.view',
+  SEATING_VIEW: 'seating.board.view',
   /** @deprecated use SEATING_BOARD_ASSIGN */
-  SEATING_EDIT:    'seating.board.assign',
+  SEATING_EDIT: 'seating.board.assign',
   /** @deprecated use CATEGORIES_ALL */
-  CATEGORIES_VIEW:   'categories.*',
+  CATEGORIES_VIEW: 'categories.*',
   CATEGORIES_MANAGE: 'categories.*',
   /** @deprecated use SETTINGS_ALL */
-  SETTINGS_USERS:       'settings.*',
-  SETTINGS_ROLES:       'settings.roles.edit',
+  SETTINGS_USERS: 'settings.*',
+  SETTINGS_ROLES: 'settings.roles.edit',
   SETTINGS_PERMISSIONS: 'settings.*',
 
   // Global wildcard
@@ -155,17 +155,17 @@ export type PermissionScope = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 // ================================================================
 
 export const PLATFORM_PERMISSIONS = {
-  TENANTS_VIEW:    'platform.tenants.view',
-  TENANTS_MANAGE:  'platform.tenants.manage',
-  PLANS_MANAGE:    'platform.plans.manage',
+  TENANTS_VIEW: 'platform.tenants.view',
+  TENANTS_MANAGE: 'platform.tenants.manage',
+  PLANS_MANAGE: 'platform.plans.manage',
   FEATURES_MANAGE: 'platform.features.manage',
-  BILLING_VIEW:    'platform.billing.view',
+  BILLING_VIEW: 'platform.billing.view',
   BILLING_CONFIRM: 'platform.billing.confirm',
-  BILLING_REJECT:  'platform.billing.reject',
-  GLOBALS_MANAGE:  'platform.globals.manage',
-  ROLES_MANAGE:    'platform.roles.manage',
-  USERS_MANAGE:    'platform.users.manage',
-  ALL:             'platform.*',
+  BILLING_REJECT: 'platform.billing.reject',
+  GLOBALS_MANAGE: 'platform.globals.manage',
+  ROLES_MANAGE: 'platform.roles.manage',
+  USERS_MANAGE: 'platform.users.manage',
+  ALL: 'platform.*',
 } as const;
 
 export type PlatformPermissionScope =

@@ -14,10 +14,7 @@ export async function getPlans(supabase: SupabaseClient): Promise<Plan[]> {
   return (data as Plan[]) ?? [];
 }
 
-export async function getPlanById(
-  supabase: SupabaseClient,
-  planId: string
-): Promise<Plan | null> {
+export async function getPlanById(supabase: SupabaseClient, planId: string): Promise<Plan | null> {
   const { data } = await supabase.from('plans').select('*').eq('id', planId).single();
   return (data as Plan | null) ?? null;
 }
@@ -63,9 +60,7 @@ export async function getAllPlansWithFeatures(
 
   return (data as unknown as PlanRow[]).map((row) => ({
     ...row,
-    features: row.plan_features
-      .filter((pf) => pf.enabled && pf.features)
-      .map((pf) => pf.features!),
+    features: row.plan_features.filter((pf) => pf.enabled && pf.features).map((pf) => pf.features!),
   })) as PlanWithFeatures[];
 }
 
