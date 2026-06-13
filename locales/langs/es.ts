@@ -129,6 +129,7 @@ export const es: Dictionary = {
     members: 'Miembros',
     billing: 'Facturación',
     admin: 'Admin',
+    eventConfig: 'Config. Evento',
   },
   dashboard: {
     title: 'Panel',

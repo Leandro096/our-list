@@ -127,6 +127,7 @@ export const en = {
     members: 'Members',
     billing: 'Billing',
     admin: 'Admin Portal',
+    eventConfig: 'Event Config',
   },
   dashboard: {
     title: 'Dashboard',

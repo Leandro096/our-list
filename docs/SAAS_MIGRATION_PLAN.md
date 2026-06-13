@@ -1,7 +1,7 @@
 # Plan de migración a SaaS multi-tenant — Wedding List
 
 > **Documento de trabajo.** Marca cada checkbox `[ ]` → `[x]` a medida que se implementa y verifica cada feature.
-> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅ · Fase 2 ✅ · Fase 3 (parcial) ✅ · Fase 4 ✅
+> Última actualización: 2026-06-12 · Rama: `feat/saas-multi-tenant` (base `origin/main`) · Fase 0 ✅ · Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ · Fase 4 ✅
 
 ---
 
@@ -478,11 +478,11 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 #### Portal de plataforma `/admin`
 
 - [x] Protección de ruta: `requirePlatformPermission('platform.tenants.view')` en `app/admin/layout.tsx`.
-- [x] `/admin/tenants`: listado de todos los tenants con badge de tipo y estado. _(filtros, suspender/reactivar, cambiar plan — pendiente §3b)_
-- [ ] `/admin/plans`: CRUD del catálogo de planes y features.
+- [x] `/admin/tenants`: listado de todos los tenants con badge de tipo, estado y plan activo. Acciones: suspender, reactivar, cambiar plan.
+- [x] `/admin/plans`: toggle activo/inactivo + editar `stripe_price_id` por plan.
 - [x] `/admin/billing`: bandeja de pagos pendientes; confirmar (activa subscription) / rechazar con nota; enlace al comprobante en bucket.
-- [ ] `/admin/globals`: editar statuses y sessions globales.
-- [ ] `/admin/roles`: CRUD de roles y permisos de plataforma; asignar rol a usuario.
+- [x] `/admin/globals`: CRUD de statuses y sessions globales (key, label, color, sort_order).
+- [x] `/admin/roles`: catálogo de roles de plataforma + asignar/revocar rol a usuario por UUID.
 
 #### Middleware de subdominio
 
@@ -490,15 +490,24 @@ Convención: `modulo.recurso.accion[.subaccion]` — wildcards soportados en tod
 - [ ] Mantener refresh de sesión Supabase SSR dentro del mismo middleware.
 - [ ] Configurar wildcard domain en Vercel + DNS `*.dominio.com`.
 
-##### Pendiente Fase 3b (backlog)
+##### Fase 3b — Completado ✅
+
+- [x] `assertCanAddMember` conectado en `inviteMemberAction` (quota enforcement).
+- [x] `services/status.service.ts`, `services/session.service.ts`, `services/platform.service.ts` creados.
+- [x] `services/index.ts` exporta los tres nuevos servicios.
+- [x] `/admin/tenants` acciones: suspender, reactivar, cambiar plan (`TenantActions` component).
+- [x] `/admin/plans`: toggle active + editar stripe_price_id (`PlanRowActions` component).
+- [x] `/admin/globals`: CRUD global statuses + sessions (`GlobalsManager` component).
+- [x] `/admin/roles`: catálogo de roles + asignar/revocar a usuario (`RolesManager` component).
+- [x] `/dashboard/settings/event`: CRUD custom statuses + sessions por evento (`EventConfig` component).
+- [x] Admin layout nav: enlaces a Plans, Globals, Roles con guards de permiso.
+- [x] Dashboard sidebar: enlace **Config. Evento** en grupo Settings.
+
+##### Pendiente (próxima iteración)
 
 - [ ] Selector de tenant/evento activo en el header del dashboard.
-- [ ] Wiring de `assertCanAddMember` en `inviteMemberAction`.
 - [ ] Asignación de miembros a eventos (`event_members`).
-- [ ] Gestión de estados y sesiones personalizadas del evento.
-- [ ] `/admin/tenants` acciones: suspender, reactivar, cambiar plan.
-- [ ] `/admin/plans`: CRUD completo.
-- [ ] `/admin/globals` y `/admin/roles`.
+- [ ] Middleware de subdominio para multi-tenant por URL.
 
 ---
 

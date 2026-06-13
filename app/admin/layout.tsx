@@ -1,6 +1,14 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, CreditCard, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import {
+  Globe,
+  Users,
+  Building2,
+  CreditCard,
+  ListChecks,
+  ShieldCheck,
+  LayoutDashboard,
+} from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getPlatformContext } from '@/lib/server-auth';
@@ -22,16 +30,34 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const navItems = [
     {
+      href: '/admin/tenants',
+      icon: Building2,
+      label: 'Tenants',
+      show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.TENANTS_VIEW),
+    },
+    {
       href: '/admin/billing',
       icon: CreditCard,
       label: 'Pagos',
       show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.BILLING_VIEW),
     },
     {
-      href: '/admin/tenants',
-      icon: Building2,
-      label: 'Tenants',
-      show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.TENANTS_VIEW),
+      href: '/admin/plans',
+      icon: ListChecks,
+      label: 'Planes',
+      show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.PLANS_MANAGE),
+    },
+    {
+      href: '/admin/globals',
+      icon: Globe,
+      label: 'Globales',
+      show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.GLOBALS_MANAGE),
+    },
+    {
+      href: '/admin/roles',
+      icon: Users,
+      label: 'Roles',
+      show: hasPlatformPermission(ctx.platformPermissions, PLATFORM_PERMISSIONS.ROLES_MANAGE),
     },
   ].filter((i) => i.show);
 
