@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { PLATFORM_PERMISSIONS } from '@/lib/permissions';
 import { ForbiddenError, UnauthorizedError, requirePlatformPermission } from '@/lib/server-auth';
 
-import type { StatusPayload, SessionPayload } from '@/services/session.service';
+import type { StatusPayload } from '@/services/status.service';
+import type { SessionPayload } from '@/services/session.service';
 import { deleteStatus, updateStatus, createGlobalStatus } from '@/services/status.service';
 import { deleteSession, updateSession, createGlobalSession } from '@/services/session.service';
 

@@ -94,7 +94,8 @@ async function handleCheckoutCompleted(
 
   if (stripeSubId) {
     const sub = await stripe.subscriptions.retrieve(stripeSubId);
-    periodEnd = new Date(sub.current_period_end * 1000).toISOString();
+    const periodEndTs = sub.items.data[0]?.current_period_end ?? 0;
+    periodEnd = new Date(periodEndTs * 1000).toISOString();
   }
 
   const subscription = await activateSubscriptionFromStripe(
@@ -132,10 +133,9 @@ async function handleInvoiceSucceeded(
   event: Stripe.Event
 ) {
   const invoice = event.data.object as Stripe.Invoice;
+  const subRef = invoice.parent?.subscription_details?.subscription;
   const stripeSubId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : (invoice.subscription?.id ?? null);
+    typeof subRef === 'string' ? subRef : ((subRef as { id?: string } | null)?.id ?? null);
 
   if (!stripeSubId) return;
 
@@ -148,11 +148,12 @@ async function handleInvoiceSucceeded(
 
   if (subRow) {
     const sub = await stripe.subscriptions.retrieve(stripeSubId);
+    const periodEndTs = sub.items.data[0]?.current_period_end ?? 0;
     await supabase
       .from('subscriptions')
       .update({
         status: 'active',
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        current_period_end: new Date(periodEndTs * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', (subRow as { id: string; tenant_id: string }).id);
@@ -172,10 +173,9 @@ async function handleInvoiceFailed(
   event: Stripe.Event
 ) {
   const invoice = event.data.object as Stripe.Invoice;
+  const subRef2 = invoice.parent?.subscription_details?.subscription;
   const stripeSubId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : (invoice.subscription?.id ?? null);
+    typeof subRef2 === 'string' ? subRef2 : ((subRef2 as { id?: string } | null)?.id ?? null);
 
   if (!stripeSubId) return;
 
@@ -228,11 +228,12 @@ async function handleSubscriptionUpdated(
 
   const status = statusMap[stripeSub.status] ?? 'pending';
 
+  const subPeriodEndTs = stripeSub.items.data[0]?.current_period_end ?? 0;
   await supabase
     .from('subscriptions')
     .update({
       status,
-      current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
+      current_period_end: new Date(subPeriodEndTs * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', (subRow as { id: string; tenant_id: string }).id);
