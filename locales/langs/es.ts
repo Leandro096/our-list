@@ -65,6 +65,7 @@ export const es: Dictionary = {
     signUp: 'Registrarse',
     email: 'Correo electrónico',
     password: 'Contraseña',
+    passwordHint: 'Introduce tu contraseña',
     forgotPassword: '¿Olvidaste tu contraseña?',
     noAccount: '¿No tienes una cuenta?',
     alreadyHaveAccount: '¿Ya tienes una cuenta?',

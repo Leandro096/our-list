@@ -53,18 +53,23 @@ export function AdminBillingActions({ paymentId, canConfirm, canReject }: Props)
 
   const handleConfirm = async () => {
     update({ isLoading: true });
-    const result = await confirmPaymentAction(paymentId, notes.trim() || null);
-    update({ isLoading: false });
-    if (result.ok) {
-      toast({ description: 'Pago confirmado. Suscripción activada.' });
-      update({ modal: null, notes: '' });
-      router.refresh();
-    } else {
-      toast({
-        title: 'Error',
-        description: result.error ?? 'La acción falló.',
-        variant: 'destructive',
-      });
+    try {
+      const result = await confirmPaymentAction(paymentId, notes.trim() || null);
+      if (result.ok) {
+        toast({ description: 'Pago confirmado. Suscripción activada.' });
+        update({ modal: null, notes: '' });
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error ?? 'La acción falló.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'La acción falló.', variant: 'destructive' });
+    } finally {
+      update({ isLoading: false });
     }
   };
 
@@ -74,18 +79,23 @@ export function AdminBillingActions({ paymentId, canConfirm, canReject }: Props)
       return;
     }
     update({ isLoading: true });
-    const result = await rejectPaymentAction(paymentId, reason.trim());
-    update({ isLoading: false });
-    if (result.ok) {
-      toast({ description: 'Pago rechazado.' });
-      update({ modal: null, reason: '' });
-      router.refresh();
-    } else {
-      toast({
-        title: 'Error',
-        description: result.error ?? 'La acción falló.',
-        variant: 'destructive',
-      });
+    try {
+      const result = await rejectPaymentAction(paymentId, reason.trim());
+      if (result.ok) {
+        toast({ description: 'Pago rechazado.' });
+        update({ modal: null, reason: '' });
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error ?? 'La acción falló.',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'La acción falló.', variant: 'destructive' });
+    } finally {
+      update({ isLoading: false });
     }
   };
 

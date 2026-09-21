@@ -132,7 +132,7 @@ function getInitials(name: string | null | undefined) {
     .slice(0, 2);
 }
 
-export function DashboardHeader() {
+export function DashboardHeader({ contextSwitcher }: { contextSwitcher?: React.ReactNode }) {
   const { profile, signOut, isLoading, activeRole, activePermissions, selectRole } = useAuth();
   const router = useRouter();
   const { setTheme } = useTheme();
@@ -270,8 +270,8 @@ export function DashboardHeader() {
         </SheetContent>
       </Sheet>
 
-      {/* Page title area - can be used for breadcrumbs */}
-      <div className="flex-1" />
+      {/* Active workspace / event switcher */}
+      <div className="flex flex-1 items-center">{contextSwitcher}</div>
 
       {/* Language switcher */}
       <LanguageSwitcher />

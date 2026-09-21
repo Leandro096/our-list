@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PLATFORM_PERMISSIONS } from '@/lib/permissions';
 import { requirePlatformPermission } from '@/lib/server-auth';
 
-import { getPendingPayments } from '@/services/billing.service';
+import { getSignedProofUrl, getPendingPayments } from '@/services/billing.service';
 
 import { AdminBillingActions } from '@/components/admin/billing-actions';
 import {
@@ -37,7 +37,15 @@ export default async function AdminBillingPage() {
     redirect('/dashboard');
   }
 
-  const payments = await getPendingPayments(supabase);
+  const pendingPayments = await getPendingPayments(supabase);
+  // proof_url stores a private storage path, not a public URL — sign it
+  // here so the "Ver" link below actually resolves.
+  const payments = await Promise.all(
+    pendingPayments.map(async (p) => ({
+      ...p,
+      signedProofUrl: await getSignedProofUrl(supabase, p.proof_url),
+    }))
+  );
 
   const canConfirm = ctx.platformPermissions.some(
     (p) => p === PLATFORM_PERMISSIONS.BILLING_CONFIRM || p === PLATFORM_PERMISSIONS.ALL
@@ -101,9 +109,9 @@ export default async function AdminBillingPage() {
                             : '—'}
                         </TableCell>
                         <TableCell>
-                          {p.proof_url ? (
+                          {p.signedProofUrl ? (
                             <a
-                              href={p.proof_url}
+                              href={p.signedProofUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"

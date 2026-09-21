@@ -11,3 +11,4 @@ export * from './session.service';
 export * from './category.service';
 export * from './platform.service';
 export * from './dashboard.service';
+export * from './event-member.service';

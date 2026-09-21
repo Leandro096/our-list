@@ -8,7 +8,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { createAdminClient } from './supabase/admin';
 import { hasPermission, hasPlatformPermission } from './permissions';
+import { readActiveSelection, readRequestSubdomain } from './active-context';
 
 export class UnauthorizedError extends Error {
   constructor(message = 'Unauthorized') {
@@ -128,6 +130,70 @@ export interface ActiveContext {
  * Throws `UnauthorizedError` when not authenticated.
  * Throws `ForbiddenError` when the user has no active tenant membership or event.
  */
+type MembershipRow = {
+  tenant_id: string;
+  roles: { role_permissions: Array<{ permissions: { scope: string } | null }> } | null;
+};
+
+const MEMBERSHIP_SELECT = `
+  tenant_id,
+  roles(
+    role_permissions(
+      permissions(scope)
+    )
+  )
+`;
+
+/**
+ * Resolves the subdomain (injected by the proxy) to a tenant id, if any.
+ * Uses the admin client because the public `tenants` table is RLS-protected;
+ * reading a single id by its unique subdomain is safe.
+ */
+async function resolveSubdomainTenantId(): Promise<string | null> {
+  const subdomain = await readRequestSubdomain();
+  if (!subdomain) return null;
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.from('tenants').select('id').eq('subdomain', subdomain).maybeSingle();
+    return (data as { id: string } | null)?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves the user's active membership, preferring `preferredTenantId` when the
+ * user is actually an active member of it; otherwise falls back to their first.
+ */
+async function resolveMembership(
+  supabase: SupabaseClient,
+  userId: string,
+  preferredTenantId?: string
+): Promise<MembershipRow | null> {
+  if (preferredTenantId) {
+    const { data } = await supabase
+      .from('tenant_members')
+      .select(MEMBERSHIP_SELECT)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .eq('tenant_id', preferredTenantId)
+      .limit(1)
+      .maybeSingle();
+    if (data) return data as unknown as MembershipRow;
+  }
+
+  const { data } = await supabase
+    .from('tenant_members')
+    .select(MEMBERSHIP_SELECT)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('created_at')
+    .limit(1)
+    .maybeSingle();
+
+  return (data as unknown as MembershipRow | null) ?? null;
+}
+
 export async function getActiveContext(supabase: SupabaseClient): Promise<ActiveContext> {
   const {
     data: { user },
@@ -135,60 +201,62 @@ export async function getActiveContext(supabase: SupabaseClient): Promise<Active
   } = await supabase.auth.getUser();
   if (authError || !user) throw new UnauthorizedError();
 
-  const { data: membership } = await supabase
-    .from('tenant_members')
-    .select(
-      `
-      tenant_id,
-      roles(
-        role_permissions(
-          permissions(scope)
-        )
-      )
-    `
-    )
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .order('created_at')
-    .limit(1)
-    .single();
+  // Tenant preference order: subdomain (if member) > cookie selection > first.
+  const { tenantId: cookieTenantId, eventId: cookieEventId } = await readActiveSelection();
+  const subdomainTenantId = await resolveSubdomainTenantId();
 
+  const membership = await resolveMembership(
+    supabase,
+    user.id,
+    subdomainTenantId ?? cookieTenantId
+  );
   if (!membership) throw new ForbiddenError('No active tenant membership');
-
-  type RoleData = {
-    role_permissions: Array<{ permissions: { scope: string } | null }>;
-  };
-  const m = membership as unknown as { tenant_id: string; roles: RoleData | null };
 
   const permissions = [
     ...new Set(
-      (m.roles?.role_permissions ?? []).flatMap((rp) =>
+      (membership.roles?.role_permissions ?? []).flatMap((rp) =>
         rp.permissions?.scope ? [rp.permissions.scope] : []
       )
     ),
   ];
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id')
-    .eq('tenant_id', m.tenant_id)
-    .eq('status', 'active')
-    .order('created_at')
-    .limit(1)
-    .single();
+  // Event preference: cookie selection (if it belongs to the tenant AND is
+  // visible to the user under RLS) > first active visible event.
+  let eventId: string | null = null;
+  if (cookieEventId) {
+    const { data } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', cookieEventId)
+      .eq('tenant_id', membership.tenant_id)
+      .eq('status', 'active')
+      .maybeSingle();
+    eventId = (data as { id: string } | null)?.id ?? null;
+  }
+  if (!eventId) {
+    const { data } = await supabase
+      .from('events')
+      .select('id')
+      .eq('tenant_id', membership.tenant_id)
+      .eq('status', 'active')
+      .order('created_at')
+      .limit(1)
+      .maybeSingle();
+    eventId = (data as { id: string } | null)?.id ?? null;
+  }
 
-  if (!event) throw new ForbiddenError('No active event found for tenant');
+  if (!eventId) throw new ForbiddenError('No active event found for tenant');
 
   const { data: userRecord } = await supabase
     .from('users')
     .select('is_super_admin')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   return {
     userId: user.id,
-    tenantId: m.tenant_id,
-    eventId: (event as { id: string }).id,
+    tenantId: membership.tenant_id,
+    eventId,
     permissions,
     isSuperAdmin: (userRecord as { is_super_admin?: boolean } | null)?.is_super_admin ?? false,
   };

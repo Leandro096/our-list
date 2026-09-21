@@ -37,10 +37,13 @@ export async function confirmPaymentAction(
     };
   }
 
-  const result = await confirmPayment(supabase, paymentId, ctx.userId, notes);
-
-  if (!result.ok) {
-    return { ok: false, error: result.error ?? 'No se pudo confirmar el pago.' };
+  try {
+    const result = await confirmPayment(supabase, paymentId, ctx.userId, notes);
+    if (!result.ok) {
+      return { ok: false, error: result.error ?? 'No se pudo confirmar el pago.' };
+    }
+  } catch {
+    return { ok: false, error: 'Error al confirmar el pago. Intenta de nuevo.' };
   }
 
   revalidatePath('/admin/billing');
@@ -77,10 +80,13 @@ export async function rejectPaymentAction(
     };
   }
 
-  const result = await rejectPayment(supabase, paymentId, ctx.userId, reason);
-
-  if (!result.ok) {
-    return { ok: false, error: result.error ?? 'No se pudo rechazar el pago.' };
+  try {
+    const result = await rejectPayment(supabase, paymentId, ctx.userId, reason);
+    if (!result.ok) {
+      return { ok: false, error: result.error ?? 'No se pudo rechazar el pago.' };
+    }
+  } catch {
+    return { ok: false, error: 'Error al rechazar el pago. Intenta de nuevo.' };
   }
 
   revalidatePath('/admin/billing');

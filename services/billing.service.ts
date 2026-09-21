@@ -90,6 +90,39 @@ export async function getActiveSubscription(
   return (data as unknown as SubscriptionWithDetails | null) ?? null;
 }
 
+/**
+ * The `payment-proofs` bucket is private — signs a short-lived URL for a
+ * stored proof path. Returns null if the path is empty or signing fails
+ * (e.g. the caller lacks the storage RLS read policy for that folder).
+ */
+export async function getSignedProofUrl(
+  supabase: SupabaseClient,
+  path: string | null,
+  expiresInSeconds = 3600
+): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await supabase.storage
+    .from('payment-proofs')
+    .createSignedUrl(path, expiresInSeconds);
+  if (error) return null;
+  return data?.signedUrl ?? null;
+}
+
+/** Lightweight check: does the tenant have at least one active subscription? */
+export async function tenantHasActiveSubscription(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 // ---- Mutations ----
 
 export type SubmitPaymentInput = {

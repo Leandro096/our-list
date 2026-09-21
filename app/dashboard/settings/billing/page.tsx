@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { redirect } from 'next/navigation';
 import { es as esLocale } from 'date-fns/locale';
-import { Clock, XCircle, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Clock, XCircle, CreditCard, ExternalLink, CheckCircle2 } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getActiveContext } from '@/lib/server-auth';
@@ -9,7 +9,11 @@ import { PERMISSIONS, hasPermission } from '@/lib/permissions';
 
 import { getTenantById } from '@/services/tenant.service';
 import { getAllPlansWithFeatures } from '@/services/plan.service';
-import { getPaymentsForTenant, getActiveSubscription } from '@/services/billing.service';
+import {
+  getSignedProofUrl,
+  getPaymentsForTenant,
+  getActiveSubscription,
+} from '@/services/billing.service';
 
 import { BillingProofForm } from '@/components/settings/billing-proof-form';
 import { StripePlanSelector } from '@/components/settings/stripe-plan-selector';
@@ -88,12 +92,21 @@ export default async function BillingPage() {
     redirect('/dashboard');
   }
 
-  const [subscription, payments, tenant, allPlans] = await Promise.all([
+  const [subscription, paymentsRaw, tenant, allPlans] = await Promise.all([
     getActiveSubscription(supabase, ctx.tenantId),
     getPaymentsForTenant(supabase, ctx.tenantId),
     getTenantById(supabase, ctx.tenantId),
     getAllPlansWithFeatures(supabase),
   ]);
+
+  // proof_url stores a private storage path — sign it so tenants can review
+  // what they submitted (method !== 'bank_transfer' payments have none).
+  const payments = await Promise.all(
+    paymentsRaw.map(async (p) => ({
+      ...p,
+      signedProofUrl: await getSignedProofUrl(supabase, p.proof_url),
+    }))
+  );
 
   const plan = subscription?.plans as
     | {
@@ -213,6 +226,7 @@ export default async function BillingPage() {
                     <TableHead>Fecha</TableHead>
                     <TableHead>Monto</TableHead>
                     <TableHead>Referencia</TableHead>
+                    <TableHead>Comprobante</TableHead>
                     <TableHead>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -229,6 +243,21 @@ export default async function BillingPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {p.reference ?? '—'}
+                      </TableCell>
+                      <TableCell>
+                        {p.signedProofUrl ? (
+                          <a
+                            href={p.signedProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                          >
+                            Ver
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <PaymentStatusBadge status={p.status} />

@@ -233,7 +233,7 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'tenant_upload_own_proof'
+    WHERE policyname = 'tenant_upload_own_proof'
       AND tablename = 'objects'
       AND schemaname = 'storage'
   ) THEN
@@ -254,7 +254,7 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'tenant_read_own_proof'
+    WHERE policyname = 'tenant_read_own_proof'
       AND tablename = 'objects'
       AND schemaname = 'storage'
   ) THEN
@@ -275,7 +275,7 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'platform_billing_read_all_proofs'
+    WHERE policyname = 'platform_billing_read_all_proofs'
       AND tablename = 'objects'
       AND schemaname = 'storage'
   ) THEN

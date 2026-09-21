@@ -476,7 +476,7 @@ function FeatureCard({
       {/* Gold accent top bar — revealed on hover */}
       <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl bg-gradient-to-r from-transparent via-primary/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       {/* Ghost number */}
-      <span className="select-none font-serif text-5xl font-bold leading-none text-primary/10 dark:text-primary/8">
+      <span className="select-none font-serif text-5xl font-bold leading-none text-primary/10 dark:text-primary/48">
         {number}
       </span>
       {/* Icon */}

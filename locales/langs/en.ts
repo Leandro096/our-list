@@ -63,6 +63,7 @@ export const en = {
     signUp: 'Sign up',
     email: 'Email',
     password: 'Password',
+    passwordHint: 'Input your password',
     forgotPassword: 'Forgot password?',
     noAccount: "Don't have an account?",
     alreadyHaveAccount: 'Already have an account?',

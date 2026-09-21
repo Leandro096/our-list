@@ -2,7 +2,7 @@ import type Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 import { getPlanById } from '@/services/plan.service';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(body, sig, WEBHOOK_SECRET);
   } catch {
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 });
   }
@@ -93,7 +93,7 @@ async function handleCheckoutCompleted(
   let periodEnd: string | null = null;
 
   if (stripeSubId) {
-    const sub = await stripe.subscriptions.retrieve(stripeSubId);
+    const sub = await getStripe().subscriptions.retrieve(stripeSubId);
     const periodEndTs = sub.items.data[0]?.current_period_end ?? 0;
     periodEnd = new Date(periodEndTs * 1000).toISOString();
   }
@@ -147,7 +147,7 @@ async function handleInvoiceSucceeded(
     .single();
 
   if (subRow) {
-    const sub = await stripe.subscriptions.retrieve(stripeSubId);
+    const sub = await getStripe().subscriptions.retrieve(stripeSubId);
     const periodEndTs = sub.items.data[0]?.current_period_end ?? 0;
     await supabase
       .from('subscriptions')

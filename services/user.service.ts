@@ -193,6 +193,59 @@ export async function updateRolePermissions(
   }
 }
 
+type TenantRoleRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  role_permissions: Array<{
+    permissions: { id: string; scope: string; description: string | null } | null;
+  }>;
+};
+
+/**
+ * Resolves the role + permissions granted by the user's tenant_members.role_id
+ * for a specific tenant. This is the tenant-scoped RBAC source (the same one
+ * getActiveContext/requireTenantPermission use server-side) — distinct from
+ * the legacy global `user_roles` table. Returns null if the user has no
+ * active membership in the tenant, or no role assigned.
+ */
+export async function getTenantRole(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<{ id: string; name: string; description: string | null; permissions: string[] } | null> {
+  const { data } = await supabase
+    .from('tenant_members')
+    .select(
+      `
+      roles(
+        id,
+        name,
+        description,
+        role_permissions(
+          permissions(id, scope, description)
+        )
+      )
+    `
+    )
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  const role = (data as unknown as { roles: TenantRoleRow | null } | null)?.roles;
+  if (!role) return null;
+
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    permissions: role.role_permissions
+      .map((rp) => rp.permissions?.scope)
+      .filter((scope): scope is string => Boolean(scope)),
+  };
+}
+
 /**
  * Fetches the full user profile with roles, permissions, and active tenant/event.
  *
@@ -206,7 +259,8 @@ export async function updateRolePermissions(
  */
 export async function getInitialProfile(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  preferred?: { tenantId?: string; eventId?: string }
 ): Promise<UserWithRoles | null> {
   // Run the user/roles query and the tenant membership query in parallel.
   const [{ data, error }, { data: membershipData }] = await Promise.all([
@@ -264,22 +318,61 @@ export async function getInitialProfile(
           .filter((scope): scope is string => Boolean(scope)),
       })) ?? [];
 
+  // Honour the persisted active selection (passed in by the caller) when valid,
+  // so the client context matches the server-side getActiveContext resolution.
+  const cookieTenantId = preferred?.tenantId;
+  const cookieEventId = preferred?.eventId;
+
+  let activeTenantId = (membershipData as { tenant_id: string } | null)?.tenant_id ?? null;
+  if (cookieTenantId) {
+    const { data: preferredMembership } = await supabase
+      .from('tenant_members')
+      .select('tenant_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .eq('tenant_id', cookieTenantId)
+      .maybeSingle();
+    if (preferredMembership) activeTenantId = cookieTenantId;
+  }
+
+  // Merge in the tenant-scoped role (tenant_members.role_id) for the active
+  // tenant — this is the SAME source getActiveContext uses for server-side
+  // authorization. The legacy global `user_roles` table above is unrelated
+  // to tenant membership, so a tenant owner with no `user_roles` row would
+  // otherwise see an empty sidebar despite having full access server-side.
+  if (activeTenantId) {
+    const tenantRole = await getTenantRole(supabase, userId, activeTenantId);
+    if (tenantRole && !roles.some((r) => r.id === tenantRole.id)) {
+      roles.push(tenantRole);
+    }
+  }
+
   const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
 
-  const activeTenantId = (membershipData as { tenant_id: string } | null)?.tenant_id ?? null;
-
-  // Resolve the first active event for the tenant (only if we have a tenant).
+  // Resolve the active event for the tenant (cookie selection > first).
   let activeEventId: string | null = null;
   if (activeTenantId) {
-    const { data: eventData } = await supabase
-      .from('events')
-      .select('id')
-      .eq('tenant_id', activeTenantId)
-      .eq('status', 'active')
-      .order('created_at')
-      .limit(1)
-      .single();
-    activeEventId = (eventData as { id: string } | null)?.id ?? null;
+    if (cookieEventId) {
+      const { data: preferredEvent } = await supabase
+        .from('events')
+        .select('id')
+        .eq('id', cookieEventId)
+        .eq('tenant_id', activeTenantId)
+        .eq('status', 'active')
+        .maybeSingle();
+      activeEventId = (preferredEvent as { id: string } | null)?.id ?? null;
+    }
+    if (!activeEventId) {
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('id')
+        .eq('tenant_id', activeTenantId)
+        .eq('status', 'active')
+        .order('created_at')
+        .limit(1)
+        .maybeSingle();
+      activeEventId = (eventData as { id: string } | null)?.id ?? null;
+    }
   }
 
   const { user_roles: _omit, ...userData } = data;

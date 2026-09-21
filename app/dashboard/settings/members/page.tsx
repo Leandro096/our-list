@@ -4,9 +4,12 @@ import { createClient } from '@/lib/supabase/server';
 import { getActiveContext } from '@/lib/server-auth';
 import { PERMISSIONS, hasPermission } from '@/lib/permissions';
 
+import { getEventById } from '@/services/event.service';
 import { getTenantMembers } from '@/services/tenant.service';
 import { getRolesWithPermissions } from '@/services/user.service';
+import { getEventMembers } from '@/services/event-member.service';
 
+import { EventMembersManager } from '@/components/settings/event-members';
 import { TenantMembersManager } from '@/components/settings/tenant-members';
 
 export const metadata = { title: 'Miembros — Wedding List' };
@@ -25,9 +28,17 @@ export default async function MembersPage() {
     redirect('/dashboard');
   }
 
-  const [members, roles] = await Promise.all([
+  const canAssignEvents = hasPermission(
+    ctx.permissions,
+    PERMISSIONS.EVENTS_MEMBERS_ASSIGN,
+    ctx.isSuperAdmin
+  );
+
+  const [members, roles, eventMembers, event] = await Promise.all([
     getTenantMembers(supabase, ctx.tenantId),
     getRolesWithPermissions(supabase),
+    canAssignEvents ? getEventMembers(supabase, ctx.eventId) : Promise.resolve([]),
+    canAssignEvents ? getEventById(supabase, ctx.eventId) : Promise.resolve(null),
   ]);
 
   return (
@@ -39,6 +50,13 @@ export default async function MembersPage() {
         </p>
       </div>
       <TenantMembersManager members={members} roles={roles} />
+      {canAssignEvents && (
+        <EventMembersManager
+          members={members}
+          assignments={eventMembers}
+          eventName={event?.name ?? 'evento actual'}
+        />
+      )}
     </div>
   );
 }

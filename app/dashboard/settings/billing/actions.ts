@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { LimitError } from '@/lib/limits';
+import { PERMISSIONS } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { optimizeProof, ProofValidationError } from '@/lib/image-optimizer';
 import { ForbiddenError, UnauthorizedError, requireTenantPermission } from '@/lib/server-auth';
@@ -50,7 +51,7 @@ export async function submitPaymentProofAction(
 
   let ctx: Awaited<ReturnType<typeof requireTenantPermission>>;
   try {
-    ctx = await requireTenantPermission(supabase, 'tenant.billing.submit');
+    ctx = await requireTenantPermission(supabase, PERMISSIONS.SETTINGS_BILLING_SUBMIT_PROOF);
   } catch (err) {
     return {
       error:
@@ -109,8 +110,10 @@ export async function submitPaymentProofAction(
     return { error: 'Error al subir el comprobante. Intenta de nuevo.' };
   }
 
-  const { data: urlData } = supabase.storage.from('payment-proofs').getPublicUrl(storagePath);
-  const proofUrl = urlData?.publicUrl ?? storagePath;
+  // payment-proofs is a private bucket — getPublicUrl would return a URL
+  // that 403s. Store the storage path itself; readers sign it on demand via
+  // getSignedProofUrl().
+  const proofUrl = storagePath;
 
   // Create payment record
   let paymentId: string;
@@ -156,7 +159,7 @@ export async function createCheckoutSessionAction(planId: string): Promise<Strip
 
   let ctx: Awaited<ReturnType<typeof requireTenantPermission>>;
   try {
-    ctx = await requireTenantPermission(supabase, 'tenant.billing.submit');
+    ctx = await requireTenantPermission(supabase, PERMISSIONS.SETTINGS_BILLING_SUBMIT_PROOF);
   } catch (err) {
     return {
       error:
@@ -178,7 +181,7 @@ export async function createCheckoutSessionAction(planId: string): Promise<Strip
   // Get or create Stripe Customer
   let customerId = await getStripeCustomerId(supabase, ctx.tenantId);
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: undefined,
       name: tenant.name,
       metadata: { tenant_id: ctx.tenantId },
@@ -190,7 +193,7 @@ export async function createCheckoutSessionAction(planId: string): Promise<Strip
   const mode = plan.billing_type === 'one_time' ? 'payment' : 'subscription';
 
   try {
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode,
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
@@ -216,7 +219,7 @@ export async function createPortalSessionAction(): Promise<StripeSessionResult> 
 
   let ctx: Awaited<ReturnType<typeof requireTenantPermission>>;
   try {
-    ctx = await requireTenantPermission(supabase, 'tenant.billing.submit');
+    ctx = await requireTenantPermission(supabase, PERMISSIONS.SETTINGS_BILLING_SUBMIT_PROOF);
   } catch (err) {
     return {
       error: err instanceof UnauthorizedError ? 'No autenticado.' : 'Error de autorización.',
@@ -229,7 +232,7 @@ export async function createPortalSessionAction(): Promise<StripeSessionResult> 
   }
 
   try {
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: `${SITE_URL}/dashboard/settings/billing`,
     });
