@@ -7,13 +7,7 @@ import { Building2, CalendarDays } from 'lucide-react';
 import { toast } from '@/hooks';
 import { setActiveEventAction, setActiveTenantAction } from '@/app/dashboard/context-actions';
 
-import {
-  Select,
-  SelectItem,
-  SelectValue,
-  SelectTrigger,
-  SelectContent,
-} from '@/components/ui';
+import { Select, SelectItem, SelectValue, SelectTrigger, SelectContent } from '@/components/ui';
 
 export interface ContextOption {
   id: string;
@@ -60,7 +54,11 @@ export function ContextSwitcher({ tenants, events, activeTenantId, activeEventId
   return (
     <div className="flex items-center gap-2">
       {showTenants && (
-        <Select value={activeTenantId ?? undefined} onValueChange={handleTenant} disabled={isPending}>
+        <Select
+          value={activeTenantId ?? undefined}
+          onValueChange={handleTenant}
+          disabled={isPending}
+        >
           <SelectTrigger className="h-9 w-[150px] sm:w-[180px]" aria-label="Workspace activo">
             <Building2 className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Workspace" />

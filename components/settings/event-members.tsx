@@ -87,7 +87,9 @@ export function EventMembersManager({ members, assignments, eventName }: Props) 
                     <User className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{u?.display_name ?? u?.email ?? 'Usuario'}</p>
+                    <p className="truncate font-medium">
+                      {u?.display_name ?? u?.email ?? 'Usuario'}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">{u?.email}</p>
                   </div>
                   {roleName && <Badge variant="outline">{roleName}</Badge>}

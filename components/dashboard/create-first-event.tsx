@@ -8,14 +8,7 @@ import { toast } from '@/hooks';
 import { useTranslation } from '@/locales';
 import { createFirstEventAction } from '@/app/dashboard/context-actions';
 
-import {
-  Card,
-  Button,
-  CardTitle,
-  CardHeader,
-  CardContent,
-  CardDescription,
-} from '@/components/ui';
+import { Card, Button, CardTitle, CardHeader, CardContent, CardDescription } from '@/components/ui';
 
 /**
  * Shown on the dashboard instead of a crash when the active tenant has no

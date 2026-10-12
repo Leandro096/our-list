@@ -110,12 +110,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .eq('status', 'active')
       .order('created_at');
     tenants =
-      (memberships as unknown as Array<{ tenants: ContextOption | ContextOption[] | null }> | null)
-        ?.flatMap((m) => {
-          const t = m.tenants;
-          if (!t) return [];
-          return Array.isArray(t) ? t : [t];
-        }) ?? [];
+      (
+        memberships as unknown as Array<{ tenants: ContextOption | ContextOption[] | null }> | null
+      )?.flatMap((m) => {
+        const t = m.tenants;
+        if (!t) return [];
+        return Array.isArray(t) ? t : [t];
+      }) ?? [];
 
     if (activeTenantId) {
       const { data: eventRows } = await supabase

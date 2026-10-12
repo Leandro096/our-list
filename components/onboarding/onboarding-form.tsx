@@ -45,11 +45,19 @@ export function OnboardingForm({ plans, defaultName, defaultType }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast({ title: 'Falta el nombre', description: 'Ingresa un nombre para tu workspace.', variant: 'destructive' });
+      toast({
+        title: 'Falta el nombre',
+        description: 'Ingresa un nombre para tu workspace.',
+        variant: 'destructive',
+      });
       return;
     }
     if (!selectedPlanId) {
-      toast({ title: 'Selecciona un plan', description: 'Elige un plan para continuar.', variant: 'destructive' });
+      toast({
+        title: 'Selecciona un plan',
+        description: 'Elige un plan para continuar.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -72,7 +80,12 @@ export function OnboardingForm({ plans, defaultName, defaultType }: Props) {
         {(
           [
             { value: 'individual', label: 'Personal', icon: CalendarCheck, hint: 'Para 1 evento' },
-            { value: 'organization', label: 'Organización', icon: Users, hint: 'Equipo y varios eventos' },
+            {
+              value: 'organization',
+              label: 'Organización',
+              icon: Users,
+              hint: 'Equipo y varios eventos',
+            },
           ] as const
         ).map((opt) => {
           const active = type === opt.value;
@@ -83,10 +96,14 @@ export function OnboardingForm({ plans, defaultName, defaultType }: Props) {
               onClick={() => setType(opt.value)}
               className={cn(
                 'flex items-center gap-3 rounded-lg border p-4 text-left transition-colors',
-                active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:bg-accent/50'
+                active
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-border hover:bg-accent/50'
               )}
             >
-              <opt.icon className={cn('h-5 w-5', active ? 'text-primary' : 'text-muted-foreground')} />
+              <opt.icon
+                className={cn('h-5 w-5', active ? 'text-primary' : 'text-muted-foreground')}
+              />
               <div>
                 <p className="font-medium">{opt.label}</p>
                 <p className="text-xs text-muted-foreground">{opt.hint}</p>
@@ -148,7 +165,9 @@ export function OnboardingForm({ plans, defaultName, defaultType }: Props) {
                     )}
                     <ul className="space-y-0.5 text-xs text-muted-foreground">
                       <li>
-                        {plan.max_events === 999 ? 'Eventos ilimitados' : `${plan.max_events} evento(s)`}
+                        {plan.max_events === 999
+                          ? 'Eventos ilimitados'
+                          : `${plan.max_events} evento(s)`}
                       </li>
                       <li>Hasta {plan.max_guests_per_event} invitados/evento</li>
                       <li>{plan.max_members} miembro(s)</li>

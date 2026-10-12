@@ -154,7 +154,11 @@ async function resolveSubdomainTenantId(): Promise<string | null> {
   if (!subdomain) return null;
   try {
     const admin = createAdminClient();
-    const { data } = await admin.from('tenants').select('id').eq('subdomain', subdomain).maybeSingle();
+    const { data } = await admin
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', subdomain)
+      .maybeSingle();
     return (data as { id: string } | null)?.id ?? null;
   } catch {
     return null;

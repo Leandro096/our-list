@@ -27,7 +27,8 @@ export async function createWorkspaceAction(input: {
     await createWorkspace(user, { name: input.name, planId: input.planId });
   } catch (err) {
     return {
-      error: err instanceof Error ? err.message : 'No se pudo crear el workspace. Inténtalo de nuevo.',
+      error:
+        err instanceof Error ? err.message : 'No se pudo crear el workspace. Inténtalo de nuevo.',
     };
   }
 
