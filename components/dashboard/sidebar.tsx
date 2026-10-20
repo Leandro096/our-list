@@ -15,7 +15,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronDown,
-  CalendarCog,
   LayoutDashboard,
 } from 'lucide-react';
 
@@ -91,12 +90,6 @@ const navigation: NavItem[] = [
         href: '/dashboard/settings/roles',
         icon: Shield,
         permission: PERMISSIONS.SETTINGS_ROLES,
-      },
-      {
-        nameKey: 'nav.eventConfig',
-        href: '/dashboard/settings/event',
-        icon: CalendarCog,
-        permission: PERMISSIONS.STATUSES_MANAGE_CREATE,
       },
     ],
   },

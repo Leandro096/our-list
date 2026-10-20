@@ -193,105 +193,37 @@ export async function updateRolePermissions(
   }
 }
 
-type TenantRoleRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  role_permissions: Array<{
-    permissions: { id: string; scope: string; description: string | null } | null;
-  }>;
-};
-
 /**
- * Resolves the role + permissions granted by the user's tenant_members.role_id
- * for a specific tenant. This is the tenant-scoped RBAC source (the same one
- * getActiveContext/requireTenantPermission use server-side) — distinct from
- * the legacy global `user_roles` table. Returns null if the user has no
- * active membership in the tenant, or no role assigned.
- */
-export async function getTenantRole(
-  supabase: SupabaseClient,
-  userId: string,
-  tenantId: string
-): Promise<{ id: string; name: string; description: string | null; permissions: string[] } | null> {
-  const { data } = await supabase
-    .from('tenant_members')
-    .select(
-      `
-      roles(
-        id,
-        name,
-        description,
-        role_permissions(
-          permissions(id, scope, description)
-        )
-      )
-    `
-    )
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
-    .maybeSingle();
-
-  const role = (data as unknown as { roles: TenantRoleRow | null } | null)?.roles;
-  if (!role) return null;
-
-  return {
-    id: role.id,
-    name: role.name,
-    description: role.description,
-    permissions: role.role_permissions
-      .map((rp) => rp.permissions?.scope)
-      .filter((scope): scope is string => Boolean(scope)),
-  };
-}
-
-/**
- * Fetches the full user profile with roles, permissions, and active tenant/event.
+ * Fetches the full user profile with roles and their permissions embedded.
  *
  * Designed for **server-side usage** (RSC layouts, server actions) so the
  * result can be passed as `initialProfile` to `<AuthProvider>`. This allows
  * the client to skip ALL Supabase calls on initial mount, avoiding the Web
  * Lock contention that causes the 8-second loading spinner on page refresh.
- *
- * Phase 1: also resolves `active_tenant_id` and `active_event_id` from
- * `tenant_members` + `events` so client components can read them via `useAuth()`.
  */
 export async function getInitialProfile(
   supabase: SupabaseClient,
-  userId: string,
-  preferred?: { tenantId?: string; eventId?: string }
+  userId: string
 ): Promise<UserWithRoles | null> {
-  // Run the user/roles query and the tenant membership query in parallel.
-  const [{ data, error }, { data: membershipData }] = await Promise.all([
-    supabase
-      .from('users')
-      .select(
-        `
-        *,
-        user_roles!user_roles_user_id_fkey(
-          roles(
-            id,
-            name,
-            description,
-            role_permissions(
-              permissions(id, scope, description)
-            )
+  const { data, error } = await supabase
+    .from('users')
+    .select(
+      `
+      *,
+      user_roles!user_roles_user_id_fkey(
+        roles(
+          id,
+          name,
+          description,
+          role_permissions(
+            permissions(id, scope, description)
           )
         )
-      `
       )
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('tenant_members')
-      .select('tenant_id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .order('created_at')
-      .limit(1)
-      .single(),
-  ]);
+    `
+    )
+    .eq('id', userId)
+    .single();
 
   if (error || !data) return null;
 
@@ -318,69 +250,8 @@ export async function getInitialProfile(
           .filter((scope): scope is string => Boolean(scope)),
       })) ?? [];
 
-  // Honour the persisted active selection (passed in by the caller) when valid,
-  // so the client context matches the server-side getActiveContext resolution.
-  const cookieTenantId = preferred?.tenantId;
-  const cookieEventId = preferred?.eventId;
-
-  let activeTenantId = (membershipData as { tenant_id: string } | null)?.tenant_id ?? null;
-  if (cookieTenantId) {
-    const { data: preferredMembership } = await supabase
-      .from('tenant_members')
-      .select('tenant_id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .eq('tenant_id', cookieTenantId)
-      .maybeSingle();
-    if (preferredMembership) activeTenantId = cookieTenantId;
-  }
-
-  // Merge in the tenant-scoped role (tenant_members.role_id) for the active
-  // tenant — this is the SAME source getActiveContext uses for server-side
-  // authorization. The legacy global `user_roles` table above is unrelated
-  // to tenant membership, so a tenant owner with no `user_roles` row would
-  // otherwise see an empty sidebar despite having full access server-side.
-  if (activeTenantId) {
-    const tenantRole = await getTenantRole(supabase, userId, activeTenantId);
-    if (tenantRole && !roles.some((r) => r.id === tenantRole.id)) {
-      roles.push(tenantRole);
-    }
-  }
-
   const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
 
-  // Resolve the active event for the tenant (cookie selection > first).
-  let activeEventId: string | null = null;
-  if (activeTenantId) {
-    if (cookieEventId) {
-      const { data: preferredEvent } = await supabase
-        .from('events')
-        .select('id')
-        .eq('id', cookieEventId)
-        .eq('tenant_id', activeTenantId)
-        .eq('status', 'active')
-        .maybeSingle();
-      activeEventId = (preferredEvent as { id: string } | null)?.id ?? null;
-    }
-    if (!activeEventId) {
-      const { data: eventData } = await supabase
-        .from('events')
-        .select('id')
-        .eq('tenant_id', activeTenantId)
-        .eq('status', 'active')
-        .order('created_at')
-        .limit(1)
-        .maybeSingle();
-      activeEventId = (eventData as { id: string } | null)?.id ?? null;
-    }
-  }
-
   const { user_roles: _omit, ...userData } = data;
-  return {
-    ...userData,
-    roles,
-    permissions,
-    active_tenant_id: activeTenantId,
-    active_event_id: activeEventId,
-  } as UserWithRoles;
+  return { ...userData, roles, permissions } as UserWithRoles;
 }

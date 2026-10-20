@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { getActiveContext } from '@/lib/server-auth';
 
 import { getSeatingDataWithFamily } from '@/services';
 
@@ -8,8 +7,7 @@ import { SeatingManager } from '@/components/seating/seating-manager';
 
 export default async function SeatingPage() {
   const supabase = await createClient();
-  const ctx = await getActiveContext(supabase);
-  const { guests, assignments, tables } = await getSeatingDataWithFamily(supabase, ctx.eventId);
+  const { guests, assignments, tables } = await getSeatingDataWithFamily(supabase);
 
   return (
     <div className="space-y-6">

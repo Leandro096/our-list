@@ -2,53 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerClient } from '@supabase/ssr';
 
-// Keep in sync with SUBDOMAIN_HEADER in '@/lib/active-context'. Defined locally
-// to avoid importing that module (it pulls `next/headers`, unavailable here).
-const SUBDOMAIN_HEADER = 'x-tenant-subdomain';
-
-const RESERVED_SUBDOMAINS = new Set(['www', 'app', 'admin', 'api']);
-
-/**
- * Extracts the tenant subdomain from the request host, if any.
- * - Production: matches `<sub>.${NEXT_PUBLIC_ROOT_DOMAIN}` (single level only).
- * - Local dev: matches `<sub>.localhost`.
- * Reserved subdomains (www, app, admin, api) and the apex domain return null.
- */
-function resolveSubdomain(request: NextRequest): string | null {
-  const host = (request.headers.get('host') ?? '').split(':')[0].toLowerCase();
-  if (!host) return null;
-
-  if (host.endsWith('.localhost')) {
-    const sub = host.slice(0, -'.localhost'.length);
-    return sub && !sub.includes('.') && !RESERVED_SUBDOMAINS.has(sub) ? sub : null;
-  }
-
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.toLowerCase();
-  if (!rootDomain) return null;
-
-  const suffix = `.${rootDomain}`;
-  if (!host.endsWith(suffix)) return null;
-
-  const sub = host.slice(0, -suffix.length);
-  // Ignore the apex (empty), multi-level subdomains, and reserved names.
-  if (!sub || sub.includes('.') || RESERVED_SUBDOMAINS.has(sub)) return null;
-  return sub;
-}
-
 export async function updateSession(request: NextRequest) {
-  // Strip any client-supplied subdomain header (anti-spoofing) and re-derive it
-  // from the trusted host. Downstream server code reads it via headers().
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.delete(SUBDOMAIN_HEADER);
-  const subdomain = resolveSubdomain(request);
-  if (subdomain) requestHeaders.set(SUBDOMAIN_HEADER, subdomain);
-
-  // Expose the request pathname to server components (layouts can't read it
-  // otherwise). Used by the dashboard billing gate to avoid a redirect loop.
-  requestHeaders.set('x-pathname', request.nextUrl.pathname);
-
   let supabaseResponse = NextResponse.next({
-    request: { headers: requestHeaders },
+    request,
   });
 
   const supabase = createServerClient(
@@ -62,7 +18,7 @@ export async function updateSession(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
-            request: { headers: requestHeaders },
+            request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)

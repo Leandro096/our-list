@@ -61,8 +61,6 @@ export type CreateGuestInput = Pick<
   reception_attending: boolean;
   parent_guest_id?: string | null;
   created_by?: string | null;
-  /** Phase 1+: scopes the guest to a specific event. */
-  event_id?: string | null;
 };
 
 export type UpdateGuestInput = Partial<
@@ -116,8 +114,6 @@ export interface GuestListParams {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
-  /** Phase 1+: scope results to a specific event. */
-  eventId?: string | null;
 }
 
 export interface GuestListResult {
@@ -138,7 +134,6 @@ async function getGuestsPaginated(
     sortOrder = 'asc',
     page = 1,
     pageSize = 50,
-    eventId,
   } = params;
 
   const { data, error } = await supabase.rpc('get_guests_paginated', {
@@ -150,7 +145,6 @@ async function getGuestsPaginated(
     p_sort_order: sortOrder,
     p_page: page,
     p_page_size: pageSize,
-    p_event_id: eventId ?? null,
   });
 
   if (error) throw error;
@@ -271,7 +265,6 @@ export async function createGuest(
     phone: rawFields.phone || null,
     dietary_restrictions: rawFields.dietary_restrictions || null,
     notes: rawFields.notes || null,
-    event_id: rawFields.event_id ?? null,
   };
 
   const { data, error } = await withTimeout(

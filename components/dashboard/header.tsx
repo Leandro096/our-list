@@ -21,9 +21,7 @@ import {
   ScanLine,
   Armchair,
   Settings,
-  CreditCard,
   ChevronDown,
-  ShieldCheck,
   LayoutDashboard,
 } from 'lucide-react';
 
@@ -101,22 +99,10 @@ const navigationItems = [
         permission: PERMISSIONS.SETTINGS_USERS,
       },
       {
-        key: 'nav.members' as const,
-        href: '/dashboard/settings/members',
-        icon: Users,
-        permission: PERMISSIONS.SETTINGS_MEMBERS_INVITE,
-      },
-      {
         key: 'nav.roles' as const,
         href: '/dashboard/settings/roles',
         icon: Shield,
         permission: PERMISSIONS.SETTINGS_ROLES,
-      },
-      {
-        key: 'nav.billing' as const,
-        href: '/dashboard/settings/billing',
-        icon: CreditCard,
-        permission: PERMISSIONS.SETTINGS_BILLING_VIEW,
       },
     ],
   },
@@ -132,7 +118,7 @@ function getInitials(name: string | null | undefined) {
     .slice(0, 2);
 }
 
-export function DashboardHeader({ contextSwitcher }: { contextSwitcher?: React.ReactNode }) {
+export function DashboardHeader() {
   const { profile, signOut, isLoading, activeRole, activePermissions, selectRole } = useAuth();
   const router = useRouter();
   const { setTheme } = useTheme();
@@ -270,8 +256,8 @@ export function DashboardHeader({ contextSwitcher }: { contextSwitcher?: React.R
         </SheetContent>
       </Sheet>
 
-      {/* Active workspace / event switcher */}
-      <div className="flex flex-1 items-center">{contextSwitcher}</div>
+      {/* Page title area - can be used for breadcrumbs */}
+      <div className="flex-1" />
 
       {/* Language switcher */}
       <LanguageSwitcher />
@@ -331,19 +317,6 @@ export function DashboardHeader({ contextSwitcher }: { contextSwitcher?: React.R
               {t('nav.profile')}
             </Link>
           </DropdownMenuItem>
-
-          {/* Admin portal — only for super admins / platform role users */}
-          {isSuperAdmin && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/billing">
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  {t('nav.admin')}
-                </Link>
-              </DropdownMenuItem>
-            </>
-          )}
 
           {/* Role switcher — only when the user has more than one role */}
           {(profile?.roles?.length ?? 0) > 1 && (

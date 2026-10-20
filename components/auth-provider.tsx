@@ -53,10 +53,6 @@ interface AuthContextType {
   activeRole: Role | null;
   /** Resolved permission scopes for the active role only. */
   activePermissions: string[];
-  /** Phase 1+: active tenant id resolved server-side via getInitialProfile. */
-  activeTenantId: string | null;
-  /** Phase 1+: active event id resolved server-side via getInitialProfile. */
-  activeEventId: string | null;
   /** Selects a role, fetches its permissions from DB, and persists to localStorage. */
   selectRole: (role: Role) => Promise<void>;
   signOut: () => Promise<void>;
@@ -205,12 +201,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         }>;
       };
 
-      const roles: {
-        id: string;
-        name: string;
-        description: string | null;
-        permissions?: string[];
-      }[] =
+      const roles: { id: string; name: string; description: string | null }[] =
         (data.user_roles as Array<{ roles: RoleRow | null }>)
           ?.map((ur) => ur.roles)
           .filter((r): r is RoleRow => r !== null)
@@ -225,34 +216,15 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
               .filter((scope): scope is string => Boolean(scope)),
           })) ?? [];
 
-      // Merge in the tenant-scoped role (tenant_members.role_id) for the
-      // user's active tenant — same source getActiveContext uses server-side.
-      // Without this, a tenant owner with no row in the legacy global
-      // `user_roles` table sees an empty sidebar despite full server access.
-      const { data: membership } = await supabase
-        .from('tenant_members')
-        .select(
-          'roles(id, name, description, role_permissions(permissions(id, scope, description)))'
-        )
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .order('created_at')
-        .limit(1)
-        .maybeSingle();
-
-      const tenantRole = (membership as unknown as { roles: RoleRow | null } | null)?.roles;
-      if (tenantRole && !roles.some((r) => r.id === tenantRole.id)) {
-        roles.push({
-          id: tenantRole.id,
-          name: tenantRole.name,
-          description: tenantRole.description,
-          permissions: tenantRole.role_permissions
-            .map((rp) => rp.permissions?.scope)
-            .filter((scope): scope is string => Boolean(scope)),
-        });
-      }
-
-      const permissions = [...new Set(roles.flatMap((r) => r.permissions ?? []))];
+      const permissions = [
+        ...new Set(
+          (data.user_roles as Array<{ roles: RoleRow | null }>)?.flatMap((ur) =>
+            (ur.roles?.role_permissions ?? []).flatMap((rp) =>
+              rp.permissions?.scope ? [rp.permissions.scope] : []
+            )
+          ) ?? []
+        ),
+      ];
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { user_roles: _omit, ...userData } = data;
@@ -409,8 +381,6 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
       isLoading,
       activeRole,
       activePermissions,
-      activeTenantId: profile?.active_tenant_id ?? null,
-      activeEventId: profile?.active_event_id ?? null,
       selectRole,
       signOut,
       refreshProfile,

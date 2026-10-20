@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { getActiveContext } from '@/lib/server-auth';
 
 import { getCategories, getGuestsPaginatedWithFamily } from '@/services';
 
@@ -33,8 +32,6 @@ export default async function GuestsPage({
   const size = [50, 100, 300].includes(parseInt(params.size ?? '')) ? parseInt(params.size!) : 50;
 
   const supabase = await createClient();
-  const ctx = await getActiveContext(supabase);
-
   const [{ data: guests, count }, categories] = await Promise.all([
     getGuestsPaginatedWithFamily(supabase, {
       search: params.q,
@@ -45,9 +42,8 @@ export default async function GuestsPage({
       sortOrder,
       page,
       pageSize: size,
-      eventId: ctx.eventId,
     }),
-    getCategories(supabase, ctx.eventId),
+    getCategories(supabase),
   ]);
 
   return (

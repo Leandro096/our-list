@@ -8,30 +8,23 @@ export type CategoryWithCount = Category & { guestCount: number };
 
 // ---- Input types ----
 
-export type CategoryInput = Pick<Category, 'name' | 'color' | 'description'> & {
-  event_id?: string | null;
-};
+export type CategoryInput = Pick<Category, 'name' | 'color' | 'description'>;
 
 // ---- Queries ----
 
-export async function getCategories(
-  supabase: SupabaseClient,
-  eventId?: string | null
-): Promise<Category[]> {
-  let query = supabase.from('categories').select('*').order('name');
-  if (eventId) query = query.eq('event_id', eventId);
-  const { data, error } = await query;
+export async function getCategories(supabase: SupabaseClient): Promise<Category[]> {
+  const { data, error } = await supabase.from('categories').select('*').order('name');
   if (error) throw error;
   return data ?? [];
 }
 
 export async function getCategoriesWithGuestCount(
-  supabase: SupabaseClient,
-  eventId?: string | null
+  supabase: SupabaseClient
 ): Promise<CategoryWithCount[]> {
-  let query = supabase.from('categories').select('*, guest_categories(count)').order('name');
-  if (eventId) query = query.eq('event_id', eventId);
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*, guest_categories(count)')
+    .order('name');
 
   if (error) throw error;
 
@@ -53,7 +46,6 @@ export async function createCategory(
       name: input.name,
       color: input.color,
       description: input.description || null,
-      event_id: input.event_id ?? null,
     })
     .select()
     .single();
