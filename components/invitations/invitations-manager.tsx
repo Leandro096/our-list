@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { Check, Undo2, Search, RotateCcw } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { MESSAGE_OPTIONS } from '@/lib/invitation-messages';
+import { joinNames, MESSAGE_OPTIONS } from '@/lib/invitation-messages';
 import { buildInvitationUrl, renderInvitationMessage } from '@/lib/invitation';
 
 import { toast } from '@/hooks';
@@ -31,6 +31,7 @@ export interface InvitationRow {
   first_name: string;
   last_name: string;
   phone: string | null;
+  members: string[];
   short_code: string;
   invitation_sent_at: string | null;
   status: string;
@@ -53,13 +54,18 @@ export function InvitationsManager({
   const [filter, setFilter] = useState<Filter>('todo');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(false);
+  const [plural, setPlural] = useState(false);
   const [, startTransition] = useTransition();
 
-  const current = templates.getOption(templates.defaultId);
+  const current = templates.getOption(templates.defaultId, plural);
   const sample = rows[0];
+  const sampleNames = joinNames(
+    [sample?.first_name ?? 'María', ...(plural ? [t('invitations.message.sampleMember')] : [])],
+    current.lang
+  );
   const preview = renderInvitationMessage(
     current.body,
-    sample?.first_name ?? 'María',
+    sampleNames,
     buildInvitationUrl(siteUrl, sample?.short_code ?? 'abc234'),
     current.lang
   );
@@ -156,11 +162,30 @@ export function InvitationsManager({
           </Select>
         </div>
 
+        <div role="tablist" className="inline-flex rounded-lg bg-muted p-1">
+          {[false, true].map((isPlural) => (
+            <button
+              key={String(isPlural)}
+              role="tab"
+              aria-selected={plural === isPlural}
+              onClick={() => setPlural(isPlural)}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+                plural === isPlural
+                  ? 'bg-background font-medium shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {t(isPlural ? 'invitations.message.several' : 'invitations.message.single')}
+            </button>
+          ))}
+        </div>
+
         {editing ? (
           <div className="space-y-2">
             <Textarea
               value={current.body}
-              onChange={(e) => templates.setBody(current.id, e.target.value)}
+              onChange={(e) => templates.setBody(current.id, plural, e.target.value)}
               rows={12}
               aria-label={t('invitations.message.title')}
             />
@@ -176,8 +201,12 @@ export function InvitationsManager({
           <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
             {editing ? t('invitations.message.done') : t('invitations.message.edit')}
           </Button>
-          {templates.isEdited(current.id) && (
-            <Button variant="ghost" size="sm" onClick={() => templates.resetBody(current.id)}>
+          {templates.isEdited(current.id, plural) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => templates.resetBody(current.id, plural)}
+            >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
               {t('invitations.message.reset')}
             </Button>

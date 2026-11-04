@@ -55,7 +55,29 @@ export default async function GuestsPage({
       pageGuests.map((g) => g.id)
     );
   const shareById = new Map((shareFields ?? []).map((row) => [row.id, row]));
-  const guests = pageGuests.map((g) => ({ ...g, ...shareById.get(g.id) }));
+
+  // First names of the people under each guest, so shared messages can use the plural.
+  const { data: memberRows } = await supabase
+    .from('guests')
+    .select('parent_guest_id, first_name')
+    .in(
+      'parent_guest_id',
+      pageGuests.map((g) => g.id)
+    )
+    .order('first_name');
+  const membersByParent = new Map<string, string[]>();
+  for (const row of memberRows ?? []) {
+    membersByParent.set(row.parent_guest_id, [
+      ...(membersByParent.get(row.parent_guest_id) ?? []),
+      row.first_name,
+    ]);
+  }
+
+  const guests = pageGuests.map((g) => ({
+    ...g,
+    ...shareById.get(g.id),
+    members: membersByParent.get(g.id) ?? [],
+  }));
 
   return (
     <div className="space-y-6">

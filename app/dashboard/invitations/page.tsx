@@ -14,13 +14,20 @@ export default async function InvitationsPage() {
       .select('id, first_name, last_name, phone, short_code, invitation_sent_at, status')
       .is('parent_guest_id', null)
       .order('first_name'),
-    supabase.from('guests').select('parent_guest_id').not('parent_guest_id', 'is', null),
+    supabase
+      .from('guests')
+      .select('parent_guest_id, first_name')
+      .not('parent_guest_id', 'is', null)
+      .order('first_name'),
     headers(),
   ]);
 
-  const familyCount = new Map<string, number>();
+  const membersByParent = new Map<string, string[]>();
   for (const row of members ?? []) {
-    familyCount.set(row.parent_guest_id, (familyCount.get(row.parent_guest_id) ?? 0) + 1);
+    membersByParent.set(row.parent_guest_id, [
+      ...(membersByParent.get(row.parent_guest_id) ?? []),
+      row.first_name,
+    ]);
   }
 
   const host = headersList.get('x-forwarded-host') ?? headersList.get('host') ?? 'localhost:3000';
@@ -33,7 +40,10 @@ export default async function InvitationsPage() {
       <PageHeader titleKey="invitations.title" descriptionKey="invitations.description" />
       <InvitationsManager
         siteUrl={siteUrl}
-        guests={(guests ?? []).map((g) => ({ ...g, family: familyCount.get(g.id) ?? 0 }))}
+        guests={(guests ?? []).map((g) => {
+          const names = membersByParent.get(g.id) ?? [];
+          return { ...g, members: names, family: names.length };
+        })}
       />
     </div>
   );

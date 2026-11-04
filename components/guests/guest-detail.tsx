@@ -201,6 +201,7 @@ export function GuestDetail({ guest }: GuestDetailProps) {
                     phone: guest.phone,
                     short_code: guest.short_code,
                     invitation_sent_at: guest.invitation_sent_at ?? null,
+                    members: (guest.children ?? []).map((child) => child.first_name),
                   }}
                 />
               </CardContent>

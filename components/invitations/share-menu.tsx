@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, ChevronDown, MessageCircle } from 'lucide-react';
 
-import { MESSAGE_OPTIONS } from '@/lib/invitation-messages';
+import { joinNames, MESSAGE_OPTIONS } from '@/lib/invitation-messages';
 import { buildWhatsappUrl, buildInvitationUrl, renderInvitationMessage } from '@/lib/invitation';
 
 import { toast } from '@/hooks';
@@ -29,6 +29,8 @@ export interface ShareGuest {
   phone: string | null;
   short_code: string;
   invitation_sent_at: string | null;
+  /** First names of the other people covered by this invitation (family, plus one). */
+  members?: string[];
 }
 
 interface ShareMenuProps {
@@ -53,8 +55,10 @@ export function ShareMenu({ guest, variant = 'icon', onSentChange }: ShareMenuPr
   const hasPhone = buildWhatsappUrl(guest.phone, '') !== null;
 
   const messageFor = (optionId: string) => {
-    const option = templates.getOption(optionId);
-    return renderInvitationMessage(option.body, guest.first_name, link, option.lang);
+    const members = guest.members ?? [];
+    const option = templates.getOption(optionId, members.length > 0);
+    const names = joinNames([guest.first_name, ...members], option.lang);
+    return renderInvitationMessage(option.body, names, link, option.lang);
   };
 
   const markSent = async () => {

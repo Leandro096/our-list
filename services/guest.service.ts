@@ -415,6 +415,8 @@ export type GuestDetailWithFamily = GuestDetail & {
 
 export type GuestListItemWithFamily = GuestListItem & {
   has_children?: boolean;
+  /** First names of the people under this guest; filled in by the guests page. */
+  members?: string[];
 };
 
 export type GuestListResultWithFamily = {

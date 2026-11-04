@@ -828,6 +828,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                             phone: guest.phone,
                             short_code: guest.short_code,
                             invitation_sent_at: guest.invitation_sent_at,
+                            members: guest.members,
                           }}
                         />
                       )}

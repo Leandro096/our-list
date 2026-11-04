@@ -11,6 +11,9 @@ import {
 const BODIES_KEY = 'save-the-date-message-bodies';
 const DEFAULT_KEY = 'save-the-date-default-message';
 
+/** Edited texts are stored per message, with a separate entry for the plural version. */
+const bodyKey = (id: string, plural: boolean) => (plural ? `${id}#plural` : id);
+
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -43,25 +46,28 @@ export function useMessageTemplates() {
     }
   }, []);
 
+  /** The message text to use: the edited one if there is one, otherwise the built-in. */
   const getOption = useCallback(
-    (id: string): MessageOption => {
+    (id: string, plural = false): MessageOption => {
       const option = findMessageOption(id);
-      return { ...option, body: bodies[option.id] ?? option.body };
+      const original = plural ? option.bodyPlural : option.body;
+      return { ...option, body: bodies[bodyKey(option.id, plural)] ?? original };
     },
     [bodies]
   );
 
-  const setBody = (id: string, body: string) => {
-    const next = { ...bodies, [id]: body };
+  const save = (next: Record<string, string>) => {
     setBodies(next);
     write(BODIES_KEY, JSON.stringify(next));
   };
 
-  const resetBody = (id: string) => {
+  const setBody = (id: string, plural: boolean, body: string) =>
+    save({ ...bodies, [bodyKey(id, plural)]: body });
+
+  const resetBody = (id: string, plural: boolean) => {
     const next = { ...bodies };
-    delete next[id];
-    setBodies(next);
-    write(BODIES_KEY, JSON.stringify(next));
+    delete next[bodyKey(id, plural)];
+    save(next);
   };
 
   const setDefaultId = (id: string) => {
@@ -75,6 +81,6 @@ export function useMessageTemplates() {
     resetBody,
     defaultId,
     setDefaultId,
-    isEdited: (id: string) => id in bodies,
+    isEdited: (id: string, plural: boolean) => bodyKey(id, plural) in bodies,
   };
 }
