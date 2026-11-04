@@ -26,6 +26,8 @@ CREATE TABLE public.users (
 CREATE TABLE public.guests (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   invitation_guid uuid NOT NULL DEFAULT uuid_generate_v4() UNIQUE,
+  short_code text NOT NULL UNIQUE, -- see lib/db/migrations/2026-11-03-guest-short-code.sql
+  invitation_sent_at timestamp with time zone,
   first_name text NOT NULL,
   last_name text NOT NULL,
   email text,

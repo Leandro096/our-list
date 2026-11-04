@@ -32,7 +32,7 @@ export default async function GuestsPage({
   const size = [50, 100, 300].includes(parseInt(params.size ?? '')) ? parseInt(params.size!) : 50;
 
   const supabase = await createClient();
-  const [{ data: guests, count }, categories] = await Promise.all([
+  const [{ data: pageGuests, count }, categories] = await Promise.all([
     getGuestsPaginatedWithFamily(supabase, {
       search: params.q,
       status: params.status,
@@ -45,6 +45,17 @@ export default async function GuestsPage({
     }),
     getCategories(supabase),
   ]);
+
+  // The paginated list function does not return the save-the-date fields, so fetch them for this page.
+  const { data: shareFields } = await supabase
+    .from('guests')
+    .select('id, short_code, invitation_sent_at')
+    .in(
+      'id',
+      pageGuests.map((g) => g.id)
+    );
+  const shareById = new Map((shareFields ?? []).map((row) => [row.id, row]));
+  const guests = pageGuests.map((g) => ({ ...g, ...shareById.get(g.id) }));
 
   return (
     <div className="space-y-6">

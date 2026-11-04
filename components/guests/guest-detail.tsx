@@ -25,10 +25,14 @@ import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
 
 import { useLocale, useTranslation } from '@/locales/i18n-provider';
 
+import { InvitationActions } from './invitation-actions';
+
 interface GuestDetailProps {
   guest: {
     id: string;
     invitation_guid: string;
+    short_code?: string;
+    invitation_sent_at?: string | null;
     first_name: string;
     last_name: string;
     email: string | null;
@@ -182,6 +186,26 @@ export function GuestDetail({ guest }: GuestDetailProps) {
               )}
             </CardContent>
           </Card>
+
+          {guest.short_code && guest.family_role === 'parent' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('invitations.title')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="font-mono text-sm">/i/{guest.short_code}</p>
+                <InvitationActions
+                  guest={{
+                    id: guest.id,
+                    first_name: guest.first_name,
+                    phone: guest.phone,
+                    short_code: guest.short_code,
+                    invitation_sent_at: guest.invitation_sent_at ?? null,
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Event Attendance */}
           <Card>

@@ -61,6 +61,8 @@ export interface Category {
 export interface Guest {
   id: string;
   invitation_guid: string;
+  short_code: string;
+  invitation_sent_at: string | null;
   first_name: string;
   last_name: string;
   email: string | null;

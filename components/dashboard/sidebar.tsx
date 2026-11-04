@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Tags,
+  Send,
   Users,
   Shield,
   History,
@@ -47,6 +48,12 @@ const navigation: NavItem[] = [
     nameKey: 'nav.guests',
     href: '/dashboard/guests',
     icon: Users,
+    permission: PERMISSIONS.GUESTS_VIEW,
+  },
+  {
+    nameKey: 'nav.invitations',
+    href: '/dashboard/invitations',
+    icon: Send,
     permission: PERMISSIONS.GUESTS_VIEW,
   },
   {

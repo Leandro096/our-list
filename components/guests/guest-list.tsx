@@ -29,6 +29,7 @@ import type { GuestListItemWithFamily } from '@/services';
 import { deleteGuestAction, bulkDeleteGuestsAction } from '@/app/dashboard/guests/actions';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { ShareMenu } from '@/components/invitations/share-menu';
 import { Dialog, DialogTitle, DialogHeader, DialogContent } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -818,39 +819,52 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
 
                   {/* Actions */}
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">{t('common.actions')}</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/guests/${guest.id}`}>
-                            <Eye className="mr-2 h-4 w-4" /> {t('common.view')}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/guests/${guest.id}/edit`}>
-                            <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/guests/${guest.id}/qr`}>
-                            <QrCode className="mr-2 h-4 w-4" /> {t('guests.qrCode')}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() =>
-                            dispatch({ type: 'UPDATE', payload: { deleteTargetId: guest.id } })
-                          }
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      {guest.short_code && !guest.parent_guest_id && (
+                        <ShareMenu
+                          guest={{
+                            id: guest.id,
+                            first_name: guest.first_name,
+                            phone: guest.phone,
+                            short_code: guest.short_code,
+                            invitation_sent_at: guest.invitation_sent_at,
+                          }}
+                        />
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">{t('common.actions')}</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/guests/${guest.id}`}>
+                              <Eye className="mr-2 h-4 w-4" /> {t('common.view')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/guests/${guest.id}/edit`}>
+                              <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/guests/${guest.id}/qr`}>
+                              <QrCode className="mr-2 h-4 w-4" /> {t('guests.qrCode')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() =>
+                              dispatch({ type: 'UPDATE', payload: { deleteTargetId: guest.id } })
+                            }
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
