@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, Download, ArrowLeft } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 
-import { Card, Button, CardTitle, CardHeader, CardContent } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 interface QRCodeDisplayProps {
   guest: {
@@ -14,9 +13,10 @@ interface QRCodeDisplayProps {
     first_name: string;
     last_name: string;
   };
+  helpText: string;
 }
 
-export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
+export function QRCodeDisplay({ guest, helpText }: QRCodeDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -113,46 +113,29 @@ export function QRCodeDisplay({ guest }: QRCodeDisplayProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link href={`/dashboard/guests/${guest.id}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Guest
-        </Link>
-      </Button>
-
-      <Card ref={printRef}>
-        <CardHeader className="text-center">
-          <CardTitle className="font-serif text-2xl">
-            {guest.first_name} {guest.last_name}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Wedding Guest Invitation</p>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6">
-          <div className="rounded-lg bg-white p-4 shadow-sm">
-            <QRCodeSVG
-              id="qr-svg"
-              value={guest.invitation_guid}
-              size={200}
-              level="H"
-              includeMargin
-              fgColor="#1C1917"
-              bgColor="#FFFFFF"
-            />
-          </div>
-          <p className="text-center text-sm text-muted-foreground">Scan this code at check-in</p>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </Button>
-            <Button variant="outline" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div ref={printRef} className="flex flex-col items-center gap-5 py-2 text-center">
+      <div className="rounded-lg border border-border bg-white p-3">
+        <QRCodeSVG
+          id="qr-svg"
+          value={guest.invitation_guid}
+          size={200}
+          level="H"
+          includeMargin
+          fgColor="#35291F"
+          bgColor="#FFFFFF"
+        />
+      </div>
+      <p className="max-w-xs text-sm text-muted-foreground">{helpText}</p>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={handlePrint}>
+          <Printer />
+          Print
+        </Button>
+        <Button variant="outline" onClick={handleDownload}>
+          <Download />
+          Download
+        </Button>
+      </div>
     </div>
   );
 }

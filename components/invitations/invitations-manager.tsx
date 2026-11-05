@@ -123,7 +123,7 @@ export function InvitationsManager({
     <div className="space-y-5">
       <section aria-label={t('invitations.progress.label')} className="space-y-2">
         <div className="flex items-baseline justify-between gap-4">
-          <p className="font-serif text-2xl">
+          <p className="font-serif text-3xl">
             {t('invitations.progress.summary', { sent: sentCount, total: rows.length })}
           </p>
           <span className="text-sm tabular-nums text-muted-foreground">{pct}%</span>
@@ -136,7 +136,7 @@ export function InvitationsManager({
           className="h-1.5 overflow-hidden rounded-full bg-muted"
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            className="h-full rounded-full bg-gold transition-[width] duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -162,7 +162,7 @@ export function InvitationsManager({
           </Select>
         </div>
 
-        <div role="tablist" className="inline-flex rounded-lg bg-muted p-1">
+        <div role="tablist" className="inline-flex gap-5 border-b border-border">
           {[false, true].map((isPlural) => (
             <button
               key={String(isPlural)}
@@ -170,9 +170,9 @@ export function InvitationsManager({
               aria-selected={plural === isPlural}
               onClick={() => setPlural(isPlural)}
               className={cn(
-                'rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+                'relative -mb-px border-b-2 border-transparent px-0.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
                 plural === isPlural
-                  ? 'bg-background font-medium shadow-sm'
+                  ? 'border-gold font-medium text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -215,7 +215,7 @@ export function InvitationsManager({
       </section>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" className="inline-flex rounded-lg bg-muted p-1">
+        <div role="tablist" className="inline-flex gap-5 border-b border-border">
           {filters.map((f) => (
             <button
               key={f.id}
@@ -223,9 +223,9 @@ export function InvitationsManager({
               aria-selected={filter === f.id}
               onClick={() => setFilter(f.id)}
               className={cn(
-                'rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+                'relative -mb-px border-b-2 border-transparent px-0.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
                 filter === f.id
-                  ? 'bg-background font-medium shadow-sm'
+                  ? 'border-gold font-medium text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -275,7 +275,7 @@ export function InvitationsManager({
                   </p>
                   {sent && (
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Check className="h-3 w-3 text-primary" />
+                      <Check className="h-3 w-3 text-sage" />
                       {t('invitations.sentAt', { date: sentFormatter.format(new Date(sent)) })}
                     </p>
                   )}

@@ -1,18 +1,7 @@
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
-import { createClient } from '@/lib/supabase/server';
-
-import { getGuestByIdWithFamily } from '@/services';
-
-import { GuestDetail } from '@/components/guests/guest-detail';
-
+// A guest now opens in a dialog on the guests page.
 export default async function GuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, supabase] = await Promise.all([params, createClient()]);
-  const guest = await getGuestByIdWithFamily(supabase, id);
-
-  if (!guest) {
-    notFound();
-  }
-
-  return <GuestDetail guest={guest} />;
+  const { id } = await params;
+  redirect(`/dashboard/guests?guest=${id}`);
 }

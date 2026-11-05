@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
 import { useRef, useEffect, useReducer, useTransition } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   X,
   Eye,
@@ -22,6 +21,8 @@ import {
   ChevronRight,
   MoreHorizontal,
 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 
 import { toast } from '@/hooks';
 import type { Category } from '@/lib';
@@ -43,7 +44,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Input,
-  Badge,
   Table,
   Button,
   Select,
@@ -66,6 +66,7 @@ import {
 
 import { useTranslation } from '@/locales/i18n-provider';
 
+import { GuestDialog } from './guest-dialog';
 import { ExportDialog } from './export-dialog';
 import { ImportDialog } from './import-dialog';
 
@@ -83,6 +84,7 @@ export interface GuestFilters {
 }
 
 interface GuestListProps {
+  statusCounts: Record<string, number>;
   guests: GuestListItemWithFamily[];
   categories: Category[];
   totalCount: number;
@@ -100,11 +102,12 @@ const SORT_OPTIONS = ['first_name', 'last_name', 'status', 'created_at'] as cons
 const EVENT_TYPE_OPTIONS = ['all', 'ceremony', 'reception', 'both', 'none'] as const;
 type EventTypeOption = (typeof EVENT_TYPE_OPTIONS)[number];
 
-const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
-  pending: 'outline',
-  confirmed: 'default',
-  declined: 'secondary',
-  tentative: 'outline',
+// A dot carries the state; the label carries the meaning. Declined is hollow.
+const STATUS_DOT: Record<string, string> = {
+  pending: 'bg-chart-5',
+  confirmed: 'bg-chart-1',
+  declined: 'border border-chart-4 bg-transparent',
+  tentative: 'bg-chart-2',
 };
 
 // ---- Module-scope helpers ----
@@ -136,7 +139,14 @@ function guestListReducer(state: GuestListState, action: GuestListAction): Guest
   return { ...state, ...action.payload };
 }
 
-export function GuestList({ guests, categories, totalCount, currentParams }: GuestListProps) {
+export function GuestList({
+  guests,
+  categories,
+  totalCount,
+  currentParams,
+  statusCounts,
+}: GuestListProps) {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -200,6 +210,14 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
     startTransition(() => {
       router.push(`${pathname}${search ? `?${search}` : ''}`);
     });
+  }
+
+  function openGuest(id: string, tab?: string) {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('guest', id);
+    if (tab) next.set('tab', tab);
+    else next.delete('tab');
+    router.push(`${pathname}?${next.toString()}`, { scroll: false });
   }
 
   function handleSearchChange(value: string) {
@@ -331,26 +349,6 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   function FilterControls({ onAfterChange }: { onAfterChange?: () => void }) {
     return (
       <>
-        {/* Status filter */}
-        <Select
-          value={currentParams.status}
-          onValueChange={(v) => {
-            navigate({ status: v, page: 1 });
-            onAfterChange?.();
-          }}
-        >
-          <SelectTrigger size="sm" className="w-full text-xs sm:w-[130px]">
-            <SelectValue placeholder={t('guests.status')} />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o} value={o} className="text-xs">
-                {getStatusLabel(o)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {/* Category filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -473,6 +471,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
   return (
     <div className="space-y-4">
       {/* Dialogs */}
+      <GuestDialog categories={categories} />
       <ExportDialog
         open={exportOpen}
         onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { exportOpen: v } })}
@@ -572,6 +571,35 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
         </DialogContent>
       </Dialog>
 
+      {/* ---- Status tabs: the list is read by RSVP state first ---- */}
+      <div role="tablist" className="flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border">
+        {STATUS_OPTIONS.map((option) => {
+          const active = currentParams.status === option;
+          const count =
+            option === 'all'
+              ? Object.values(statusCounts).reduce((sum, n) => sum + n, 0)
+              : (statusCounts[option] ?? 0);
+          return (
+            <button
+              key={option}
+              role="tab"
+              type="button"
+              aria-selected={active}
+              onClick={() => navigate({ status: option, page: 1 })}
+              className={cn(
+                'relative -mb-px whitespace-nowrap border-b-2 border-transparent px-0.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+                active
+                  ? 'border-gold font-medium text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {option === 'all' ? t('guestDialog.all') : getStatusLabel(option)}
+              <span className="ml-1.5 tabular-nums text-muted-foreground">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* ---- Toolbar ---- */}
       <div className="flex flex-col gap-3">
         {/* Row 1: search + mobile filter button + import/export */}
@@ -667,7 +695,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
       </p>
 
       {/* ---- Table ---- */}
-      <div className="relative overflow-hidden rounded-lg border border-border">
+      <div className="relative overflow-hidden rounded-lg border border-border bg-card">
         {isPending && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -700,7 +728,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
               <TableHead>
                 <button
                   type="button"
-                  className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
+                  className="flex items-center text-left text-xs font-medium text-muted-foreground hover:text-foreground"
                   onClick={() => handleSort('first_name')}
                 >
                   {t('guests.fullName')}{' '}
@@ -714,17 +742,17 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
               <TableHead>
                 <button
                   type="button"
-                  className="flex items-center text-left text-xs font-semibold uppercase tracking-wide hover:text-foreground"
+                  className="flex items-center text-left text-xs font-medium text-muted-foreground hover:text-foreground"
                   onClick={() => handleSort('status')}
                 >
                   {t('guests.status')}{' '}
                   <SortIcon column="status" sort={currentParams.sort} order={currentParams.order} />
                 </button>
               </TableHead>
-              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wide">
+              <TableHead className="hidden md:table-cell text-xs font-medium text-muted-foreground">
                 {t('nav.categories')}
               </TableHead>
-              <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wide">
+              <TableHead className="hidden lg:table-cell text-xs font-medium text-muted-foreground">
                 {t('guests.table')}
               </TableHead>
               <TableHead />
@@ -742,7 +770,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                 <TableRow
                   key={guest.id}
                   className={`cursor-pointer transition-colors ${selectedIds.has(guest.id) ? 'bg-muted/50' : ''}`}
-                  onClick={() => router.push(`/dashboard/guests/${guest.id}`)}
+                  onClick={() => openGuest(guest.id)}
                 >
                   {/* Checkbox */}
                   <TableCell
@@ -760,7 +788,7 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                   </TableCell>
 
                   {/* Name + email stacked */}
-                  <TableCell className="min-w-0 py-3">
+                  <TableCell className="min-w-0 py-2">
                     <p className="truncate font-medium leading-tight">
                       {!guest.parent_guest_id && guest.has_children && (
                         <span title={t('guests.isParent')}>
@@ -784,9 +812,16 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
 
                   {/* Status */}
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[guest.status] ?? 'outline'} className="text-xs">
+                    <span className="inline-flex items-center gap-2 text-sm">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'h-2 w-2 rounded-full',
+                          STATUS_DOT[guest.status] ?? 'bg-border'
+                        )}
+                      />
                       {t(`guests.statuses.${guest.status}`)}
-                    </Badge>
+                    </span>
                   </TableCell>
 
                   {/* Categories */}
@@ -840,20 +875,14 @@ export function GuestList({ guests, categories, totalCount, currentParams }: Gue
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/guests/${guest.id}`}>
-                              <Eye className="mr-2 h-4 w-4" /> {t('common.view')}
-                            </Link>
+                          <DropdownMenuItem onClick={() => openGuest(guest.id)}>
+                            <Eye className="mr-2 h-4 w-4" /> {t('common.view')}
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/guests/${guest.id}/edit`}>
-                              <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
-                            </Link>
+                          <DropdownMenuItem onClick={() => openGuest(guest.id, 'edit')}>
+                            <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/guests/${guest.id}/qr`}>
-                              <QrCode className="mr-2 h-4 w-4" /> {t('guests.qrCode')}
-                            </Link>
+                          <DropdownMenuItem onClick={() => openGuest(guest.id, 'qr')}>
+                            <QrCode className="mr-2 h-4 w-4" /> {t('guests.qrCode')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

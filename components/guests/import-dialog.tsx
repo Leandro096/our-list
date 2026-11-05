@@ -237,7 +237,7 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
           <div className="space-y-4">
             {/* Column reference */}
             <div className="rounded-md border bg-muted/40 px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {t('guests.importDialog.templateTitle')}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -383,16 +383,16 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
         {step === 'preview' && (
           <div className="space-y-3">
             <div className="flex gap-3">
-              <div className="flex items-center gap-2 rounded-md border bg-green-50 px-3 py-2 dark:bg-green-950">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-400">
+              <div className="flex items-center gap-2 rounded-md border bg-sage/10 px-3 py-2">
+                <CheckCircle2 className="h-4 w-4 text-sage" />
+                <span className="text-sm font-medium text-sage">
                   {t('guests.importDialog.validRows', { count: validCount })}
                 </span>
               </div>
               {errorRows.length > 0 && (
-                <div className="flex items-center gap-2 rounded-md border bg-red-50 px-3 py-2 dark:bg-red-950">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                <div className="flex items-center gap-2 rounded-md border bg-destructive/10 px-3 py-2">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <span className="text-sm font-medium text-destructive">
                     {t('guests.importDialog.errorRows', {
                       count: errorRows.length,
                     })}
@@ -434,10 +434,10 @@ export function ImportDialog({ open, onOpenChange, onImported }: ImportDialogPro
         {/* ─── Step 4: Result ─── */}
         {step === 'result' && importResult && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-md border bg-green-50 px-4 py-3 dark:bg-green-950">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex items-center gap-3 rounded-md border bg-sage/10 px-4 py-3">
+              <CheckCircle2 className="h-5 w-5 text-sage" />
               <div>
-                <p className="font-semibold text-green-700 dark:text-green-400">
+                <p className="font-semibold text-sage">
                   {t('guests.importDialog.importedOk', {
                     count: importResult.created,
                   })}

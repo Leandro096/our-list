@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 
-import { getCategories, getGuestsPaginatedWithFamily } from '@/services';
+import { getCategories, getDashboardStats, getGuestsPaginatedWithFamily } from '@/services';
 
 import { PageHeader } from '@/components/page-header';
 import { GuestList } from '@/components/guests/guest-list';
@@ -32,7 +32,7 @@ export default async function GuestsPage({
   const size = [50, 100, 300].includes(parseInt(params.size ?? '')) ? parseInt(params.size!) : 50;
 
   const supabase = await createClient();
-  const [{ data: pageGuests, count }, categories] = await Promise.all([
+  const [{ data: pageGuests, count }, categories, stats] = await Promise.all([
     getGuestsPaginatedWithFamily(supabase, {
       search: params.q,
       status: params.status,
@@ -44,7 +44,11 @@ export default async function GuestsPage({
       pageSize: size,
     }),
     getCategories(supabase),
+    getDashboardStats(supabase),
   ]);
+  const statusCounts = Object.fromEntries(
+    stats.guestsByStatus.map((s) => [s.status.toLowerCase(), s.count])
+  );
 
   // The paginated list function does not return the save-the-date fields, so fetch them for this page.
   const { data: shareFields } = await supabase
@@ -85,10 +89,11 @@ export default async function GuestsPage({
         titleKey="guests.title"
         descriptionKey="guests.description"
         actionKey="guests.addGuest"
-        actionHref="/dashboard/guests/new"
+        actionHref="/dashboard/guests?guest=new"
       />
       <GuestList
         guests={guests}
+        statusCounts={statusCounts}
         categories={categories}
         totalCount={count}
         currentParams={{

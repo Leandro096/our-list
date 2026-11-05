@@ -76,7 +76,7 @@ export function ExportDialog({ open, onOpenChange, guests, categories }: ExportD
         <div className="space-y-4">
           {groups.map((group) => (
             <div key={group}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
                 {t(GROUP_TRANSLATION_KEY[group] ?? group)}
               </p>
               <div className="grid grid-cols-2 gap-2">

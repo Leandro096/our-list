@@ -314,7 +314,7 @@ export function SeatingManager({
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
               <Armchair className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -336,8 +336,8 @@ export function SeatingManager({
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10">
-              <Users className="h-5 w-5 text-accent" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
               <p className="text-2xl font-bold">{unassignedGuests.length}</p>
@@ -576,7 +576,7 @@ export function SeatingManager({
             return (
               <Card
                 key={table.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
+                className="cursor-pointer transition-colors hover:border-khaki"
                 onClick={() => openEditDialog(table)}
               >
                 <CardHeader className="pb-3">

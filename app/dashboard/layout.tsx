@@ -26,7 +26,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <DashboardSidebar />
           <ShellInner>
             <DashboardHeader />
-            <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
+              {children}
+            </main>
           </ShellInner>
         </DashboardShell>
       </AuthGuard>

@@ -16,6 +16,7 @@ import {
 } from '@/services';
 
 import { useAuth } from '@/components/auth-provider';
+import { EventDayTabs } from '@/components/dashboard/event-day-tabs';
 import {
   Card,
   Badge,
@@ -156,8 +157,9 @@ export default function ScannerPage() {
 
   return (
     <div className="space-y-6">
+      <EventDayTabs />
       <div>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight">{t('scanner.title')}</h1>
+        <h1 className="font-serif text-4xl leading-[1.1] tracking-tight">{t('scanner.title')}</h1>
         <p className="mt-1 text-muted-foreground">{t('scanner.description')}</p>
       </div>
 
@@ -165,22 +167,22 @@ export default function ScannerPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{todayStats.ceremony}</p>
+              <p className="font-serif text-3xl tabular-nums">{todayStats.ceremony}</p>
               <p className="text-sm text-muted-foreground">{t('scanner.ceremonyCheckIns')}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-              <Users className="h-6 w-6 text-accent" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{todayStats.reception}</p>
+              <p className="font-serif text-3xl tabular-nums">{todayStats.reception}</p>
               <p className="text-sm text-muted-foreground">{t('scanner.receptionCheckIns')}</p>
             </div>
           </CardContent>

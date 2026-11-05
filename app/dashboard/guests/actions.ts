@@ -15,9 +15,12 @@ import {
   deleteGuest,
   createGuest,
   updateGuest,
+  getCategories,
+  getGuestForEdit,
   bulkDeleteGuests,
   linkGuestToParent,
   unlinkGuestFromParent,
+  getGuestByIdWithFamily,
 } from '@/services';
 
 const MAX_IMPORT_ROWS = 1000;
@@ -282,4 +285,17 @@ export async function getAvailableGuestsAction(excludeId?: string): Promise<Avai
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// ---- Guest dialog data -----------------------------------------------------
+
+export async function getGuestDialogDataAction(id: string) {
+  const supabase = await createClient();
+  await requireAuth(supabase, PERMISSIONS.GUESTS_VIEW);
+  const [detail, edit, categories] = await Promise.all([
+    getGuestByIdWithFamily(supabase, id),
+    getGuestForEdit(supabase, id),
+    getCategories(supabase),
+  ]);
+  return { detail, edit, categories };
 }

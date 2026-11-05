@@ -3,7 +3,7 @@ import './globals.css';
 import { cookies } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Newsreader, Instrument_Sans } from 'next/font/google';
 
 import type { Locale } from '@/lib';
 import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from '@/locales';
@@ -11,14 +11,16 @@ import { I18nProvider, DEFAULT_LOCALE, LOCALE_STORAGE_KEY } from '@/locales';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const inter = Inter({
+const instrument = Instrument_Sans({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-instrument',
 });
 
-const playfair = Playfair_Display({
+const newsreader = Newsreader({
   subsets: ['latin'],
-  variable: '--font-playfair',
+  style: ['normal', 'italic'],
+  axes: ['opsz'],
+  variable: '--font-newsreader',
 });
 
 export const metadata: Metadata = {
@@ -33,8 +35,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FAFAF8' },
-    { media: '(prefers-color-scheme: dark)', color: '#1C1917' },
+    { media: '(prefers-color-scheme: light)', color: '#FFFDFA' },
+    { media: '(prefers-color-scheme: dark)', color: '#1B1612' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -55,7 +57,7 @@ export default async function RootLayout({
       className="bg-background"
       data-scroll-behavior="smooth"
     >
-      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
+      <body className={`${instrument.variable} ${newsreader.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

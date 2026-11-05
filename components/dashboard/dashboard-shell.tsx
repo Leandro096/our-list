@@ -17,14 +17,14 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         'relative flex flex-1 flex-col transition-all duration-300',
-        collapsed ? 'lg:pl-16' : 'lg:pl-64'
+        collapsed ? 'lg:pl-16' : 'lg:pl-60'
       )}
     >
       {isPageLoading && (
         <div
           className={cn(
             'pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-[2px]',
-            collapsed ? 'lg:left-16' : 'lg:left-64'
+            collapsed ? 'lg:left-16' : 'lg:left-60'
           )}
         >
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

@@ -58,7 +58,7 @@ export function HomeClientPage() {
               alt="GL Logo"
               width={38}
               height={38}
-              className="shrink-0 rounded-full ring-1 ring-primary/30"
+              className="h-[38px] w-[38px] shrink-0 rounded-full ring-1 ring-primary/30"
               priority
             />
             <div className="flex flex-col leading-none">
@@ -438,7 +438,7 @@ export function HomeClientPage() {
               alt="GL Logo"
               width={28}
               height={28}
-              className="rounded-full opacity-90 ring-1 ring-primary/20"
+              className="h-7 w-7 rounded-full opacity-90 ring-1 ring-primary/20"
             />
             <div className="flex flex-col leading-none">
               <span className="font-serif text-sm font-semibold text-foreground">

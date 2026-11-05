@@ -11,6 +11,8 @@ import { getDashboardStats } from '@/services';
 
 import { Spinner } from '@/components/ui/spinner';
 
+import type { CategoryBreakdown } from './dashboard-content';
+
 const DashboardContent = dynamic(
   () => import('./dashboard-content').then((m) => m.DashboardContent),
   {
@@ -24,9 +26,15 @@ const DashboardContent = dynamic(
 
 interface DashboardRealtimeProps {
   initialStats: DashboardStats;
+  unsentInvitations: number;
+  categoryBreakdown: CategoryBreakdown;
 }
 
-export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
+export function DashboardRealtime({
+  initialStats,
+  unsentInvitations,
+  categoryBreakdown,
+}: DashboardRealtimeProps) {
   const [stats, setStats] = useState<DashboardStats>(initialStats);
   const supabase = useMemo(() => createClient(), []);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -89,5 +97,11 @@ export function DashboardRealtime({ initialStats }: DashboardRealtimeProps) {
     };
   }, [subscribe, supabase]);
 
-  return <DashboardContent stats={stats} />;
+  return (
+    <DashboardContent
+      stats={stats}
+      unsentInvitations={unsentInvitations}
+      categoryBreakdown={categoryBreakdown}
+    />
+  );
 }

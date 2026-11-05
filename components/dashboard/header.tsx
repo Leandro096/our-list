@@ -4,30 +4,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useRouter, usePathname } from 'next/navigation';
-import {
-  Sun,
-  User,
-  Moon,
-  Menu,
-  Tags,
-  Heart,
-  Check,
-  Users,
-  LogOut,
-  Shield,
-  Monitor,
-  History,
-  UserCog,
-  ScanLine,
-  Armchair,
-  Settings,
-  ChevronDown,
-  LayoutDashboard,
-} from 'lucide-react';
+import { Sun, User, Moon, Menu, Heart, Check, LogOut, Shield, Monitor } from 'lucide-react';
 
 import { toast } from '@/hooks';
 import { useI18n } from '@/locales';
-import { cn, PERMISSIONS, hasPermission } from '@/lib';
+import { cn, hasPermission } from '@/lib';
 
 import { useAuth } from '@/components/auth-provider';
 import {
@@ -48,65 +29,7 @@ import {
 
 import { useSidebar } from './sidebar-context';
 import { LanguageSwitcher } from '../language-switcher';
-
-const navigationItems = [
-  {
-    key: 'nav.dashboard' as const,
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    permission: PERMISSIONS.DASHBOARD_VIEW,
-  },
-  {
-    key: 'nav.guests' as const,
-    href: '/dashboard/guests',
-    icon: Users,
-    permission: PERMISSIONS.GUESTS_VIEW,
-  },
-  {
-    key: 'nav.scanner' as const,
-    href: '/dashboard/scanner',
-    icon: ScanLine,
-    permission: PERMISSIONS.SCANNER_USE,
-  },
-  {
-    key: 'nav.history' as const,
-    href: '/dashboard/scanner/history',
-    icon: History,
-    permission: PERMISSIONS.SCANNER_HISTORY,
-  },
-  {
-    key: 'nav.seating' as const,
-    href: '/dashboard/seating',
-    icon: Armchair,
-    permission: PERMISSIONS.SEATING_VIEW,
-  },
-  {
-    key: 'nav.categories' as const,
-    href: '/dashboard/categories',
-    icon: Tags,
-    permission: PERMISSIONS.CATEGORIES_VIEW,
-  },
-  {
-    key: 'nav.settings' as const,
-    href: '/dashboard/settings',
-    icon: Settings,
-    permission: PERMISSIONS.SETTINGS_USERS,
-    children: [
-      {
-        key: 'nav.users' as const,
-        href: '/dashboard/settings/users',
-        icon: UserCog,
-        permission: PERMISSIONS.SETTINGS_USERS,
-      },
-      {
-        key: 'nav.roles' as const,
-        href: '/dashboard/settings/roles',
-        icon: Shield,
-        permission: PERMISSIONS.SETTINGS_ROLES,
-      },
-    ],
-  },
-];
+import { mainNav, accountNav, isNavActive } from './nav-config';
 
 function getInitials(name: string | null | undefined) {
   if (!name) return 'U';
@@ -125,17 +48,15 @@ export function DashboardHeader() {
   const pathname = usePathname();
   const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(() =>
-    pathname.startsWith('/dashboard/settings')
-  );
   const { setPageLoading } = useSidebar();
 
   const userPermissions = activePermissions;
   const isSuperAdmin = profile?.is_super_admin || false;
 
-  const filteredNavigation = navigationItems.filter((item) =>
-    hasPermission(userPermissions, item.permission, isSuperAdmin)
-  );
+  const canSee = (item: { permissions: string[] }) =>
+    item.permissions.some((p) => hasPermission(userPermissions, p, isSuperAdmin));
+  const filteredNavigation = mainNav.filter(canSee);
+  const visibleAccountNav = accountNav.filter(canSee);
 
   const handleSignOut = async () => {
     try {
@@ -152,7 +73,7 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4 md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border/70 bg-background/90 px-4 backdrop-blur md:px-8">
       {/* Mobile menu */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger asChild>
@@ -163,92 +84,32 @@ export function DashboardHeader() {
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-              <Heart className="h-5 w-5 text-primary" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
+              <Heart className="h-4 w-4 text-gold" />
             </div>
-            <SheetTitle className="font-serif text-lg font-semibold">Wedding Manager</SheetTitle>
+            <SheetTitle className="font-serif text-xl">Wedding Manager</SheetTitle>
           </div>
           <nav className="space-y-1 p-3">
             {filteredNavigation.map((item) => {
-              const hasChildren = 'children' in item && !!item.children?.length;
-
-              if (hasChildren) {
-                const visibleChildren = item.children!.filter((child) =>
-                  hasPermission(userPermissions, child.permission, isSuperAdmin)
-                );
-                if (visibleChildren.length === 0) return null;
-                const isGroupActive = pathname.startsWith(item.href);
-
-                return (
-                  <div key={item.key}>
-                    <button
-                      type="button"
-                      onClick={() => setSettingsOpen((prev) => !prev)}
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                        isGroupActive
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                      )}
-                    >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      <span className="flex-1 text-left">{t(item.key)}</span>
-                      <ChevronDown
-                        className={cn('h-4 w-4 transition-transform', settingsOpen && 'rotate-180')}
-                      />
-                    </button>
-                    {settingsOpen && (
-                      <div className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
-                        {visibleChildren.map((child) => {
-                          const isActive =
-                            pathname === child.href || pathname.startsWith(child.href);
-                          return (
-                            <Link
-                              key={child.key}
-                              href={child.href}
-                              onClick={() => {
-                                if (!isActive) setPageLoading(true);
-                                setMobileOpen(false);
-                              }}
-                              className={cn(
-                                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                                isActive
-                                  ? 'bg-accent text-accent-foreground'
-                                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                              )}
-                            >
-                              <child.icon className="h-4 w-4 shrink-0" />
-                              <span>{t(child.key)}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              const isActive =
-                pathname === item.href ||
-                (item.href !== '/dashboard' && pathname.startsWith(item.href));
-
+              const isActive = isNavActive(item, pathname);
               return (
                 <Link
-                  key={item.key}
+                  key={item.nameKey}
                   href={item.href}
                   onClick={() => {
                     if (!isActive) setPageLoading(true);
                     setMobileOpen(false);
                   }}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                     isActive
-                      ? 'bg-accent text-accent-foreground'
+                      ? 'bg-accent font-medium text-accent-foreground'
                       : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
-                  <span>{t(item.key)}</span>
+                  <span>{t(item.nameKey)}</span>
                 </Link>
               );
             })}
@@ -292,7 +153,7 @@ export function DashboardHeader() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-9 w-9 rounded-full">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary/10 text-primary">
+              <AvatarFallback className="bg-secondary font-serif text-sm text-secondary-foreground">
                 {isLoading ? '...' : getInitials(profile?.display_name)}
               </AvatarFallback>
             </Avatar>
@@ -304,7 +165,7 @@ export function DashboardHeader() {
               <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
               {profile?.is_super_admin && (
-                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
                   Super Admin
                 </span>
               )}
@@ -317,6 +178,14 @@ export function DashboardHeader() {
               {t('nav.profile')}
             </Link>
           </DropdownMenuItem>
+          {visibleAccountNav.map((item) => (
+            <DropdownMenuItem key={item.nameKey} asChild>
+              <Link href={item.href}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {t(item.nameKey)}
+              </Link>
+            </DropdownMenuItem>
+          ))}
 
           {/* Role switcher — only when the user has more than one role */}
           {(profile?.roles?.length ?? 0) > 1 && (

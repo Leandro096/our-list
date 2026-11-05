@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useReducer } from 'react';
-import { X, Plus, Check, Loader2, UserPlus, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+import { X, Plus, Check, Loader2, UserPlus, ChevronsUpDown } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,7 +19,6 @@ import {
 import { useAuth } from '@/components/auth-provider';
 import { CategoriesDialog } from '@/components/categories';
 import {
-  Card,
   Label,
   Input,
   Select,
@@ -29,10 +27,7 @@ import {
   Command,
   Textarea,
   Checkbox,
-  CardTitle,
   SelectItem,
-  CardHeader,
-  CardContent,
   SelectValue,
   CommandList,
   CommandItem,
@@ -60,6 +55,9 @@ interface GuestFormProps {
   categories: Category[];
   guest?: GuestForEdit;
   mode?: 'create' | 'edit';
+  /** Called after a successful save. `addAnother` is true for "Save and add another". */
+  onDone?: (guestId: string, addAnother: boolean) => void;
+  onCancel?: () => void;
 }
 
 type GuestFormState = {
@@ -84,7 +82,14 @@ function guestFormReducer(state: GuestFormState, action: GuestFormAction): Guest
   return { ...state, ...action.payload };
 }
 
-export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps) {
+export function GuestForm({
+  categories,
+  guest,
+  mode = 'create',
+  onDone,
+  onCancel,
+}: GuestFormProps) {
+  const addAnotherRef = useRef(false);
   const router = useRouter();
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -240,8 +245,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           }),
         ]);
 
-        router.push('/dashboard/guests');
         router.refresh();
+        if (onDone) onDone(createdGuest.id, addAnotherRef.current);
+        else router.push('/dashboard/guests');
       } else {
         await updateGuestAction(guest!.id, {
           first_name: formData.first_name,
@@ -298,8 +304,9 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
           }),
         ]);
 
-        router.push(`/dashboard/guests/${guest!.id}`);
         router.refresh();
+        if (onDone) onDone(guest!.id, false);
+        else router.push(`/dashboard/guests?guest=${guest!.id}`);
       }
     } catch (err) {
       console.error('[GuestForm] caught error:', err);
@@ -345,20 +352,13 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="mb-4">
-        <Link href="/dashboard/guests">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('guests.backToGuests')}
-        </Link>
-      </Button>
-
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('guests.personalInfo')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <section className="space-y-4">
+        <h3 className="border-b border-border pb-2 font-serif text-lg">
+          {t('guests.personalInfo')}
+        </h3>
+        <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="first_name">{t('guests.firstName')} *</Label>
@@ -399,15 +399,13 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* RSVP Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('guests.rsvpStatus')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <section className="space-y-4">
+        <h3 className="border-b border-border pb-2 font-serif text-lg">{t('guests.rsvpStatus')}</h3>
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="status">{t('guests.status')}</Label>
             <Select
@@ -754,15 +752,13 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Categories */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('nav.categories')}</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="space-y-4">
+        <h3 className="border-b border-border pb-2 font-serif text-lg">{t('nav.categories')}</h3>
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {categoriesState.map((category) => (
               <button
@@ -797,16 +793,14 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
               onSave={handleSaved}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Grupo Familiar */}
       {guest?.parent_guest_id == null && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('guests.family')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <section className="space-y-4">
+          <h3 className="border-b border-border pb-2 font-serif text-lg">{t('guests.family')}</h3>
+          <div className="space-y-6">
             {/* Sección 1: Miembros del grupo (multi-select de existentes) */}
             <div className="space-y-3">
               <div>
@@ -906,16 +900,16 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
                 </PopoverContent>
               </Popover>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
 
       {/* Additional Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('guests.additionalInfo')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <section className="space-y-4">
+        <h3 className="border-b border-border pb-2 font-serif text-lg">
+          {t('guests.additionalInfo')}
+        </h3>
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="dietary_restrictions">{t('guests.dietaryRestrictions')}</Label>
             <Input
@@ -940,20 +934,38 @@ export function GuestForm({ categories, guest, mode = 'create' }: GuestFormProps
               rows={3}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <div className="flex gap-4">
+      <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap justify-end gap-2 border-t border-border bg-background px-6 py-4">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => (onCancel ? onCancel() : router.push('/dashboard/guests'))}
+        >
+          {t('common.cancel')}
+        </Button>
+        {mode === 'create' && (
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => {
+              addAnotherRef.current = true;
+            }}
+          >
+            {t('guestDialog.saveAndAddAnother')}
+          </Button>
+        )}
         <Button
           type="submit"
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
           disabled={isLoading}
+          onClick={() => {
+            addAnotherRef.current = false;
+          }}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === 'create' ? t('guests.addGuest') : t('settings.saveChanges')}
-        </Button>
-        <Button type="button" variant="outline" asChild>
-          <Link href="/dashboard/guests">{t('common.cancel')}</Link>
         </Button>
       </div>
     </form>

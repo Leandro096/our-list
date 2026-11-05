@@ -3,130 +3,133 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Wedding Design System — Navy & Gold (GL Monogram) */
+/*
+  Wedding design system — Papelería
+  White canvas, espresso ink, beige paper, khaki detail.
+  Gold is a thread, not a fill: active markers, focus rings, progress ends (~5% of any screen).
+*/
 :root {
-  /* Core Colors - Light Mode: Ivory canvas with Deep Navy text */
-  --background: oklch(0.98 0.005 90); /* Ivory #FAFAF8 */
-  --foreground: oklch(0.18 0.085 258); /* Deep Navy #1a2744 */
+  --background: #fffdfa; /* warm white */
+  --foreground: #35291f; /* espresso ink */
 
-  --card: oklch(1 0 0); /* Pure white */
-  --card-foreground: oklch(0.18 0.085 258);
+  --card: #ffffff;
+  --card-foreground: #35291f;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.085 258);
+  --popover: #ffffff;
+  --popover-foreground: #35291f;
 
-  /* Champagne Gold — Primary */
-  --primary: oklch(0.72 0.12 85); /* #C9A84C */
-  --primary-foreground: oklch(0.13 0.07 258); /* Dark navy on gold */
+  /* Primary is the ink, so buttons stay brown and gold stays rare */
+  --primary: #4b382a;
+  --primary-foreground: #fffdfa;
 
-  /* Navy Tint — Secondary */
-  --secondary: oklch(0.92 0.03 258); /* Very light navy tint */
-  --secondary-foreground: oklch(0.18 0.085 258);
+  --secondary: #eee6d7; /* beige */
+  --secondary-foreground: #35291f;
 
-  --muted: oklch(0.95 0.018 258); /* Near-white navy tint */
-  --muted-foreground: oklch(0.42 0.065 258); /* Medium navy */
+  --muted: #f6f1e8;
+  --muted-foreground: #756553;
 
-  /* Light Navy Tint — Accent */
-  --accent: oklch(0.91 0.025 258);
-  --accent-foreground: oklch(0.18 0.085 258);
+  --accent: #f0e8d9;
+  --accent-foreground: #35291f;
 
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
+  --destructive: #a63a2a;
+  --destructive-foreground: #fffdfa;
 
-  --border: oklch(0.88 0.025 258); /* Subtle navy border */
-  --input: oklch(0.91 0.02 258);
-  --ring: oklch(0.72 0.12 85); /* Gold ring */
+  --border: #e7dfd0;
+  --input: #ded3c0;
+  --ring: #b58a2e;
 
-  /* Chart Colors */
-  --chart-1: oklch(0.72 0.12 85); /* Gold */
-  --chart-2: oklch(0.35 0.08 258); /* Navy */
-  --chart-3: oklch(0.55 0.09 200); /* Teal */
-  --chart-4: oklch(0.65 0.13 50); /* Amber */
-  --chart-5: oklch(0.5 0.06 258); /* Slate navy */
+  --chart-1: #4b382a; /* espresso */
+  --chart-2: #b9a67e; /* khaki */
+  --chart-3: #b58a2e; /* gold */
+  --chart-4: #8c7b65; /* taupe */
+  --chart-5: #d5c8b2; /* sand */
 
+  /* Corner radii: 4 / 6 / 8 / 12 */
   --radius: 0.5rem;
 
-  /* Sidebar — Dark Navy in light mode too (premium look) */
-  --sidebar: oklch(0.2 0.085 258); /* Deep Navy */
-  --sidebar-foreground: oklch(0.95 0.005 90); /* Ivory */
-  --sidebar-primary: oklch(0.72 0.12 85);
-  --sidebar-primary-foreground: oklch(0.13 0.07 258);
-  --sidebar-accent: oklch(0.26 0.085 258);
-  --sidebar-accent-foreground: oklch(0.95 0.005 90);
-  --sidebar-border: oklch(0.28 0.08 258);
-  --sidebar-ring: oklch(0.72 0.12 85);
+  /* Sidebar: beige paper, not a dark slab */
+  --sidebar: #f3ede2;
+  --sidebar-foreground: #35291f;
+  --sidebar-primary: #b58a2e;
+  --sidebar-primary-foreground: #fffdfa;
+  --sidebar-accent: #eae1d0;
+  --sidebar-accent-foreground: #35291f;
+  --sidebar-border: #e3d9c7;
+  --sidebar-ring: #b58a2e;
 
-  /* Wedding-specific tokens */
-  --gold: oklch(0.72 0.12 85);
-  --gold-muted: oklch(0.65 0.1 85);
-  --navy: oklch(0.18 0.085 258);
-  --navy-light: oklch(0.28 0.085 258);
-  --ivory: oklch(0.98 0.005 90);
-  --charcoal: oklch(0.18 0.085 258);
+  /* Wedding tokens */
+  --gold: #b58a2e;
+  --gold-muted: #cdb273;
+  --khaki: #b9a67e;
+  --khaki-deep: #8c7b55;
+  --sage: #6e6f46; /* olive khaki, used for "confirmed" */
+  --blush: #e9d9c8;
+  --ivory: #fffdfa;
+  --charcoal: #35291f;
+  --navy: #35291f;
+  --navy-light: #4b382a;
 }
 
 .dark {
-  /* Core Colors - Dark Mode: Deep Navy matching GL icon background */
-  --background: oklch(0.17 0.075 258); /* Deep Navy #1a2744 */
-  --foreground: oklch(0.95 0.008 85); /* Warm Ivory */
+  --background: #1b1612; /* dark espresso */
+  --foreground: #f1eadf;
 
-  --card: oklch(0.21 0.078 258); /* Slightly lighter navy */
-  --card-foreground: oklch(0.95 0.008 85);
+  --card: #231d18;
+  --card-foreground: #f1eadf;
 
-  --popover: oklch(0.21 0.078 258);
-  --popover-foreground: oklch(0.95 0.008 85);
+  --popover: #261f1a;
+  --popover-foreground: #f1eadf;
 
-  /* Bright Gold — Primary (Dark) */
-  --primary: oklch(0.76 0.13 85); /* Vivid champagne gold */
-  --primary-foreground: oklch(0.13 0.07 258); /* Dark navy on gold */
+  /* Beige buttons on espresso mirror brown buttons on white */
+  --primary: #e8dcc6;
+  --primary-foreground: #1b1612;
 
-  /* Medium Navy — Secondary (Dark) */
-  --secondary: oklch(0.27 0.078 258);
-  --secondary-foreground: oklch(0.95 0.008 85);
+  --secondary: #2e261f;
+  --secondary-foreground: #f1eadf;
 
-  --muted: oklch(0.25 0.075 258);
-  --muted-foreground: oklch(0.62 0.045 258); /* Light slate */
+  --muted: #2a231d;
+  --muted-foreground: #a99a82;
 
-  /* Elevated Navy — Accent (Dark) */
-  --accent: oklch(0.29 0.078 258);
-  --accent-foreground: oklch(0.95 0.008 85);
+  --accent: #332a22;
+  --accent-foreground: #f1eadf;
 
-  --destructive: oklch(0.45 0.18 25);
-  --destructive-foreground: oklch(0.95 0 0);
+  --destructive: #c4503f;
+  --destructive-foreground: #fffdfa;
 
-  --border: oklch(0.29 0.075 258); /* Navy border */
-  --input: oklch(0.25 0.072 258);
-  --ring: oklch(0.76 0.13 85); /* Bright gold ring */
+  --border: #3a3128;
+  --input: #403529;
+  --ring: #d4ab4f;
 
-  /* Chart Colors - Dark */
-  --chart-1: oklch(0.76 0.13 85); /* Bright Gold */
-  --chart-2: oklch(0.5 0.08 258); /* Slate Navy */
-  --chart-3: oklch(0.6 0.09 200); /* Teal */
-  --chart-4: oklch(0.68 0.13 50); /* Amber */
-  --chart-5: oklch(0.55 0.06 258); /* Medium slate */
+  --chart-1: #e8dcc6;
+  --chart-2: #a89870;
+  --chart-3: #d4ab4f;
+  --chart-4: #8c7b65;
+  --chart-5: #7d6c57;
 
-  /* Sidebar - Dark: Darker navy */
-  --sidebar: oklch(0.14 0.065 258); /* Darkest Navy */
-  --sidebar-foreground: oklch(0.95 0.008 85);
-  --sidebar-primary: oklch(0.76 0.13 85);
-  --sidebar-primary-foreground: oklch(0.13 0.07 258);
-  --sidebar-accent: oklch(0.24 0.078 258);
-  --sidebar-accent-foreground: oklch(0.95 0.008 85);
-  --sidebar-border: oklch(0.27 0.075 258);
-  --sidebar-ring: oklch(0.76 0.13 85);
+  --sidebar: #15110e;
+  --sidebar-foreground: #f1eadf;
+  --sidebar-primary: #d4ab4f;
+  --sidebar-primary-foreground: #1b1612;
+  --sidebar-accent: #241d17;
+  --sidebar-accent-foreground: #f1eadf;
+  --sidebar-border: #2e261f;
+  --sidebar-ring: #d4ab4f;
 
-  /* Wedding-specific tokens - Dark */
-  --gold: oklch(0.76 0.13 85);
-  --gold-muted: oklch(0.62 0.1 85);
-  --navy: oklch(0.17 0.075 258);
-  --navy-light: oklch(0.29 0.078 258);
-  --ivory: oklch(0.95 0.008 85);
-  --charcoal: oklch(0.17 0.075 258);
+  --gold: #d4ab4f;
+  --gold-muted: #8f7536;
+  --khaki: #a89870;
+  --khaki-deep: #c2b48c;
+  --sage: #a3a67a;
+  --blush: #4a3b30;
+  --ivory: #f1eadf;
+  --charcoal: #f1eadf;
+  --navy: #1b1612;
+  --navy-light: #332a22;
 }
 
 @theme inline {
-  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
-  --font-serif: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif;
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
 
   --color-background: var(--background);
@@ -157,6 +160,8 @@
   /* Wedding tokens */
   --color-gold: var(--gold);
   --color-gold-muted: var(--gold-muted);
+  --color-khaki: var(--khaki);
+  --color-khaki-deep: var(--khaki-deep);
   --color-blush: var(--blush);
   --color-sage: var(--sage);
   --color-ivory: var(--ivory);
@@ -185,19 +190,39 @@
     @apply bg-background text-foreground;
   }
 
-  /* Typography - Headings use Playfair Display */
+  /* Headings use Newsreader, whose optical size adapts from caption to display */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply font-serif tracking-tight;
+    @apply font-serif font-medium tracking-tight;
   }
 
-  /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+  }
+}
+
+/* The one moment of motion: the RSVP ribbon unrolls once when the dashboard opens */
+@keyframes ribbon-unroll {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.ribbon-segment {
+  transform-origin: left center;
+  animation: ribbon-unroll 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ribbon-segment {
+    animation: none;
   }
 }
 
@@ -208,8 +233,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--muted);
-  border-radius: 4px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {

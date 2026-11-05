@@ -1,18 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
-import { getCategories } from '@/services';
-
-import { PageHeader } from '@/components/page-header';
-import { GuestForm } from '@/components/guests/guest-form';
-
-export default async function NewGuestPage() {
-  const supabase = await createClient();
-  const categories = await getCategories(supabase);
-
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader titleKey="guests.newGuest" descriptionKey="guests.newDescription" />
-      <GuestForm categories={categories} />
-    </div>
-  );
+// Creating a guest now happens in a dialog on the guests page.
+export default function NewGuestPage() {
+  redirect('/dashboard/guests?guest=new');
 }

@@ -280,7 +280,7 @@ export function RolesManager({ roles, permissions }: RolesManagerProps) {
               <Label>{t('settings.roles_section.permissions')}</Label>
               {Object.entries(permissionGroups).map(([group, perms]) => (
                 <div key={group} className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {group}
                   </p>
                   <div className="space-y-1.5 rounded-md border border-border p-3">
