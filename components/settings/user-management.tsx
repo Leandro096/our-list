@@ -1,21 +1,20 @@
 'use client';
 
 import { useReducer } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
-import { User, Crown, Pencil, Shield, UserPlus } from 'lucide-react';
+import { User, Crown, Pencil, Shield, UserPlus, Trash2 } from 'lucide-react';
 
 import { toast } from '@/hooks';
 import type { Role } from '@/lib';
 import { useLocale, useTranslation } from '@/locales';
 import type { UserWithRoleAssignments } from '@/services';
-import {
-  updateUserRolesAction,
-  updateUserSuperAdminAction,
-} from '@/app/dashboard/settings/actions';
+import { updateUserAction, deleteUserAction } from '@/app/dashboard/settings/users/actions';
 
 import {
   Card,
+  Input,
   Table,
   Badge,
   Label,
@@ -38,11 +37,13 @@ import {
   DialogDescription,
 } from '@/components/ui';
 
-import { InviteUserDialog } from './invite-user-dialog';
+import { CreateUserDialog } from './create-user-dialog';
 
 interface UserManagementProps {
   users: UserWithRoleAssignments[];
   roles: Role[];
+  currentUserId: string;
+  canEditSuperAdmin: boolean;
 }
 
 function getRoleIcon(roleName: string) {
@@ -57,6 +58,9 @@ function getRoleIcon(roleName: string) {
 type State = {
   editingUser: UserWithRoleAssignments | null;
   editIsSuperAdmin: boolean;
+  editName: string;
+  editEmail: string;
+  editPassword: string;
   editRoleIds: string[];
   isSaving: boolean;
   inviteOpen: boolean;
@@ -74,7 +78,13 @@ function reducer(state: State, action: Action): State {
   return { ...state, ...action.payload };
 }
 
-export function UserManagement({ users, roles }: UserManagementProps) {
+export function UserManagement({
+  users,
+  roles,
+  currentUserId,
+  canEditSuperAdmin,
+}: UserManagementProps) {
+  const router = useRouter();
   const { t } = useTranslation();
   const { locale } = useLocale();
   const dateFnsLocale = locale === 'es' ? esLocale : undefined;
@@ -82,12 +92,24 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   const [state, dispatch] = useReducer(reducer, {
     editingUser: null,
     editIsSuperAdmin: false,
+    editName: '',
+    editEmail: '',
+    editPassword: '',
     editRoleIds: [],
     isSaving: false,
     inviteOpen: false,
   });
 
-  const { editingUser, editIsSuperAdmin, editRoleIds, isSaving, inviteOpen } = state;
+  const {
+    editingUser,
+    editIsSuperAdmin,
+    editName,
+    editEmail,
+    editPassword,
+    editRoleIds,
+    isSaving,
+    inviteOpen,
+  } = state;
 
   const openEdit = (user: UserWithRoleAssignments) => {
     dispatch({
@@ -95,6 +117,9 @@ export function UserManagement({ users, roles }: UserManagementProps) {
       payload: {
         editingUser: user,
         editIsSuperAdmin: user.is_super_admin,
+        editName: user.display_name ?? '',
+        editEmail: user.email,
+        editPassword: '',
         editRoleIds: user.user_roles.map((ur) => ur.role_id),
       },
     });
@@ -103,7 +128,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   const closeEdit = () => {
     dispatch({
       type: 'UPDATE',
-      payload: { editingUser: null, editIsSuperAdmin: false, editRoleIds: [] },
+      payload: { editingUser: null, editIsSuperAdmin: false, editPassword: '', editRoleIds: [] },
     });
   };
 
@@ -111,20 +136,45 @@ export function UserManagement({ users, roles }: UserManagementProps) {
     dispatch({ type: 'TOGGLE_ROLE', roleId });
   };
 
+  const handleDelete = async () => {
+    if (!editingUser) return;
+    const name = editingUser.display_name || editingUser.email;
+    if (!window.confirm(t('settings.users_section.deleteConfirm').replace('{name}', name))) return;
+    dispatch({ type: 'UPDATE', payload: { isSaving: true } });
+    try {
+      await deleteUserAction(editingUser.id);
+      toast({ title: t('settings.users_section.deleteSuccess') });
+      closeEdit();
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: t('settings.users_section.deleteError'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      dispatch({ type: 'UPDATE', payload: { isSaving: false } });
+    }
+  };
+
   const handleSave = async () => {
     if (!editingUser) return;
     dispatch({ type: 'UPDATE', payload: { isSaving: true } });
     try {
-      await Promise.all([
-        updateUserSuperAdminAction(editingUser.id, editIsSuperAdmin),
-        updateUserRolesAction(editingUser.id, editRoleIds),
-      ]);
+      await updateUserAction({
+        userId: editingUser.id,
+        displayName: editName,
+        email: editEmail,
+        password: editPassword || undefined,
+        roleIds: editRoleIds,
+        isSuperAdmin: editIsSuperAdmin,
+      });
       closeEdit();
+      router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al actualizar el usuario.';
       toast({
-        title: 'Error',
-        description: message,
+        title: t('settings.users_section.updateError'),
+        description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       });
     } finally {
@@ -135,7 +185,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
   return (
     <div className="space-y-6">
       {/* Users Table */}
-      <InviteUserDialog
+      <CreateUserDialog
         roles={roles}
         open={inviteOpen}
         onOpenChange={(v) => dispatch({ type: 'UPDATE', payload: { inviteOpen: v } })}
@@ -149,7 +199,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
             onClick={() => dispatch({ type: 'UPDATE', payload: { inviteOpen: true } })}
           >
             <UserPlus className="mr-2 h-4 w-4" />
-            {t('settings.users_section.inviteUser')}
+            {t('settings.users_section.createUser')}
           </Button>
         </CardHeader>
         <CardContent>
@@ -320,6 +370,46 @@ export function UserManagement({ users, roles }: UserManagementProps) {
           </DialogHeader>
 
           <div className="space-y-5">
+            {/* Profile */}
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">{t('settings.users_section.createName')}</Label>
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE', payload: { editName: e.target.value } })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-email">{t('settings.users_section.createEmail')}</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE', payload: { editEmail: e.target.value } })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-password">
+                  {t('settings.users_section.createPasswordKeep')}
+                </Label>
+                <Input
+                  id="edit-password"
+                  autoComplete="new-password"
+                  value={editPassword}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE', payload: { editPassword: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Super Admin toggle */}
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-0.5">
@@ -333,6 +423,7 @@ export function UserManagement({ users, roles }: UserManagementProps) {
               <Switch
                 id="super-admin-switch"
                 checked={editIsSuperAdmin}
+                disabled={!canEditSuperAdmin || editingUser?.id === currentUserId}
                 onCheckedChange={(v) =>
                   dispatch({ type: 'UPDATE', payload: { editIsSuperAdmin: !!v } })
                 }
@@ -374,6 +465,17 @@ export function UserManagement({ users, roles }: UserManagementProps) {
             </div>
 
             <div className="flex gap-2 pt-1">
+              {editingUser && editingUser.id !== currentUserId && (
+                <Button
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={handleDelete}
+                  disabled={isSaving}
+                  aria-label={t('settings.users_section.deleteUser')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="outline" className="flex-1" onClick={closeEdit} disabled={isSaving}>
                 {t('common.cancel')}
               </Button>

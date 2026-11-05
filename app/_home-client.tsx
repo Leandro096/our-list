@@ -96,7 +96,7 @@ export function HomeClientPage() {
                   size="sm"
                   className="bg-primary text-primary-foreground shadow-[0_2px_12px_oklch(0.72_0.12_85/0.35)] hover:bg-primary/90"
                 >
-                  <Link href="/auth/sign-up">{t('home.getStarted')}</Link>
+                  <Link href="/auth/login">{t('home.getStarted')}</Link>
                 </Button>
               </>
             )}
@@ -144,7 +144,7 @@ export function HomeClientPage() {
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => setMenuOpen(false)}
               >
-                <Link href="/auth/sign-up">{t('home.getStarted')}</Link>
+                <Link href="/auth/login">{t('home.getStarted')}</Link>
               </Button>
             </div>
           </div>
@@ -201,7 +201,7 @@ export function HomeClientPage() {
                         asChild
                         className="bg-primary text-primary-foreground shadow-[0_4px_20px_oklch(0.72_0.12_85/0.40)] transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_6px_28px_oklch(0.72_0.12_85/0.55)]"
                       >
-                        <Link href="/auth/sign-up">
+                        <Link href="/auth/login">
                           {t('home.startPlanning')}
                           <Heart className="ml-2 h-4 w-4" />
                         </Link>
@@ -400,7 +400,7 @@ export function HomeClientPage() {
                       asChild
                       className="bg-primary text-primary-foreground shadow-[0_4px_28px_oklch(0.72_0.12_85/0.55)] transition-all duration-200 hover:scale-[1.03] hover:bg-primary/90"
                     >
-                      <Link href="/auth/sign-up">{t('home.getStartedFree')}</Link>
+                      <Link href="/auth/login">{t('home.getStartedFree')}</Link>
                     </Button>
                     <Button
                       size="lg"

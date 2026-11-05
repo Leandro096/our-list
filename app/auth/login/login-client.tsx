@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -106,15 +105,6 @@ export default function LoginPage() {
                   >
                     {isLoading ? t('auth.signingIn') : t('auth.signIn')}
                   </Button>
-                </div>
-                <div className="mt-6 text-center text-sm text-muted-foreground">
-                  {t('auth.noAccount')}{' '}
-                  <Link
-                    href="/auth/sign-up"
-                    className="font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {t('auth.signUp')}
-                  </Link>
                 </div>
               </form>
             </CardContent>

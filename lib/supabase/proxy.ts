@@ -28,6 +28,11 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Public self-registration is disabled: accounts are created from inside the dashboard.
+  if (request.nextUrl.pathname.startsWith('/auth/sign-up')) {
+    return NextResponse.redirect(new URL('/auth/login', request.url), 302);
+  }
+
   // Use getClaims() to validate the JWT locally using the project's public keys.
   // Faster than getUser() (no network call) and required for token refresh in the proxy.
   const { data } = await supabase.auth.getClaims();

@@ -40,9 +40,6 @@ export default function AuthErrorPage() {
                 >
                   <Link href="/auth/login">{t('auth.backToSignIn')}</Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/auth/sign-up">{t('auth.createNewAccount')}</Link>
-                </Button>
               </div>
             </CardContent>
           </Card>

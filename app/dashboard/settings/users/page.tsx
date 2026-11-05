@@ -67,7 +67,12 @@ export default async function UsersSettingsPage() {
         titleKey="settings.users_section.title"
         descriptionKey="settings.usersDescription"
       />
-      <UserManagement users={users} roles={roles} />
+      <UserManagement
+        users={users}
+        roles={roles}
+        currentUserId={user.id}
+        canEditSuperAdmin={Boolean(profile.is_super_admin)}
+      />
     </div>
   );
 }
