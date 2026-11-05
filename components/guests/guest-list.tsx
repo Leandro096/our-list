@@ -572,7 +572,10 @@ export function GuestList({
       </Dialog>
 
       {/* ---- Status tabs: the list is read by RSVP state first ---- */}
-      <div role="tablist" className="flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border">
+      <div
+        role="tablist"
+        className="flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border"
+      >
         {STATUS_OPTIONS.map((option) => {
           const active = currentParams.status === option;
           const count =

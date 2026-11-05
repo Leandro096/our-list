@@ -183,7 +183,10 @@ function ExistingGuest({
           </p>
         </DialogDescription>
 
-        <div role="tablist" className="mt-4 flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border">
+        <div
+          role="tablist"
+          className="mt-4 flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border"
+        >
           {TABS.map((key) => (
             <button
               key={key}
