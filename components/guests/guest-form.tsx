@@ -937,10 +937,11 @@ export function GuestForm({
         </div>
       </section>
 
-      <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap justify-end gap-2 border-t border-border bg-background px-6 py-4">
+      <div className="sticky bottom-0 -mx-6 flex flex-col-reverse gap-2 border-t border-border bg-background px-6 py-4 sm:flex-row sm:justify-end">
         <Button
           type="button"
           variant="ghost"
+          className="w-full sm:w-auto"
           onClick={() => (onCancel ? onCancel() : router.push('/dashboard/guests'))}
         >
           {t('common.cancel')}
@@ -949,6 +950,7 @@ export function GuestForm({
           <Button
             type="submit"
             variant="outline"
+            className="w-full sm:w-auto"
             disabled={isLoading}
             onClick={() => {
               addAnotherRef.current = true;
@@ -959,6 +961,7 @@ export function GuestForm({
         )}
         <Button
           type="submit"
+          className="w-full sm:w-auto"
           disabled={isLoading}
           onClick={() => {
             addAnotherRef.current = false;

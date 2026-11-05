@@ -708,10 +708,10 @@ export function GuestList({
           <colgroup>
             <col className="w-10" />
             <col className="min-w-0 w-auto" />
-            <col className="w-28" />
+            <col className="hidden w-28 md:table-column" />
             <col className="hidden w-48 md:table-column" />
             <col className="hidden w-20 lg:table-column" />
-            <col className="w-10" />
+            <col className="w-24" />
           </colgroup>
           <TableHeader>
             <TableRow>
@@ -742,7 +742,7 @@ export function GuestList({
                   />
                 </button>
               </TableHead>
-              <TableHead>
+              <TableHead className="hidden md:table-cell">
                 <button
                   type="button"
                   className="flex items-center text-left text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -811,10 +811,21 @@ export function GuestList({
                     {guest.email && (
                       <p className="truncate text-xs text-muted-foreground">{guest.email}</p>
                     )}
+                    {/* The status column is hidden on small screens: show it under the name */}
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground md:hidden">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          STATUS_DOT[guest.status] ?? 'bg-border'
+                        )}
+                      />
+                      {t(`guests.statuses.${guest.status}`)}
+                    </p>
                   </TableCell>
 
                   {/* Status */}
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <span className="inline-flex items-center gap-2 text-sm">
                       <span
                         aria-hidden

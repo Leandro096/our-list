@@ -63,7 +63,7 @@ export function GuestDialog({ categories }: { categories: Category[] }) {
         if (!open) setParams({ guest: null, tab: null });
       }}
     >
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
         {guestParam === 'new' && (
           <NewGuest categories={categories} onClose={() => setParams({ guest: null, tab: null })} />
         )}
@@ -92,7 +92,7 @@ function NewGuest({ categories, onClose }: { categories: Category[]; onClose: ()
         <DialogTitle className="font-serif text-2xl">{t('guests.newGuest')}</DialogTitle>
         <DialogDescription className="mt-1">{t('guests.newDescription')}</DialogDescription>
       </div>
-      <div className="flex-1 overflow-y-auto px-6 pb-6 pt-5">
+      <div className="flex-1 overflow-y-auto px-6 pt-5">
         <GuestForm
           key={formKey}
           categories={categories}
@@ -207,7 +207,7 @@ function ExistingGuest({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-6 pt-5">
+      <div className={cn('flex-1 overflow-y-auto px-6 pt-5', tab !== 'edit' && 'pb-6')}>
         {tab === 'summary' && <Summary guest={guest} onOpenGuest={onOpenGuest} />}
         {tab === 'edit' && data.edit && (
           <GuestForm
