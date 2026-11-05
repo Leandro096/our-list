@@ -47,7 +47,7 @@ export function InvitationHero({ fullName }: { fullName: string }) {
         >
           {t('invitations.page.invited')}
         </p>
-        <p className="inv-rise mt-1 text-base capitalize opacity-95" style={delay(0.9)}>
+        <p className="inv-rise mt-1 text-base opacity-95 first-letter:uppercase" style={delay(0.9)}>
           {formatWeddingDate(locale)}
         </p>
         <div className="inv-rise mt-5" style={delay(1.1)}>

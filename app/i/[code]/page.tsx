@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Cormorant_Garamond } from 'next/font/google';
 
@@ -6,6 +7,7 @@ import { COUPLE_NAMES, INVITATION_PHOTOS, SHORT_CODE_PATTERN } from '@/lib/invit
 
 import { getPublicRsvpDetails } from '@/app/rsvp/actions';
 
+import { I18nText } from '@/components/guests/i18n-text';
 import { RsvpClosed } from '@/components/guests/rsvp-closed';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { InvitationHero } from '@/components/guests/invitation-hero';
@@ -52,7 +54,7 @@ async function findGuest(code: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from('guests')
-    .select('invitation_guid, first_name, last_name')
+    .select('invitation_guid, first_name, last_name, status')
     .eq('short_code', code)
     .maybeSingle();
   return data;
@@ -93,6 +95,16 @@ export default async function InvitationPage({ params }: { params: Promise<{ cod
             <div className="mx-auto mb-6 flex w-full max-w-2xl justify-end">
               <LanguageSwitcher />
             </div>
+            {guest.status === 'confirmed' && (
+              <div className="mx-auto mb-6 w-full max-w-2xl">
+                <Link
+                  href={`/invitacion/${code.toLowerCase()}`}
+                  className="flex h-12 items-center justify-center rounded-md bg-primary px-6 text-primary-foreground"
+                >
+                  <I18nText k="invitations.page.pass.openInvitation" />
+                </Link>
+              </div>
+            )}
             {isRsvpEnabled ? (
               <PublicRsvpFlow
                 invitationGuid={guest.invitation_guid}

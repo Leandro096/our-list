@@ -14,7 +14,58 @@ export const INVITATION_PHOTOS = {
   strip: ['/invitation/strip-1.jpg', '/invitation/strip-2.jpg', '/invitation/strip-3.jpg'],
 };
 
+/** Event logistics for the real invitation. Override per deployment with NEXT_PUBLIC_* variables. */
+export const EVENT_DETAILS = {
+  ceremony: {
+    time: process.env.NEXT_PUBLIC_CEREMONY_TIME ?? '',
+    venue: process.env.NEXT_PUBLIC_CEREMONY_VENUE ?? '',
+    /** Optional exact Google Maps link; without it the venue text is searched on Maps. */
+    mapsUrl: process.env.NEXT_PUBLIC_CEREMONY_MAPS_URL ?? '',
+  },
+  reception: {
+    time: process.env.NEXT_PUBLIC_RECEPTION_TIME ?? '',
+    venue: process.env.NEXT_PUBLIC_RECEPTION_VENUE ?? '',
+    mapsUrl: process.env.NEXT_PUBLIC_RECEPTION_MAPS_URL ?? '',
+  },
+};
+
+/** Shown on the invitation page, one name per line. */
+export const PARENTS = {
+  bride: ['Jose E. Taveras', 'Rosa Medina'],
+  groom: ['Honorio A. García', 'Ingrid S. Martinez'],
+};
+
+/** Colour suggestions for the dress code, in the tones of the save-the-date photos. */
+export const DRESS_PALETTE = [
+  { hex: '#eadfc8', es: 'Arena', en: 'Sand' },
+  { hex: '#cdb892', es: 'Beige', en: 'Beige' },
+  { hex: '#a8936f', es: 'Caqui', en: 'Khaki' },
+  { hex: '#9ca88c', es: 'Salvia', en: 'Sage' },
+  { hex: '#d8b4a4', es: 'Rosa palo', en: 'Dusty rose' },
+  { hex: '#7a5a43', es: 'Cacao', en: 'Cocoa' },
+];
+
+/** Start of the ceremony as a local Date, read from a time such as "4:00 P.M." or "16:00". Midnight if unreadable. */
+export function ceremonyStart(): Date {
+  const { y, m, d } = parseIso(WEDDING_DATE_ISO);
+  const match = EVENT_DETAILS.ceremony.time.match(/(\d{1,2})(?::(\d{2}))?\s*([ap])?\.?\s*m?\.?/i);
+  let hour = 0;
+  let minute = 0;
+  if (match) {
+    hour = Number(match[1]);
+    minute = Number(match[2] ?? 0);
+    const meridiem = match[3]?.toLowerCase();
+    if (meridiem === 'p' && hour < 12) hour += 12;
+    if (meridiem === 'a' && hour === 12) hour = 0;
+  }
+  return new Date(y, m - 1, d, hour, minute);
+}
+
 export const SHORT_CODE_PATTERN = /^[a-hj-km-np-z2-9]{6}$/;
+
+export function buildPassUrl(siteUrl: string, shortCode: string): string {
+  return `${siteUrl.replace(/\/+$/, '')}/invitacion/${shortCode}`;
+}
 
 export function buildInvitationUrl(siteUrl: string, shortCode: string): string {
   return `${siteUrl.replace(/\/+$/, '')}/i/${shortCode}`;

@@ -1,4 +1,5 @@
 import {
+  Gift,
   Tags,
   Send,
   Users,
@@ -64,6 +65,12 @@ export const accountNav: NavItem[] = [
     href: '/dashboard/categories',
     icon: Tags,
     permissions: [PERMISSIONS.CATEGORIES_VIEW],
+  },
+  {
+    nameKey: 'nav.gifts',
+    href: '/dashboard/gifts',
+    icon: Gift,
+    permissions: [PERMISSIONS.GUESTS_VIEW],
   },
   {
     nameKey: 'nav.users',
