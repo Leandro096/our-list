@@ -67,7 +67,11 @@ export function StoryTimeline({ today, localeTag }: { today: number; localeTag: 
     timeZone: 'UTC',
   });
   const fmtDay = new Intl.DateTimeFormat(localeTag, { day: 'numeric', timeZone: 'UTC' });
-  const fmtDayMonth = new Intl.DateTimeFormat(localeTag, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const fmtDayMonth = new Intl.DateTimeFormat(localeTag, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
 
   const items = MILESTONES.map((m, i) => {
     const start = utc(m.from);
@@ -78,7 +82,10 @@ export function StoryTimeline({ today, localeTag }: { today: number; localeTag: 
       isWedding: i === MILESTONES.length - 1,
       label: m.to
         ? t('homeTodo.storyRange', {
-            from: (new Date(start).getUTCMonth() === new Date(end).getUTCMonth() ? fmtDay : fmtDayMonth).format(start),
+            from: (new Date(start).getUTCMonth() === new Date(end).getUTCMonth()
+              ? fmtDay
+              : fmtDayMonth
+            ).format(start),
             to: fmt.format(end),
           })
         : fmt.format(start),
