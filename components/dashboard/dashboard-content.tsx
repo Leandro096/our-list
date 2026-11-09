@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import type { DashboardStats, RecentActivityItem } from '@/lib/types';
 import { COUPLE_NAMES, WEDDING_DATE_ISO, formatWeddingDate } from '@/lib/invitation';
 
+import { StoryTimeline } from './story-timeline';
 import { useLocale, useTranslation } from '@/locales/i18n-provider';
 
 /** Guests per category name, split by reception or ceremony only. */
@@ -146,11 +147,6 @@ function Heading({ children, note }: { children: React.ReactNode; note?: string 
 function Countdown({ now, localeTag }: { now: number | null; localeTag: string }) {
   const { t } = useTranslation();
   const wedding = weddingUtc();
-  const shortDate = new Intl.DateTimeFormat(localeTag, {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  });
 
   if (now === null) return <div className="h-24" aria-hidden />;
 
@@ -188,52 +184,11 @@ function Countdown({ now, localeTag }: { now: number | null; localeTag: string }
     return <p className="font-serif text-3xl">{headline}</p>;
   }
 
-  // One tick per month boundary between today and the wedding day.
-  const start = new Date(today);
-  const ticks: Array<{ pos: number; label: string }> = [];
-  for (let k = 1; ; k++) {
-    const boundary = Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + k, 1);
-    if (boundary >= wedding) break;
-    ticks.push({
-      pos: ((boundary - today) / (wedding - today)) * 100,
-      label: new Intl.DateTimeFormat(localeTag, { month: 'short', timeZone: 'UTC' }).format(
-        boundary
-      ),
-    });
-  }
-  const step = ticks.length > 12 ? 2 : 1;
-
   return (
     <div>
       <p className="font-serif text-3xl">{headline}</p>
       {hoursLine && <p className="mt-1 text-lg text-muted-foreground">{hoursLine}</p>}
-      <div className="relative mt-6 h-14" aria-hidden>
-        <div className="ribbon-segment absolute inset-x-0 top-3 h-px bg-foreground/50" />
-        {ticks.map((tick, i) => (
-          <div
-            key={tick.pos}
-            className="absolute top-3 -translate-x-1/2"
-            style={{ left: `${tick.pos}%` }}
-          >
-            <span className="block h-2 w-px bg-foreground/40" />
-            {i % step === 0 && tick.pos > 8 && tick.pos < 92 && (
-              <span className="mt-1.5 block text-xs text-muted-foreground">{tick.label}</span>
-            )}
-          </div>
-        ))}
-        <div className="absolute left-0 top-3 -translate-y-1/2">
-          <span className="block h-2.5 w-2.5 rounded-full bg-foreground" />
-          <span className="mt-2.5 block text-xs text-muted-foreground">
-            {t('homeTodo.todayMarker')}
-          </span>
-        </div>
-        <div className="absolute right-0 top-3 -translate-y-1/2 text-right">
-          <span className="ml-auto block h-3.5 w-3.5 rounded-full bg-gold ring-4 ring-gold/20" />
-          <span className="mt-2 block text-xs text-muted-foreground">
-            {shortDate.format(wedding)}
-          </span>
-        </div>
-      </div>
+      <StoryTimeline today={today} localeTag={localeTag} />
     </div>
   );
 }
