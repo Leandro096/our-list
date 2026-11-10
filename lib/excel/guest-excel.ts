@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 
+import { formatPhone } from '@/lib/phone';
 import type { Category } from '@/lib/types';
 
 import type { GuestListItem } from '@/services/guest.service';
@@ -55,7 +56,7 @@ export function exportGuestsToExcel(
           row[COLUMN_LABELS[key]] = guest.email ?? '';
           break;
         case 'phone':
-          row[COLUMN_LABELS[key]] = guest.phone ?? '';
+          row[COLUMN_LABELS[key]] = formatPhone(guest.phone) || (guest.phone ?? '');
           break;
         case 'status':
           row[COLUMN_LABELS[key]] = guest.status;
@@ -117,7 +118,7 @@ export function downloadGuestTemplate(filename = 'guests-template'): void {
     [COLUMN_LABELS['first_name']]: 'María',
     [COLUMN_LABELS['last_name']]: 'García',
     [COLUMN_LABELS['email']]: 'maria@ejemplo.com',
-    [COLUMN_LABELS['phone']]: '+1 809 555 0100',
+    [COLUMN_LABELS['phone']]: '+1 (809) 555-0100',
     [COLUMN_LABELS['status']]: 'pending',
     [COLUMN_LABELS['dietary_restrictions']]: 'Vegetariana',
     [COLUMN_LABELS['notes']]: 'Mesa cerca de la pista de baile',

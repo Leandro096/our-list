@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { normalizePhone } from '@/lib/phone';
 import type {
   User,
   Guest,
@@ -100,7 +101,7 @@ async function getGuests(supabase: SupabaseClient): Promise<GuestListItem[]> {
     )
     .order('created_at', { ascending: false });
 
-  return data ?? [];
+  return (data ?? []).map(withSeatingArray);
 }
 
 // ---- Paginated query ----
@@ -157,6 +158,15 @@ async function getGuestsPaginated(
   return { data: rows as GuestListItem[], count };
 }
 
+/**
+ * seating_assignments.guest_id is UNIQUE, so PostgREST embeds it as a single
+ * object (or null) rather than an array. Normalize to the array shape the UI expects.
+ */
+function withSeatingArray<T extends { seating_assignments?: unknown }>(row: T): T {
+  const sa = row.seating_assignments;
+  return { ...row, seating_assignments: Array.isArray(sa) ? sa : sa ? [sa] : [] };
+}
+
 export async function getGuestById(
   supabase: SupabaseClient,
   id: string
@@ -178,7 +188,7 @@ export async function getGuestById(
     .eq('id', id)
     .single();
 
-  return data ?? null;
+  return data ? withSeatingArray(data) : null;
 }
 
 async function getGuestToConfirm(supabase: SupabaseClient, id: string): Promise<Guest | null> {
@@ -262,7 +272,7 @@ export async function createGuest(
   const guestFields = {
     ...rawFields,
     email: rawFields.email || null,
-    phone: rawFields.phone || null,
+    phone: normalizePhone(rawFields.phone),
     dietary_restrictions: rawFields.dietary_restrictions || null,
     notes: rawFields.notes || null,
   };
@@ -317,7 +327,7 @@ export async function updateGuest(
   const fields = {
     ...rawFields,
     email: rawFields.email !== undefined ? rawFields.email || null : undefined,
-    phone: rawFields.phone !== undefined ? rawFields.phone || null : undefined,
+    phone: rawFields.phone !== undefined ? normalizePhone(rawFields.phone) : undefined,
     dietary_restrictions:
       rawFields.dietary_restrictions !== undefined
         ? rawFields.dietary_restrictions || null
@@ -449,7 +459,7 @@ export async function getGuestByIdWithFamily(
       .select(FAMILY_MEMBER_SELECT)
       .eq('parent_guest_id', id)
       .order('first_name');
-    children = (childrenData ?? []) as unknown as GuestFamilyMember[];
+    children = ((childrenData ?? []) as unknown as GuestFamilyMember[]).map(withSeatingArray);
   } else {
     const [{ data: parentData }, { data: siblingsData }] = await Promise.all([
       supabase.from('guests').select(FAMILY_MEMBER_SELECT).eq('id', base.parent_guest_id!).single(),
@@ -460,8 +470,8 @@ export async function getGuestByIdWithFamily(
         .neq('id', id)
         .order('first_name'),
     ]);
-    parent = (parentData ?? null) as unknown as GuestFamilyMember | null;
-    siblings = (siblingsData ?? []) as unknown as GuestFamilyMember[];
+    parent = parentData ? withSeatingArray(parentData as unknown as GuestFamilyMember) : null;
+    siblings = ((siblingsData ?? []) as unknown as GuestFamilyMember[]).map(withSeatingArray);
   }
 
   return { ...base, family_role, children, parent, siblings };

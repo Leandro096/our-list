@@ -12,6 +12,7 @@ import {
   searchGuestsForPublicRsvp,
 } from '@/app/rsvp/actions';
 
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Card,
   Badge,
@@ -493,10 +494,10 @@ export function PublicRsvpFlow({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="guest-phone">{t('rsvp.profile.phone')}</Label>
-                <Input
+                <PhoneInput
                   id="guest-phone"
-                  value={profile.guest.phone ?? ''}
-                  onChange={(e) => updateGuestField('phone', e.target.value)}
+                  value={profile.guest.phone}
+                  onValueChange={(v) => updateGuestField('phone', v)}
                   placeholder={t('rsvp.profile.phonePlaceholder')}
                 />
               </div>
@@ -600,12 +601,10 @@ export function PublicRsvpFlow({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plus-one-phone">{t('rsvp.profile.phone')}</Label>
-                    <Input
+                    <PhoneInput
                       id="plus-one-phone"
                       value={plusOneDraft.phone}
-                      onChange={(e) =>
-                        setPlusOneDraft((prev) => ({ ...prev, phone: e.target.value }))
-                      }
+                      onValueChange={(v) => setPlusOneDraft((prev) => ({ ...prev, phone: v }))}
                       placeholder={t('rsvp.profile.phonePlaceholder')}
                     />
                   </div>
@@ -711,10 +710,10 @@ export function PublicRsvpFlow({
                     <Label htmlFor={`related-${relative.id}-phone`}>
                       {t('rsvp.profile.phone')}
                     </Label>
-                    <Input
+                    <PhoneInput
                       id={`related-${relative.id}-phone`}
-                      value={relative.phone ?? ''}
-                      onChange={(e) => updateRelatedField(relative.id, 'phone', e.target.value)}
+                      value={relative.phone}
+                      onValueChange={(v) => updateRelatedField(relative.id, 'phone', v)}
                       placeholder={t('rsvp.profile.phonePlaceholder')}
                     />
                   </div>

@@ -802,7 +802,7 @@ export const es: Dictionary = {
       phone: 'Telefono',
       dietaryRestrictions: 'Restricciones dieteticas',
       emailPlaceholder: 'nombre@email.com',
-      phonePlaceholder: '809-000-0000',
+      phonePlaceholder: '+1 (809) 000-0000',
       dietaryPlaceholder: 'Ejemplo: vegetariano, alergia a frutos secos',
     },
     related: {

@@ -8,6 +8,7 @@ import { Mail, Phone, Armchair, ScanLine, StickyNote, UtensilsCrossed } from 'lu
 
 import { cn } from '@/lib/utils';
 import type { Category } from '@/lib/types';
+import { phoneHref, formatPhone } from '@/lib/phone';
 
 import { toast } from '@/hooks';
 import { getGuestDialogDataAction } from '@/app/dashboard/guests/actions';
@@ -276,8 +277,8 @@ function Summary({
         )}
         {guest.phone && (
           <Row icon={Phone}>
-            <a href={`tel:${guest.phone}`} className="hover:underline">
-              {guest.phone}
+            <a href={phoneHref(guest.phone) ?? `tel:${guest.phone}`} className="hover:underline">
+              {formatPhone(guest.phone) || guest.phone}
             </a>
           </Row>
         )}

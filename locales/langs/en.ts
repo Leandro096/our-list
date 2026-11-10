@@ -793,7 +793,7 @@ export const en = {
       phone: 'Phone',
       dietaryRestrictions: 'Dietary restrictions',
       emailPlaceholder: 'name@email.com',
-      phonePlaceholder: '809-000-0000',
+      phonePlaceholder: '+1 (809) 000-0000',
       dietaryPlaceholder: 'Example: vegetarian, peanut allergy',
     },
     related: {

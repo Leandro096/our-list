@@ -17,6 +17,7 @@ import {
 } from '@/app/dashboard/guests/actions';
 
 import { useAuth } from '@/components/auth-provider';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { CategoriesDialog } from '@/components/categories';
 import {
   Label,
@@ -391,11 +392,10 @@ export function GuestForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">{t('guests.phone')}</Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onValueChange={(phone) => setFormData({ ...formData, phone })}
               />
             </div>
           </div>

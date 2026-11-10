@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { Check, Undo2, Search, RotateCcw } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { formatPhone } from '@/lib/phone';
 import { joinNames, MESSAGE_OPTIONS } from '@/lib/invitation-messages';
 import { buildInvitationUrl, renderInvitationMessage } from '@/lib/invitation';
 
@@ -271,7 +272,7 @@ export function InvitationsManager({
                     )}
                   </p>
                   <p className="font-mono text-xs text-muted-foreground">
-                    {row.phone || t('invitations.noPhone')}
+                    {formatPhone(row.phone) || row.phone || t('invitations.noPhone')}
                   </p>
                   {sent && (
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">

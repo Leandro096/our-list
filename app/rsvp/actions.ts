@@ -1,5 +1,6 @@
 'use server';
 
+import { normalizePhone } from '@/lib/phone';
 import { readLimiter } from '@/lib/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -276,7 +277,7 @@ export async function submitPublicRsvp(input: {
     .update({
       status: input.status,
       email: toNullable(input.email),
-      phone: toNullable(input.phone),
+      phone: normalizePhone(input.phone),
       dietary_restrictions: toNullable(input.dietaryRestrictions),
       updated_at: new Date().toISOString(),
     })
@@ -300,7 +301,7 @@ export async function submitPublicRsvp(input: {
             .update({
               status: relative.status,
               email: toNullable(relative.email),
-              phone: toNullable(relative.phone),
+              phone: normalizePhone(relative.phone),
               dietary_restrictions: toNullable(relative.dietaryRestrictions),
               updated_at: new Date().toISOString(),
             })
@@ -330,7 +331,7 @@ export async function submitPublicRsvp(input: {
             last_name: lastName,
             status: input.plusOne.status,
             email: toNullable(input.plusOne.email),
-            phone: toNullable(input.plusOne.phone),
+            phone: normalizePhone(input.plusOne.phone),
             dietary_restrictions: toNullable(input.plusOne.dietaryRestrictions),
             parent_guest_id: baseGuest.id,
             is_plus_one: true,

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { normalizePhone } from '@/lib/phone';
+
 const VALID_STATUSES = ['pending', 'confirmed', 'declined', 'tentative'] as const;
 
 /** Converts empty/blank string to null, otherwise trims */
@@ -31,7 +33,10 @@ const importRowSchema = z.object({
     z.string().min(1, 'Last name is required')
   ),
   email: stringOrNull,
-  phone: stringOrNull,
+  phone: z.preprocess(
+    (v) => (typeof v === 'string' || typeof v === 'number' ? normalizePhone(String(v)) : null),
+    z.string().nullable().optional()
+  ),
   status: z.preprocess((v) => {
     if (typeof v !== 'string' || v.trim() === '') return 'pending';
     const lower = v.trim().toLowerCase();

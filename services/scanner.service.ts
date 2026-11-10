@@ -31,6 +31,14 @@ export type ScanHistoryItem = ScanLog & {
 
 // ---- Queries ----
 
+type SeatRow = { tables: { number: string } | null };
+/** seating_assignments is a to-one embed (guest_id is UNIQUE): PostgREST returns an object, not an array. */
+type SeatEmbed = SeatRow | SeatRow[] | null | undefined;
+
+function firstSeat(sa: SeatEmbed): SeatRow | undefined {
+  return Array.isArray(sa) ? sa[0] : (sa ?? undefined);
+}
+
 export async function getTodayStats(supabase: SupabaseClient): Promise<TodayStats> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -190,9 +198,9 @@ export async function processGuestScanByFamily(
       ).guest_categories ?? []
     ).map((gc) => ({ name: gc.categories.name, color: gc.categories.color })),
     seating: (() => {
-      const sa = (
-        rootData as unknown as { seating_assignments: Array<{ tables: { number: string } | null }> }
-      ).seating_assignments?.[0];
+      const sa = firstSeat(
+        (rootData as unknown as { seating_assignments: SeatEmbed }).seating_assignments
+      );
       if (!sa?.tables) return undefined;
       return { table_number: sa.tables.number, seat_number: null };
     })(),
@@ -217,14 +225,14 @@ export async function processGuestScanByFamily(
         id: string;
         first_name: string;
         last_name: string;
-        seating_assignments: Array<{ tables: { number: string } | null }>;
+        seating_assignments: SeatEmbed;
       }>
     ).map((c) => ({
       id: c.id,
       first_name: c.first_name,
       last_name: c.last_name,
-      seating: c.seating_assignments?.[0]?.tables
-        ? { table_number: c.seating_assignments[0].tables.number }
+      seating: firstSeat(c.seating_assignments)?.tables
+        ? { table_number: firstSeat(c.seating_assignments)!.tables!.number }
         : undefined,
     })),
   ];
