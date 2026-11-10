@@ -347,32 +347,20 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   );
 
   const signOut = useCallback(async () => {
-    // 1. Limpiar estado local INMEDIATAMENTE (optimista) para que el router
-    //    pueda redirigir sin esperar la red. Así el usuario nunca queda colgado.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.error('[AuthProvider] signOut error:', error);
+    }
+
     if (user) clearActiveRoleStorage(user.id);
     setUser(null);
     setProfile(null);
     setActiveRole(null);
     setActivePermissions([]);
 
-    // 2. Descartar el singleton para que el próximo login parta de un cliente limpio.
     resetClient();
-
-    // 3. Limpiar la sesión localmente de forma inmediata (scope: 'local').
-    //    Con scope 'global' (el default), signOut() espera un POST /auth/v1/logout
-    //    que puede colgar si la conexión TCP está inactiva, dejando las cookies
-    //    intactas. Cuando AuthGuard redirige a /auth/login, el proxy ve la cookie
-    //    válida y rebota al usuario de vuelta al dashboard en un loop.
-    //    scope: 'local' llama _removeSession() directamente (sin red), borra
-    //    las cookies de inmediato y no hay bounce-loop.
-    //    La sesión del servidor expirará de forma natural.
-    try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch (error) {
-      console.error('[AuthProvider] signOut error:', error);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  }, [supabase, user]);
 
   const ctxValue = useMemo(
     () => ({
