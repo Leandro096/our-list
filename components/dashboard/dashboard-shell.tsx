@@ -16,7 +16,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        'relative flex flex-1 flex-col transition-all duration-300',
+        'relative flex min-w-0 flex-1 flex-col transition-all duration-300',
         collapsed ? 'lg:pl-16' : 'lg:pl-60'
       )}
     >

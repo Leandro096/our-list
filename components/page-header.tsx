@@ -29,7 +29,9 @@ export function PageHeader({
       className={`flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between ${className ?? ''}`}
     >
       <div className="max-w-prose">
-        <h1 className="font-serif text-4xl leading-[1.1] tracking-tight">{t(titleKey)}</h1>
+        <h1 className="text-balance break-words font-serif text-3xl leading-[1.1] tracking-tight sm:text-4xl">
+          {t(titleKey)}
+        </h1>
         {descriptionKey && (
           <p className="mt-2 leading-relaxed text-muted-foreground">{t(descriptionKey)}</p>
         )}

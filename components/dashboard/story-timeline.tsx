@@ -137,11 +137,14 @@ export function StoryTimeline({ today, localeTag }: { today: number; localeTag: 
           const first = entries[0];
           const wedding = first.isWedding;
           const past = entries.every((e) => e.past);
-          const edge = pos < 15 ? 'left-0' : pos > 85 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+          // On phones the tooltip spans the whole ruler (anchored to the track, not the
+          // marker), so it can never poke out of the viewport. From sm up it hangs off the marker.
+          const edge =
+            pos < 15 ? 'sm:left-0' : pos > 85 ? 'sm:right-0' : 'sm:left-1/2 sm:-translate-x-1/2';
           return (
             <div
               key={first.key}
-              className="group absolute top-3 -translate-x-1/2 -translate-y-1/2"
+              className="group absolute top-3 -ml-2.5 -mt-3 max-sm:static"
               style={{ left: `${pos}%` }}
             >
               <button
@@ -165,7 +168,7 @@ export function StoryTimeline({ today, localeTag }: { today: number; localeTag: 
               <div
                 role="tooltip"
                 className={cn(
-                  'pointer-events-none invisible absolute top-full z-20 mt-10 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-md border border-border bg-popover p-3 text-left text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100',
+                  'pointer-events-none invisible absolute z-20 space-y-3 max-sm:inset-x-0 max-sm:top-16 sm:top-full sm:mt-10 sm:w-72 sm:max-w-[calc(100vw-2rem)] rounded-md border border-border bg-popover p-3 text-left text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100',
                   edge
                 )}
               >
