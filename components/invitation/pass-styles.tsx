@@ -11,13 +11,25 @@ export function PassStyles() {
       @keyframes px-rise { from { opacity:0; transform: translateY(1rem); filter: blur(4px); } to { opacity:1; transform:none; filter:none; } }
       @keyframes px-cue { 0% { transform: scaleY(0); transform-origin: top; } 45% { transform: scaleY(1); transform-origin: top; } 55% { transform: scaleY(1); transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
       @keyframes px-fall {
-        0%   { opacity:0; transform: translate3d(0,-10vh,0) rotate(0deg); }
-        10%  { opacity:.9; }
-        30%  { transform: translate3d(5vw,28vh,0) rotate(110deg); }
-        55%  { transform: translate3d(-4vw,58vh,0) rotate(210deg); }
-        80%  { transform: translate3d(6vw,88vh,0) rotate(300deg); }
-        92%  { opacity:.9; }
-        100% { opacity:0; transform: translate3d(-2vw,112vh,0) rotate(380deg); }
+        0%   { opacity:0; transform: translate3d(0,-14vh,0); }
+        7%   { opacity: var(--op, .9); }
+        90%  { opacity: var(--op, .9); }
+        100% { opacity:0; transform: translate3d(var(--drift, 0),112vh,0); }
+      }
+      @keyframes px-sway {
+        from { transform: translate3d(calc(var(--sway, 24px) * -1),0,0) rotate(-14deg); }
+        to   { transform: translate3d(var(--sway, 24px),0,0) rotate(14deg); }
+      }
+      @keyframes px-tumble {
+        0%   { transform: perspective(420px) rotateX(10deg)  rotateY(0deg)   rotateZ(0deg); }
+        20%  { transform: perspective(420px) rotateX(62deg)  rotateY(40deg)  rotateZ(60deg); }
+        45%  { transform: perspective(420px) rotateX(-18deg) rotateY(165deg) rotateZ(150deg); }
+        70%  { transform: perspective(420px) rotateX(-64deg) rotateY(250deg) rotateZ(250deg); }
+        100% { transform: perspective(420px) rotateX(10deg)  rotateY(360deg) rotateZ(360deg); }
+      }
+      @keyframes px-shade {
+        0%,100% { opacity:0; } 20% { opacity:.34; } 45% { opacity:.06; } 58% { opacity:.24; } 70% { opacity:.4; } 85% { opacity:.12; }
+      }
       }
       @keyframes px-tick { from { opacity:0; transform: translateY(-40%) rotateX(65deg); } to { opacity:1; transform:none; } }
       @keyframes px-twinkle { 0%,100% { opacity:.15; transform: scale(.7); } 50% { opacity:1; transform: scale(1.2); } }
@@ -36,7 +48,15 @@ export function PassStyles() {
       .px-cue::after { content:''; display:block; width:1px; height:2.5rem; background: currentColor; animation: px-cue 2.4s ease-in-out infinite; }
 
       /* ---------- petals ---------- */
-      .px-petal { position:absolute; top:0; border-radius: 100% 0 100% 0; opacity:0; animation: px-fall linear infinite; will-change: transform; }
+      .px-petal { position:absolute; top:0; opacity:0; animation: px-fall var(--fall, 16s) linear var(--delay, 0s) infinite; will-change: transform, opacity; }
+      .px-petal-sway { display:block; width:100%; height:100%; animation: px-sway var(--swayd, 3s) ease-in-out var(--delay, 0s) infinite alternate; will-change: transform; }
+      .px-petal-spin { position:relative; display:block; width:100%; height:100%; transform-style: preserve-3d;
+        animation: px-tumble var(--spin, 7s) linear var(--delay, 0s) infinite var(--dir, normal); will-change: transform; }
+      .px-petal-strip { position:absolute; inset:0; display:block; backface-visibility: visible; }
+      .px-petal-art { display:block; width:100%; height:100%; overflow:visible; filter: blur(var(--blur, 0px)); }
+      .px-petal-shade { position:absolute; inset:0; opacity:0; pointer-events:none; filter: blur(var(--blur, 0px));
+        animation: px-shade var(--spin, 7s) linear var(--delay, 0s) infinite var(--dir, normal); }
+      .px-petal-shade svg { display:block; width:100%; height:100%; }
 
       /* ---------- scroll reveals ---------- */
       .px-rv { transition-delay: var(--d, 0s); }
