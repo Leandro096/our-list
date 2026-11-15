@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Plus, Gift, Pencil, Trash2, Landmark, TriangleAlert } from 'lucide-react';
+import { Plus, Copy, Gift, Pencil, Trash2, Landmark, TriangleAlert } from 'lucide-react';
 
 import { toast } from '@/hooks';
 import { useTranslation } from '@/locales';
@@ -74,6 +74,7 @@ export function GiftsManager({
   const { t } = useTranslation();
   const [pending, startTransition] = useTransition();
   const [accountForm, setAccountForm] = useState<BankAccountInput | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
   const [linkForm, setLinkForm] = useState<GiftLinkInput | null>(null);
 
   const run = (action: () => Promise<GiftActionResult>, onDone?: () => void) =>
@@ -85,9 +86,10 @@ export function GiftsManager({
       } else {
         toast({
           title: t('common.error'),
-          description: t(
-            'error' in result && result.error === 'invalid' ? 'gifts.invalid' : 'gifts.saveFailed'
-          ),
+          description:
+            'error' in result && result.error === 'invalid'
+              ? t('gifts.invalid')
+              : `${t('gifts.saveFailed')} (${'error' in result ? (result.detail ?? result.error) : ''})`,
           variant: 'destructive',
         });
       }
@@ -112,7 +114,12 @@ export function GiftsManager({
             <Landmark className="size-5" />
             {t('gifts.accounts')}
           </h2>
-          <Button onClick={() => setAccountForm(emptyAccount)}>
+          <Button
+            onClick={() => {
+              setDuplicating(false);
+              setAccountForm(emptyAccount);
+            }}
+          >
             <Plus />
             {t('gifts.addAccount')}
           </Button>
@@ -137,9 +144,28 @@ export function GiftsManager({
                     {t('gifts.holderId')}: {a.holder_id}
                   </p>
                   <div className="flex gap-2 pt-3">
-                    <Button variant="outline" size="sm" onClick={() => setAccountForm({ ...a })}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDuplicating(false);
+                        setAccountForm({ ...a });
+                      }}
+                    >
                       <Pencil />
                       {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const { id: _id, ...copy } = a;
+                        setDuplicating(true);
+                        setAccountForm(copy);
+                      }}
+                    >
+                      <Copy />
+                      {t('gifts.duplicate')}
                     </Button>
                     <Button
                       variant="outline"
@@ -226,7 +252,11 @@ export function GiftsManager({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {accountForm?.id ? t('gifts.editAccount') : t('gifts.addAccount')}
+              {accountForm?.id
+                ? t('gifts.editAccount')
+                : duplicating
+                  ? t('gifts.duplicateAccount')
+                  : t('gifts.addAccount')}
             </DialogTitle>
             <DialogDescription className="sr-only">{t('gifts.accounts')}</DialogDescription>
           </DialogHeader>

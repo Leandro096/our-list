@@ -24,7 +24,12 @@ export type GiftLinkInput = {
   url: string;
 };
 
-export type GiftActionResult = { ok: true } | { ok: false; error: string };
+export type GiftActionResult = { ok: true } | { ok: false; error: string; detail?: string };
+
+function dbFailure(action: string, error: { code?: string; message: string }): GiftActionResult {
+  console.error(`[gifts] ${action} failed`, error);
+  return { ok: false, error: 'save_failed', detail: `${error.code ?? 'db'}: ${error.message}` };
+}
 
 async function authorize(): Promise<
   { ok: true; supabase: Awaited<ReturnType<typeof createClient>> } | { ok: false; error: string }
@@ -72,7 +77,7 @@ export async function saveBankAccountAction(input: BankAccountInput): Promise<Gi
     ? auth.supabase.from('bank_accounts').update(row).eq('id', input.id)
     : auth.supabase.from('bank_accounts').insert(row);
   const { error } = await query;
-  if (error) return { ok: false, error: 'save_failed' };
+  if (error) return dbFailure('saveBankAccount', error);
 
   revalidatePath('/dashboard/gifts');
   return { ok: true };
@@ -82,7 +87,7 @@ export async function deleteBankAccountAction(id: string): Promise<GiftActionRes
   const auth = await authorize();
   if (!auth.ok) return auth;
   const { error } = await auth.supabase.from('bank_accounts').delete().eq('id', id);
-  if (error) return { ok: false, error: 'save_failed' };
+  if (error) return dbFailure('delete', error);
   revalidatePath('/dashboard/gifts');
   return { ok: true };
 }
@@ -102,7 +107,7 @@ export async function saveGiftLinkAction(input: GiftLinkInput): Promise<GiftActi
     ? auth.supabase.from('gift_links').update(row).eq('id', input.id)
     : auth.supabase.from('gift_links').insert(row);
   const { error } = await query;
-  if (error) return { ok: false, error: 'save_failed' };
+  if (error) return dbFailure('saveGiftLink', error);
 
   revalidatePath('/dashboard/gifts');
   return { ok: true };
@@ -112,7 +117,7 @@ export async function deleteGiftLinkAction(id: string): Promise<GiftActionResult
   const auth = await authorize();
   if (!auth.ok) return auth;
   const { error } = await auth.supabase.from('gift_links').delete().eq('id', id);
-  if (error) return { ok: false, error: 'save_failed' };
+  if (error) return dbFailure('delete', error);
   revalidatePath('/dashboard/gifts');
   return { ok: true };
 }

@@ -397,6 +397,8 @@ export const es: Dictionary = {
     links: 'Lista de regalos',
     addAccount: 'Agregar cuenta',
     editAccount: 'Editar cuenta',
+    duplicate: 'Duplicar',
+    duplicateAccount: 'Duplicar cuenta',
     addLink: 'Agregar enlace',
     editLink: 'Editar enlace',
     noAccounts: 'Aún no hay cuentas. Agrega una para que tus invitados puedan hacer su regalo.',

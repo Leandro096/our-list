@@ -394,6 +394,8 @@ export const en = {
     links: 'Gift list',
     addAccount: 'Add account',
     editAccount: 'Edit account',
+    duplicate: 'Duplicate',
+    duplicateAccount: 'Duplicate account',
     addLink: 'Add link',
     editLink: 'Edit link',
     noAccounts: 'No accounts yet. Add one so guests can send a gift.',
