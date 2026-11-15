@@ -7,7 +7,7 @@ import { Mail, UserPlus, KeyRound } from 'lucide-react';
 import { toast } from '@/hooks';
 import type { Role } from '@/lib';
 import { useTranslation } from '@/locales';
-import { createUserAction } from '@/app/dashboard/settings/users/actions';
+import { createUserAction, inviteUserAction } from '@/app/dashboard/settings/users/actions';
 
 import {
   Input,
@@ -39,8 +39,10 @@ export function CreateUserDialog({ roles, open, onOpenChange }: CreateUserDialog
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState<string>('none');
   const [isInviting, setIsInviting] = useState(false);
+  const [mode, setMode] = useState<'invite' | 'password'>('invite');
 
   const reset = () => {
+    setMode('invite');
     setEmail('');
     setName('');
     setPassword('');
@@ -60,26 +62,39 @@ export function CreateUserDialog({ roles, open, onOpenChange }: CreateUserDialog
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || (mode === 'password' && !password)) return;
 
     setIsInviting(true);
     try {
-      await createUserAction({
-        email,
-        password,
-        displayName: name,
-        roleIds: roleId === 'none' ? [] : [roleId],
-        isSuperAdmin: false,
-      });
-      toast({
-        title: t('settings.users_section.createSuccess'),
-        description: t('settings.users_section.createSuccessDesc').replace('{email}', email),
-      });
+      const roleIds = roleId === 'none' ? [] : [roleId];
+      if (mode === 'invite') {
+        await inviteUserAction({ email, displayName: name, roleIds });
+        toast({
+          title: t('settings.users_section.inviteSuccess'),
+          description: t('settings.users_section.inviteSuccessDesc').replace('{email}', email),
+        });
+      } else {
+        await createUserAction({
+          email,
+          password,
+          displayName: name,
+          roleIds,
+          isSuperAdmin: false,
+        });
+        toast({
+          title: t('settings.users_section.createSuccess'),
+          description: t('settings.users_section.createSuccessDesc').replace('{email}', email),
+        });
+      }
       router.refresh();
       handleClose(false);
     } catch (err) {
       toast({
-        title: t('settings.users_section.createError'),
+        title: t(
+          mode === 'invite'
+            ? 'settings.users_section.inviteError'
+            : 'settings.users_section.createError'
+        ),
         description: err instanceof Error ? err.message : undefined,
         variant: 'destructive',
       });
@@ -96,10 +111,38 @@ export function CreateUserDialog({ roles, open, onOpenChange }: CreateUserDialog
             <UserPlus className="h-5 w-5 text-primary" />
             {t('settings.users_section.createUser')}
           </DialogTitle>
-          <DialogDescription>{t('settings.users_section.createDescription')}</DialogDescription>
+          <DialogDescription>
+            {mode === 'invite'
+              ? t('settings.users_section.modeInviteDesc')
+              : t('settings.users_section.createDescription')}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleInvite} className="space-y-5 pt-2">
+          {/* Mode */}
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="tablist">
+            {(['invite', 'password'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  mode === m
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t(
+                  m === 'invite'
+                    ? 'settings.users_section.modeInvite'
+                    : 'settings.users_section.modePassword'
+                )}
+              </button>
+            ))}
+          </div>
+
           {/* Email */}
           <div className="grid gap-2">
             <Label htmlFor="invite-email">
@@ -127,28 +170,30 @@ export function CreateUserDialog({ roles, open, onOpenChange }: CreateUserDialog
           </div>
 
           {/* Password */}
-          <div className="grid gap-2">
-            <Label htmlFor="invite-password">
-              {t('settings.users_section.createPassword')}
-              <span className="ml-1 text-destructive">*</span>
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="invite-password"
-                  required
-                  minLength={6}
-                  className="pl-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+          {mode === 'password' && (
+            <div className="grid gap-2">
+              <Label htmlFor="invite-password">
+                {t('settings.users_section.createPassword')}
+                <span className="ml-1 text-destructive">*</span>
+              </Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="invite-password"
+                    required
+                    minLength={6}
+                    className="pl-9"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="outline" onClick={generatePassword}>
+                  {t('settings.users_section.generatePassword')}
+                </Button>
               </div>
-              <Button type="button" variant="outline" onClick={generatePassword}>
-                {t('settings.users_section.generatePassword')}
-              </Button>
             </div>
-          </div>
+          )}
 
           {/* Role */}
           <div className="grid gap-2">
@@ -185,10 +230,17 @@ export function CreateUserDialog({ roles, open, onOpenChange }: CreateUserDialog
             >
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={isInviting || !email || password.length < 6}>
-              {isInviting
-                ? t('settings.users_section.creating')
-                : t('settings.users_section.createUser')}
+            <Button
+              type="submit"
+              disabled={isInviting || !email || (mode === 'password' && password.length < 6)}
+            >
+              {mode === 'invite'
+                ? isInviting
+                  ? t('settings.users_section.inviting')
+                  : t('settings.users_section.inviteUser')
+                : isInviting
+                  ? t('settings.users_section.creating')
+                  : t('settings.users_section.createUser')}
             </Button>
           </div>
         </form>

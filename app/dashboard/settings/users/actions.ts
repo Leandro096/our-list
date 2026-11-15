@@ -86,6 +86,69 @@ export async function createUserAction(input: CreateUserInput): Promise<void> {
   revalidatePath('/dashboard/settings/users');
 }
 
+export interface InviteUserInput {
+  email: string;
+  displayName?: string;
+  roleIds: string[];
+}
+
+/**
+ * Invites a user by email. They receive the "Invite user" template and set
+ * their own password when they accept. Only callable with SETTINGS_USERS.
+ */
+export async function inviteUserAction(input: InviteUserInput): Promise<void> {
+  await authorize();
+
+  const email = input.email.trim().toLowerCase();
+  if (!email) throw new Error('El correo es obligatorio.');
+
+  const displayName = input.displayName?.trim() || email.split('@')[0];
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { display_name: displayName },
+  });
+  if (error || !data.user) throw new Error(error?.message ?? 'No se pudo enviar la invitación.');
+
+  const userId = data.user.id;
+
+  // Make sure the profile row exists (a DB trigger may already have created it).
+  const { error: profileError } = await admin
+    .from('users')
+    .upsert({ id: userId, email, display_name: displayName }, { onConflict: 'id' });
+  if (profileError) {
+    await admin.auth.admin.deleteUser(userId);
+    throw new Error(profileError.message);
+  }
+
+  if (input.roleIds.length > 0) {
+    const { error: rolesError } = await admin
+      .from('user_roles')
+      .insert(input.roleIds.map((role_id) => ({ user_id: userId, role_id })));
+    if (rolesError) throw new Error(rolesError.message);
+  }
+
+  revalidatePath('/dashboard/settings/users');
+}
+
+/**
+ * Sends the password recovery email to an existing user.
+ */
+export async function sendPasswordResetAction(userId: string): Promise<void> {
+  await authorize();
+  const admin = createAdminClient();
+
+  const { data: target, error: targetError } = await admin
+    .from('users')
+    .select('email')
+    .eq('id', userId)
+    .single();
+  if (targetError || !target?.email) throw new Error('Usuario no encontrado.');
+
+  const { error } = await admin.auth.resetPasswordForEmail(target.email);
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Updates name, email, password, super-admin flag and roles of a user.
  */

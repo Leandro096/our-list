@@ -4,13 +4,17 @@ import { useReducer } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
-import { User, Crown, Pencil, Shield, UserPlus, Trash2 } from 'lucide-react';
+import { User, Mail, Crown, Pencil, Shield, Trash2, UserPlus } from 'lucide-react';
 
 import { toast } from '@/hooks';
 import type { Role } from '@/lib';
 import { useLocale, useTranslation } from '@/locales';
 import type { UserWithRoleAssignments } from '@/services';
-import { updateUserAction, deleteUserAction } from '@/app/dashboard/settings/users/actions';
+import {
+  updateUserAction,
+  deleteUserAction,
+  sendPasswordResetAction,
+} from '@/app/dashboard/settings/users/actions';
 
 import {
   Card,
@@ -149,6 +153,29 @@ export function UserManagement({
     } catch (error) {
       toast({
         title: t('settings.users_section.deleteError'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      dispatch({ type: 'UPDATE', payload: { isSaving: false } });
+    }
+  };
+
+  const handleSendReset = async () => {
+    if (!editingUser) return;
+    dispatch({ type: 'UPDATE', payload: { isSaving: true } });
+    try {
+      await sendPasswordResetAction(editingUser.id);
+      toast({
+        title: t('settings.users_section.sendResetSuccess'),
+        description: t('settings.users_section.sendResetSuccessDesc').replace(
+          '{email}',
+          editingUser.email
+        ),
+      });
+    } catch (error) {
+      toast({
+        title: t('settings.users_section.sendResetError'),
         description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       });
@@ -406,6 +433,17 @@ export function UserManagement({
                   }
                 />
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={handleSendReset}
+                disabled={isSaving}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                {t('settings.users_section.sendResetLink')}
+              </Button>
             </div>
 
             <Separator />
