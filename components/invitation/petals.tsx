@@ -62,7 +62,15 @@ function PetalDefs() {
     <svg width="0" height="0" className="absolute" aria-hidden focusable="false">
       <defs>
         {PALETTES.map((p, i) => (
-          <radialGradient key={i} id={`pxp-fill-${i}`} cx="50%" cy="98%" r="105%" fx="50%" fy="100%">
+          <radialGradient
+            key={i}
+            id={`pxp-fill-${i}`}
+            cx="50%"
+            cy="98%"
+            r="105%"
+            fx="50%"
+            fy="100%"
+          >
             <stop offset="0%" stopColor={p.base} />
             <stop offset="16%" stopColor={p.base} />
             <stop offset="60%" stopColor={p.mid} />
@@ -103,7 +111,14 @@ function PetalArt({ shape, palette, side }: { shape: number; palette: number; si
       <g clipPath={`url(#pxp-clip-${shape})`}>
         <path d={d} fill={`url(#pxp-fill-${palette})`} />
         <path d={d} fill="#000" filter="url(#pxp-tex)" />
-        <path d={VEINS} fill="none" stroke={p.vein} strokeOpacity=".25" strokeWidth=".9" strokeLinecap="round" />
+        <path
+          d={VEINS}
+          fill="none"
+          stroke={p.vein}
+          strokeOpacity=".25"
+          strokeWidth=".9"
+          strokeLinecap="round"
+        />
         <path d={d} fill="url(#pxp-base)" />
         <path d={d} fill="url(#pxp-sheen)" opacity={p.sheen} />
         {/* static light falloff across the curve (light from the upper left) */}
@@ -139,7 +154,10 @@ function stripTransform(k: number, w: number, arcDeg: number, cup: number) {
 
 export function Petals({ count = 14, className = '' }: { count?: number; className?: string }) {
   return (
-    <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+    >
       <PetalDefs />
       {Array.from({ length: count }, (_, i) => {
         const depth = DEPTHS[(i * 2 + 1) % 3];
@@ -176,7 +194,11 @@ export function Petals({ count = 14, className = '' }: { count?: number; classNa
                   const t = k / (STRIPS - 1);
                   const side = cup > 0 ? 0.03 + 0.2 * t : 0.03 + 0.2 * (1 - t);
                   return (
-                    <span key={k} className="px-petal-strip" style={stripTransform(k, width, arc, cup)}>
+                    <span
+                      key={k}
+                      className="px-petal-strip"
+                      style={stripTransform(k, width, arc, cup)}
+                    >
                       <PetalArt shape={shape} palette={palette} side={side} />
                       <span className="px-petal-shade">
                         <svg viewBox="0 0 100 120" focusable="false">
