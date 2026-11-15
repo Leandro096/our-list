@@ -96,6 +96,22 @@ export const es: Dictionary = {
     displayNamePlaceholder: 'Tu nombre',
     passwordMinLength: 'Debe tener al menos 6 caracteres',
     creatingAccount: 'Creando cuenta...',
+    forgotPasswordTitle: 'Restablecer contraseña',
+    forgotPasswordDescription:
+      'Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.',
+    sendResetLink: 'Enviar enlace',
+    sendingResetLink: 'Enviando...',
+    resetEmailSentTitle: 'Revisa tu correo',
+    resetEmailSentDescription:
+      'Si existe una cuenta con ese correo, recibirás en breve un enlace para restablecer tu contraseña.',
+    resetPasswordTitle: 'Elige una nueva contraseña',
+    resetPasswordDescription: 'Ingresa tu nueva contraseña a continuación.',
+    newPassword: 'Nueva contraseña',
+    updatePassword: 'Actualizar contraseña',
+    updatingPassword: 'Actualizando...',
+    passwordUpdated: 'Contraseña actualizada correctamente. Redirigiendo...',
+    resetSessionMissing: 'Este enlace no es válido o ha expirado. Solicita uno nuevo.',
+    requestNewLink: 'Solicitar un nuevo enlace',
   },
   nav: {
     home: 'Inicio',

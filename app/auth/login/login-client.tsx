@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -83,7 +84,15 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">{t('auth.password')}</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">{t('auth.password')}</Label>
+                      <Link
+                        href="/auth/forgot-password"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {t('auth.forgotPassword')}
+                      </Link>
+                    </div>
                     <Input
                       id="password"
                       type="password"

@@ -64,7 +64,9 @@ export async function updateSession(request: NextRequest) {
   if (
     request.nextUrl.pathname.startsWith('/auth') &&
     isAuthenticated &&
-    !request.nextUrl.pathname.startsWith('/auth/callback')
+    !request.nextUrl.pathname.startsWith('/auth/callback') &&
+    // The recovery link signs the user in; they still need to set a new password.
+    !request.nextUrl.pathname.startsWith('/auth/reset-password')
   ) {
     const url = new URL('/dashboard', request.url);
     return NextResponse.redirect(url, 302);
