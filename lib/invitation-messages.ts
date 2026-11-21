@@ -1,18 +1,3 @@
-/**
- * Ready-made save-the-date messages for WhatsApp.
- *
- * Placeholders: {nombre} (the guest's first name, or all the first names when the invitation
- * covers several people), {pareja}, {fecha} and {enlace} (their personal link).
- * `lang` is the language of the message itself, which is not always the language of the dashboard:
- * guests abroad may need the English version even when the couple works in Spanish.
- *
- * Every message is built from the same four pieces (greeting, announcement, call to action, closing),
- * so all versions say the same thing and only change in language and tone. Guests abroad get one
- * extra piece, the early notice about flights. Invitations that cover more than one person use the
- * plural wording. To change what the messages say, edit the pieces below; to change one message,
- * use the editor in the dashboard.
- */
-
 export type MessageLang = 'es' | 'en';
 export type MessageTone = 'formal' | 'warm';
 export type MessageAudience = 'abroad' | 'local';
@@ -22,18 +7,14 @@ export interface MessageOption {
   lang: MessageLang;
   audience: MessageAudience;
   tone: MessageTone;
-  /** Key under `invitations.messages` for the label shown in menus. */
   labelKey: string;
-  /** For one person. */
   body: string;
-  /** For an invitation that covers several people. */
   bodyPlural: string;
 }
 
 interface Pieces {
   greeting: string;
   announcement: string;
-  /** Only sent to guests who live abroad. */
   earlyNotice: string;
   callToAction: string;
   closing: string;
@@ -82,7 +63,6 @@ const SINGULAR: Record<MessageLang, Record<MessageTone, Pieces>> = {
   },
 };
 
-/** Only what changes when the message goes to several people; the rest is shared with SINGULAR. */
 const PLURAL_OVERRIDES: Record<MessageLang, Record<MessageTone, Partial<Pieces>>> = {
   es: {
     formal: {
@@ -98,7 +78,7 @@ const PLURAL_OVERRIDES: Record<MessageLang, Record<MessageTone, Partial<Pieces>>
       announcement:
         '¡Estamos felices y queremos que lo sepan primero! Nos casamos el {fecha}, un día que va a marcar nuestras vidas para siempre, y no imaginamos vivirlo sin ustedes.',
       earlyNotice:
-        'Les avisamos con tiempo porque sabemos que venir de fuera toma planificación: así pueden mirar vuelos, comparar precios y escoger lo que mejor les quede.',
+        'Les avisamos con tiempo porque sabemos que para ustedes venir de sus hogares toma planificación: así pueden buscar vuelos, comparar precios y escoger lo que mejor les quede.',
       callToAction:
         'Aparten la fecha y cuéntennos si pueden asistir. En el mismo enlace pueden responder por todos:\n{enlace}',
     },
@@ -145,7 +125,6 @@ export const MESSAGE_OPTIONS: MessageOption[] = AUDIENCES.flatMap((audience) =>
       lang,
       audience,
       tone,
-      // e.g. abroadEsFormal, localEnWarm
       labelKey: `${audience}${cap(lang)}${cap(tone)}`,
       body: build(lang, tone, audience, false),
       bodyPlural: build(lang, tone, audience, true),
@@ -159,7 +138,6 @@ export function findMessageOption(id: string): MessageOption {
   return MESSAGE_OPTIONS.find((option) => option.id === id) ?? MESSAGE_OPTIONS[0];
 }
 
-/** "Ana", "Ana y Luis", "Ana, Luis y Marta" (and "Ana e Isabel": Spanish swaps y→e before an "i" sound). */
 export function joinNames(names: string[], lang: MessageLang): string {
   if (names.length <= 1) return names[0] ?? '';
   const last = names[names.length - 1];
