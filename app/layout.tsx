@@ -23,7 +23,15 @@ const newsreader = Newsreader({
   variable: '--font-newsreader',
 });
 
+// Resolves relative Open Graph image URLs (e.g. the invitation hero) to absolute ones.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000');
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Guests List App',
   description:
     'Elegant wedding guest management platform with QR check-in, seating assignments, and comprehensive guest tracking.',

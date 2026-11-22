@@ -18,16 +18,16 @@ export function InvitationHero({ fullName }: { fullName: string }) {
   const { locale } = useLocale();
 
   return (
-    <header className="relative h-[78svh] min-h-[32rem] w-full overflow-hidden bg-[#e9dfcf] lg:sticky lg:top-0 lg:h-svh">
+    <header className="relative h-[92svh] min-h-[36rem] w-full overflow-hidden bg-[#e9dfcf] lg:sticky lg:top-0 lg:h-svh">
       <img
         src={INVITATION_PHOTOS.hero}
         alt=""
-        className="inv-photo absolute inset-0 h-full w-full object-cover object-[35%_30%]"
+        className="inv-photo absolute inset-0 h-full w-full object-cover object-[50%_85%]"
         fetchPriority="high"
         decoding="async"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--inv-ink)] from-0% via-[var(--inv-ink)]/60 via-40% to-transparent to-75%" />
-      <div className="absolute inset-x-0 bottom-0 p-6 pb-14 text-[var(--inv-paper)] sm:p-10 sm:pb-16">
+      <div className="absolute inset-0 bg-gradient-to-b from-[var(--inv-ink)]/65 from-0% via-[var(--inv-ink)]/30 via-35% to-transparent to-60%" />
+      <div className="absolute inset-x-0 top-0 p-6 pt-12 text-[var(--inv-paper)] sm:p-10 sm:pt-14">
         <p
           className="inv-rise font-[family-name:var(--font-invitation)] text-xl italic opacity-90"
           style={delay(0.1)}

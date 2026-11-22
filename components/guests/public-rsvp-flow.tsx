@@ -135,6 +135,9 @@ export function PublicRsvpFlow({
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // The personal save-the-date page only asks for attendance and phone.
+  const showExtraFields = !invitationGuid;
+
   const statusLabel = (value: RsvpStatus) => t(`rsvp.statuses.${value}`);
 
   const formatInvitedEvents = (events: Array<'ceremony' | 'reception' | 'both'>): string => {
@@ -483,15 +486,17 @@ export function PublicRsvpFlow({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="guest-email">{t('rsvp.profile.email')}</Label>
-                <Input
-                  id="guest-email"
-                  value={profile.guest.email ?? ''}
-                  onChange={(e) => updateGuestField('email', e.target.value)}
-                  placeholder={t('rsvp.profile.emailPlaceholder')}
-                />
-              </div>
+              {showExtraFields && (
+                <div className="space-y-2">
+                  <Label htmlFor="guest-email">{t('rsvp.profile.email')}</Label>
+                  <Input
+                    id="guest-email"
+                    value={profile.guest.email ?? ''}
+                    onChange={(e) => updateGuestField('email', e.target.value)}
+                    placeholder={t('rsvp.profile.emailPlaceholder')}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="guest-phone">{t('rsvp.profile.phone')}</Label>
                 <PhoneInput
@@ -502,15 +507,17 @@ export function PublicRsvpFlow({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="guest-diet">{t('rsvp.profile.dietaryRestrictions')}</Label>
-              <Textarea
-                id="guest-diet"
-                value={profile.guest.dietary_restrictions ?? ''}
-                onChange={(e) => updateGuestField('dietary_restrictions', e.target.value)}
-                placeholder={t('rsvp.profile.dietaryPlaceholder')}
-              />
-            </div>
+            {showExtraFields && (
+              <div className="space-y-2">
+                <Label htmlFor="guest-diet">{t('rsvp.profile.dietaryRestrictions')}</Label>
+                <Textarea
+                  id="guest-diet"
+                  value={profile.guest.dietary_restrictions ?? ''}
+                  onChange={(e) => updateGuestField('dietary_restrictions', e.target.value)}
+                  placeholder={t('rsvp.profile.dietaryPlaceholder')}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -588,17 +595,19 @@ export function PublicRsvpFlow({
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="plus-one-email">{t('rsvp.profile.email')}</Label>
-                    <Input
-                      id="plus-one-email"
-                      value={plusOneDraft.email}
-                      onChange={(e) =>
-                        setPlusOneDraft((prev) => ({ ...prev, email: e.target.value }))
-                      }
-                      placeholder={t('rsvp.profile.emailPlaceholder')}
-                    />
-                  </div>
+                  {showExtraFields && (
+                    <div className="space-y-2">
+                      <Label htmlFor="plus-one-email">{t('rsvp.profile.email')}</Label>
+                      <Input
+                        id="plus-one-email"
+                        value={plusOneDraft.email}
+                        onChange={(e) =>
+                          setPlusOneDraft((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        placeholder={t('rsvp.profile.emailPlaceholder')}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="plus-one-phone">{t('rsvp.profile.phone')}</Label>
                     <PhoneInput
@@ -610,20 +619,22 @@ export function PublicRsvpFlow({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="plus-one-diet">{t('rsvp.profile.dietaryRestrictions')}</Label>
-                  <Textarea
-                    id="plus-one-diet"
-                    value={plusOneDraft.dietary_restrictions}
-                    onChange={(e) =>
-                      setPlusOneDraft((prev) => ({
-                        ...prev,
-                        dietary_restrictions: e.target.value,
-                      }))
-                    }
-                    placeholder={t('rsvp.related.dietaryPlaceholder')}
-                  />
-                </div>
+                {showExtraFields && (
+                  <div className="space-y-2">
+                    <Label htmlFor="plus-one-diet">{t('rsvp.profile.dietaryRestrictions')}</Label>
+                    <Textarea
+                      id="plus-one-diet"
+                      value={plusOneDraft.dietary_restrictions}
+                      onChange={(e) =>
+                        setPlusOneDraft((prev) => ({
+                          ...prev,
+                          dietary_restrictions: e.target.value,
+                        }))
+                      }
+                      placeholder={t('rsvp.related.dietaryPlaceholder')}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -695,17 +706,19 @@ export function PublicRsvpFlow({
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor={`related-${relative.id}-email`}>
-                      {t('rsvp.profile.email')}
-                    </Label>
-                    <Input
-                      id={`related-${relative.id}-email`}
-                      value={relative.email ?? ''}
-                      onChange={(e) => updateRelatedField(relative.id, 'email', e.target.value)}
-                      placeholder={t('rsvp.profile.emailPlaceholder')}
-                    />
-                  </div>
+                  {showExtraFields && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`related-${relative.id}-email`}>
+                        {t('rsvp.profile.email')}
+                      </Label>
+                      <Input
+                        id={`related-${relative.id}-email`}
+                        value={relative.email ?? ''}
+                        onChange={(e) => updateRelatedField(relative.id, 'email', e.target.value)}
+                        placeholder={t('rsvp.profile.emailPlaceholder')}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor={`related-${relative.id}-phone`}>
                       {t('rsvp.profile.phone')}
@@ -718,19 +731,21 @@ export function PublicRsvpFlow({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`related-${relative.id}-diet`}>
-                    {t('rsvp.profile.dietaryRestrictions')}
-                  </Label>
-                  <Textarea
-                    id={`related-${relative.id}-diet`}
-                    value={relative.dietary_restrictions ?? ''}
-                    onChange={(e) =>
-                      updateRelatedField(relative.id, 'dietary_restrictions', e.target.value)
-                    }
-                    placeholder={t('rsvp.related.dietaryPlaceholder')}
-                  />
-                </div>
+                {showExtraFields && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`related-${relative.id}-diet`}>
+                      {t('rsvp.profile.dietaryRestrictions')}
+                    </Label>
+                    <Textarea
+                      id={`related-${relative.id}-diet`}
+                      value={relative.dietary_restrictions ?? ''}
+                      onChange={(e) =>
+                        updateRelatedField(relative.id, 'dietary_restrictions', e.target.value)
+                      }
+                      placeholder={t('rsvp.related.dietaryPlaceholder')}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
