@@ -870,6 +870,7 @@ export const en = {
       saveFailed: 'We could not save your confirmation.',
       generic: 'Something went wrong. Please try again.',
       plusOneNameRequired: 'To add your plus one, first and last name are required.',
+      statusRequired: 'Please choose whether you will attend or not.',
     },
     success: {
       thanksSaved: 'Thank you, {name}. Your response was saved.',

@@ -55,6 +55,11 @@ type EditableRsvpProfile = {
 
 type RsvpStatus = 'confirmed' | 'tentative' | 'declined';
 
+/** Guests must answer yes or no; a stored "tentative" or "pending" counts as unanswered. */
+type RsvpAnswer = 'confirmed' | 'declined';
+const toAnswer = (value: string | null | undefined): RsvpAnswer | null =>
+  value === 'confirmed' || value === 'declined' ? value : null;
+
 /**
  * One answer in a radio group. The whole row is the target, and the chosen row is
  * filled with the primary color and carries a check, so the selection never depends on
@@ -101,24 +106,20 @@ export function PublicRsvpFlow({
         }
       : null
   );
-  const [status, setStatus] = useState<RsvpStatus>(
-    initialProfile && initialProfile.guest.status !== 'pending'
-      ? initialProfile.guest.status
-      : 'confirmed'
-  );
+  const [status, setStatus] = useState<RsvpAnswer | null>(toAnswer(initialProfile?.guest.status));
   const [profile, setProfile] = useState<EditableRsvpProfile | null>(initialProfile ?? null);
   const [addPlusOne, setAddPlusOne] = useState(false);
   const [plusOneDraft, setPlusOneDraft] = useState<{
     first_name: string;
     last_name: string;
-    status: RsvpStatus;
+    status: RsvpAnswer | null;
     email: string;
     phone: string;
     dietary_restrictions: string;
   }>({
     first_name: '',
     last_name: '',
-    status: 'tentative',
+    status: null,
     email: '',
     phone: '',
     dietary_restrictions: '',
@@ -188,6 +189,13 @@ export function PublicRsvpFlow({
       return;
     }
 
+    const relatedPending =
+      profile.family_role === 'parent' && profile.related.some((r) => !toAnswer(r.status));
+    if (!status || relatedPending || (addPlusOne && !plusOneDraft.status)) {
+      setError(t('rsvp.errors.statusRequired'));
+      return;
+    }
+
     if (addPlusOne && (!plusOneDraft.first_name.trim() || !plusOneDraft.last_name.trim())) {
       setError(t('rsvp.errors.plusOneNameRequired'));
       return;
@@ -208,7 +216,7 @@ export function PublicRsvpFlow({
           profile.family_role === 'parent'
             ? profile.related.map((relative) => ({
                 id: relative.id,
-                status: relative.status === 'pending' ? 'tentative' : relative.status,
+                status: relative.status as RsvpStatus,
                 email: relative.email ?? '',
                 phone: relative.phone ?? '',
                 dietaryRestrictions: relative.dietary_restrictions ?? '',
@@ -234,12 +242,12 @@ export function PublicRsvpFlow({
 
       const relatedStatuses =
         profile.family_role === 'parent'
-          ? profile.related.map((relative) =>
-              relative.status === 'pending' ? 'tentative' : (relative.status as RsvpStatus)
-            )
+          ? profile.related.map((relative) => relative.status as RsvpStatus)
           : [];
       const plusOneStatuses =
-        addPlusOne && profile.can_add_plus_one && res.plusOneCreated ? [plusOneDraft.status] : [];
+        addPlusOne && profile.can_add_plus_one && res.plusOneCreated && plusOneDraft.status
+          ? [plusOneDraft.status]
+          : [];
       const allStatuses: RsvpStatus[] = [status, ...relatedStatuses, ...plusOneStatuses];
       const decisionCounts: Record<RsvpStatus, number> = {
         confirmed: allStatuses.filter((s) => s === 'confirmed').length,
@@ -286,12 +294,12 @@ export function PublicRsvpFlow({
       setPlusOneDraft({
         first_name: '',
         last_name: '',
-        status: 'tentative',
+        status: null,
         email: '',
         phone: '',
         dietary_restrictions: '',
       });
-      setStatus(details.data.guest.status === 'pending' ? 'confirmed' : details.data.guest.status);
+      setStatus(toAnswer(details.data.guest.status));
     } finally {
       setIsLoadingProfile(false);
     }
@@ -570,21 +578,16 @@ export function PublicRsvpFlow({
                 <div className="space-y-2">
                   <Label>{t('rsvp.status.title')}</Label>
                   <RadioGroup
-                    value={plusOneDraft.status}
+                    value={plusOneDraft.status ?? ''}
                     onValueChange={(value) =>
-                      setPlusOneDraft((prev) => ({ ...prev, status: value as RsvpStatus }))
+                      setPlusOneDraft((prev) => ({ ...prev, status: value as RsvpAnswer }))
                     }
-                    className="grid gap-2 sm:grid-cols-3"
+                    className="grid gap-2 sm:grid-cols-2"
                   >
                     <Choice
                       value="confirmed"
                       id="plus-one-status-confirmed"
                       label={t('rsvp.status.confirm')}
-                    />
-                    <Choice
-                      value="tentative"
-                      id="plus-one-status-tentative"
-                      label={t('rsvp.status.tentative')}
                     />
                     <Choice
                       value="declined"
@@ -649,12 +652,11 @@ export function PublicRsvpFlow({
           </CardHeader>
           <CardContent className="space-y-4">
             <RadioGroup
-              value={status}
-              onValueChange={(value) => setStatus(value as RsvpStatus)}
+              value={status ?? ''}
+              onValueChange={(value) => setStatus(value as RsvpAnswer)}
               className="space-y-2"
             >
               <Choice value="confirmed" id="status-confirmed" label={t('rsvp.status.confirm')} />
-              <Choice value="tentative" id="status-tentative" label={t('rsvp.status.tentative')} />
               <Choice value="declined" id="status-declined" label={t('rsvp.status.decline')} />
             </RadioGroup>
           </CardContent>
@@ -683,19 +685,14 @@ export function PublicRsvpFlow({
                 <div className="space-y-2">
                   <Label>{t('rsvp.status.title')}</Label>
                   <RadioGroup
-                    value={relative.status === 'pending' ? 'tentative' : relative.status}
+                    value={toAnswer(relative.status) ?? ''}
                     onValueChange={(value) => updateRelatedStatus(relative.id, value as RsvpStatus)}
-                    className="grid gap-2 sm:grid-cols-3"
+                    className="grid gap-2 sm:grid-cols-2"
                   >
                     <Choice
                       value="confirmed"
                       id={`related-${relative.id}-confirmed`}
                       label={t('rsvp.status.confirm')}
-                    />
-                    <Choice
-                      value="tentative"
-                      id={`related-${relative.id}-tentative`}
-                      label={t('rsvp.status.tentative')}
                     />
                     <Choice
                       value="declined"

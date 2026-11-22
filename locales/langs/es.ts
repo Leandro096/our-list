@@ -880,6 +880,7 @@ export const es: Dictionary = {
       saveFailed: 'No se pudo guardar la confirmacion.',
       generic: 'Algo salio mal. Intenta nuevamente.',
       plusOneNameRequired: 'Para agregar tu +1, debes completar nombre y apellido.',
+      statusRequired: 'Por favor indica si podrás asistir o no.',
     },
     success: {
       thanksSaved: 'Gracias, {name}. Tu respuesta fue guardada.',
