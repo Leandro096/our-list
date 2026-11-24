@@ -17,8 +17,9 @@ import {
   createTable,
   deleteTable,
   updateTable,
+  moveSeatMember,
+  removeSeatMember,
   assignSeatWithFamily,
-  removeSeatAssignmentWithFamily,
 } from '@/services';
 
 export async function createTableAction(
@@ -56,9 +57,19 @@ export async function assignSeatWithFamilyAction(
   return result;
 }
 
-export async function removeSeatAssignmentWithFamilyAction(guestId: string): Promise<void> {
+export async function moveSeatMemberAction(
+  input: AssignSeatInput
+): Promise<AssignSeatFamilyResult> {
   const supabase = await createClient();
   await requireAuth(supabase, PERMISSIONS.SEATING_EDIT);
-  await removeSeatAssignmentWithFamily(supabase, guestId);
+  const result = await moveSeatMember(supabase, input);
+  revalidatePath('/dashboard/seating');
+  return result;
+}
+
+export async function removeSeatMemberAction(guestId: string): Promise<void> {
+  const supabase = await createClient();
+  await requireAuth(supabase, PERMISSIONS.SEATING_EDIT);
+  await removeSeatMember(supabase, guestId);
   revalidatePath('/dashboard/seating');
 }

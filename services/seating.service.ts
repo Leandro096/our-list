@@ -176,6 +176,7 @@ export async function getSeatingDataWithFamily(
     .from('guests')
     .select('id, first_name, last_name, status, parent_guest_id, seating_assignments(id, table_id)')
     .in('parent_guest_id', parentIds)
+    .eq('status', 'confirmed')
     .order('first_name');
 
   const childrenByParent = new Map<string, SeatingGuestChild[]>();
@@ -200,74 +201,79 @@ export async function getSeatingDataWithFamily(
 
 // ---- Family mutations ----
 
+/**
+ * Seats a guest at a table.
+ * - A group head is seated together with their confirmed members that have no seat yet
+ *   (members already seated elsewhere are left where they are).
+ * - A member (child/companion) is seated on their own.
+ * Capacity is counted per person.
+ */
 export async function assignSeatWithFamily(
   supabase: SupabaseClient,
   input: AssignSeatInput
 ): Promise<AssignSeatFamilyResult> {
-  // Resolve root parent
   const { data: guestRow } = await supabase
     .from('guests')
     .select('id, parent_guest_id')
     .eq('id', input.guest_id)
     .single();
 
-  const rootId = guestRow?.parent_guest_id ?? input.guest_id;
+  let memberIds = [input.guest_id];
 
-  // Get all family members (root + children)
-  const { data: children } = await supabase
-    .from('guests')
-    .select('id')
-    .eq('parent_guest_id', rootId);
+  if (guestRow && !guestRow.parent_guest_id) {
+    const { data: children } = await supabase
+      .from('guests')
+      .select('id, seating_assignments(id)')
+      .eq('parent_guest_id', input.guest_id)
+      .eq('status', 'confirmed');
 
-  const memberIds = [rootId, ...(children ?? []).map((c) => c.id)];
+    const unseatedChildIds = (children ?? [])
+      .filter((c) => !((c.seating_assignments as unknown[] | null) ?? []).length)
+      .map((c) => c.id);
+    memberIds = [input.guest_id, ...unseatedChildIds];
+  }
 
-  // Check table capacity
+  return seatMembers(supabase, memberIds, input.table_id);
+}
+
+/** Moves (or seats) one single person to a table, regardless of their group. */
+export async function moveSeatMember(
+  supabase: SupabaseClient,
+  input: AssignSeatInput
+): Promise<AssignSeatFamilyResult> {
+  return seatMembers(supabase, [input.guest_id], input.table_id);
+}
+
+async function seatMembers(
+  supabase: SupabaseClient,
+  memberIds: string[],
+  tableId: string
+): Promise<AssignSeatFamilyResult> {
   const [{ data: tableRow }, { data: currentAssignments }] = await Promise.all([
-    supabase.from('tables').select('capacity').eq('id', input.table_id).single(),
-    supabase.from('seating_assignments').select('guest_id').eq('table_id', input.table_id),
+    supabase.from('tables').select('capacity').eq('id', tableId).single(),
+    supabase.from('seating_assignments').select('guest_id').eq('table_id', tableId),
   ]);
 
   const capacity = tableRow?.capacity ?? 0;
-  const currentCount = (currentAssignments ?? []).length;
-  const needed = memberIds.length;
-  const available = Math.max(0, capacity - currentCount);
+  const seatedHere = new Set((currentAssignments ?? []).map((a) => a.guest_id as string));
+  const toSeat = memberIds.filter((id) => !seatedHere.has(id));
+  const available = Math.max(0, capacity - seatedHere.size);
 
-  if (currentCount + needed > capacity) {
-    return { assigned: 0, skipped_capacity: true, needed, available };
+  if (toSeat.length > available) {
+    return { assigned: 0, skipped_capacity: true, needed: toSeat.length, available };
   }
+  if (toSeat.length === 0) return { assigned: 0, skipped_capacity: false };
 
-  // Assign all family members
-  const upsertRows = memberIds.map((id) => ({ guest_id: id, table_id: input.table_id }));
-  const { error } = await supabase
-    .from('seating_assignments')
-    .upsert(upsertRows, { onConflict: 'guest_id' });
+  const { error } = await supabase.from('seating_assignments').upsert(
+    toSeat.map((id) => ({ guest_id: id, table_id: tableId })),
+    { onConflict: 'guest_id' }
+  );
 
   if (error) throw error;
-  return { assigned: memberIds.length, skipped_capacity: false };
+  return { assigned: toSeat.length, skipped_capacity: false };
 }
 
-export async function removeSeatAssignmentWithFamily(
-  supabase: SupabaseClient,
-  guestId: string
-): Promise<void> {
-  // Resolve root parent
-  const { data: guestRow } = await supabase
-    .from('guests')
-    .select('id, parent_guest_id')
-    .eq('id', guestId)
-    .single();
-
-  const rootId = guestRow?.parent_guest_id ?? guestId;
-
-  // Get all family members
-  const { data: children } = await supabase
-    .from('guests')
-    .select('id')
-    .eq('parent_guest_id', rootId);
-
-  const memberIds = [rootId, ...(children ?? []).map((c) => c.id)];
-
-  const { error } = await supabase.from('seating_assignments').delete().in('guest_id', memberIds);
-
-  if (error) throw error;
+/** Removes the seat of one single person (their group is not affected). */
+export async function removeSeatMember(supabase: SupabaseClient, guestId: string): Promise<void> {
+  await removeSeatAssignment(supabase, guestId);
 }

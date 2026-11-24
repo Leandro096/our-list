@@ -562,6 +562,9 @@ export const es: Dictionary = {
     capacityExceeded: 'Capacidad insuficiente ({needed} necesarios, {available} disponibles).',
     groupAssigned: 'Grupo asignado',
     groupAssignedDesc: '{count} miembro(s) asignado(s) a la mesa.',
+    moveTo: 'Mover a…',
+    memberOf: 'de {name}',
+    moveToAnotherTable: 'Mover a otra mesa',
   },
   settings: {
     title: 'Configuración',

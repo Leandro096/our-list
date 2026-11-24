@@ -11,8 +11,9 @@ import {
   createTableAction,
   deleteTableAction,
   updateTableAction,
+  moveSeatMemberAction,
+  removeSeatMemberAction,
   assignSeatWithFamilyAction,
-  removeSeatAssignmentWithFamilyAction,
 } from '@/app/dashboard/seating/actions';
 
 import {
@@ -82,15 +83,52 @@ export function SeatingManager({
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [isSubmittingEditAssign, setIsSubmittingEditAssign] = useState(false);
 
+  // Every confirmed person (group heads + their members), counted individually
   const assignedGuestIds = new Set(assignments.map((a) => a.guest_id));
-  const unassignedGuests = guests.filter((g) => !assignedGuestIds.has(g.id));
-  const assignedGuestsCount = guests.length - unassignedGuests.length;
+  const parentNameById = new Map(guests.map((g) => [g.id, `${g.first_name} ${g.last_name}`]));
+  const allPeople = guests.flatMap((g) => [g, ...g.children]);
 
-  const getTableGuests = (tableId: string) =>
-    // Show only parent/solo assignments (not children) for clean group view
-    assignments.filter((a) => a.table_id === tableId && !a.guests?.parent_guest_id);
-  const getChildrenInTable = (parentId: string, tableId: string) =>
-    assignments.filter((a) => a.table_id === tableId && a.guests?.parent_guest_id === parentId);
+  // Entries offered for seating. A group head brings the members that still have no seat;
+  // a member whose head is already seated shows up on their own.
+  const unassignedGuests = guests.flatMap((g) => {
+    const pendingChildren = g.children.filter((c) => !assignedGuestIds.has(c.id));
+    const entries: Array<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      size: number;
+      parentName: string | null;
+    }> = [];
+    if (!assignedGuestIds.has(g.id)) {
+      entries.push({ ...g, size: 1 + pendingChildren.length, parentName: null });
+    } else {
+      for (const c of pendingChildren) {
+        entries.push({ ...c, size: 1, parentName: parentNameById.get(g.id) ?? null });
+      }
+    }
+    return entries;
+  });
+  const unassignedPeopleCount = allPeople.filter((p) => !assignedGuestIds.has(p.id)).length;
+  const assignedGuestsCount = allPeople.length - unassignedPeopleCount;
+  const entrySize = (id: string) => unassignedGuests.find((e) => e.id === id)?.size ?? 1;
+
+  // All people seated at a table, grouped so that members follow their head
+  const getTableMembers = (tableId: string) => {
+    const atTable = assignments.filter((a) => a.table_id === tableId);
+    const present = new Set(atTable.map((a) => a.guest_id));
+    const heads = atTable.filter(
+      (a) => !a.guests?.parent_guest_id || !present.has(a.guests.parent_guest_id)
+    );
+    return heads
+      .sort((a, b) => (a.guests?.parent_guest_id ? 1 : 0) - (b.guests?.parent_guest_id ? 1 : 0))
+      .flatMap((head) => [
+        { assignment: head, isMember: false },
+        ...atTable
+          .filter((a) => a.guests?.parent_guest_id === head.guest_id)
+          .map((assignment) => ({ assignment, isMember: true })),
+      ]);
+  };
+  const getOccupied = (tableId: string) => assignments.filter((a) => a.table_id === tableId).length;
 
   const handleAddTable = async () => {
     if (!newTableName || !newTableNumber) return;
@@ -176,10 +214,7 @@ export function SeatingManager({
         setIsAssigning(false);
         return;
       }
-      const totalCount = selectedGuests.reduce((sum, id) => {
-        const g = unassignedGuests.find((ug) => ug.id === id);
-        return sum + 1 + (g?.children?.length ?? 0);
-      }, 0);
+      const totalCount = selectedGuests.reduce((sum, id) => sum + entrySize(id), 0);
       setSelectedGuests([]);
       setSelectedTable('');
       setGuestSearch('');
@@ -203,7 +238,7 @@ export function SeatingManager({
   const handleRemoveAssignment = async (guestId: string | undefined) => {
     if (!guestId) return;
     try {
-      await removeSeatAssignmentWithFamilyAction(guestId);
+      await removeSeatMemberAction(guestId);
       toast({ title: t('seating.guestUnassigned') });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -214,6 +249,90 @@ export function SeatingManager({
       });
     }
   };
+
+  const handleMoveMember = async (guestId: string, tableId: string) => {
+    try {
+      const result = await moveSeatMemberAction({ guest_id: guestId, table_id: tableId });
+      if (result.skipped_capacity) {
+        toast({
+          title: t('common.error'),
+          description: t('seating.capacityExceeded', {
+            needed: String(result.needed ?? 0),
+            available: String(result.available ?? 0),
+          }),
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: t('seating.guestsAssigned') });
+    } catch {
+      toast({
+        title: t('common.error'),
+        description: t('seating.guestAssignError'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const renderMembers = (tableId: string) => (
+    <div className="space-y-1.5">
+      {getTableMembers(tableId).map(({ assignment, isMember }) => {
+        const guest = assignment.guests;
+        const parentPresent = isMember;
+        const headName =
+          guest?.parent_guest_id && !parentPresent
+            ? parentNameById.get(guest.parent_guest_id)
+            : null;
+        const otherTables = tables.filter(
+          (tb) => tb.id !== tableId && getOccupied(tb.id) < tb.capacity
+        );
+        return (
+          <div
+            key={assignment.id}
+            className={`flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 ${
+              isMember ? 'ml-4' : ''
+            }`}
+          >
+            <span className="min-w-0 truncate text-sm">
+              {guest?.first_name} {guest?.last_name}
+              {headName && (
+                <span className="ml-1 text-xs text-muted-foreground">
+                  ({t('seating.memberOf', { name: headName })})
+                </span>
+              )}
+            </span>
+            <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {otherTables.length > 0 && guest?.id && (
+                <Select value="" onValueChange={(value) => handleMoveMember(guest.id, value)}>
+                  <SelectTrigger
+                    className="h-6 w-auto gap-1 px-2 text-xs"
+                    aria-label={t('seating.moveToAnotherTable')}
+                  >
+                    <SelectValue placeholder={t('seating.moveTo')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {otherTables.map((tb) => (
+                      <SelectItem key={tb.id} value={tb.id}>
+                        {tb.number} — {tb.name} ({getOccupied(tb.id)}/{tb.capacity})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={() => handleRemoveAssignment(guest?.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   const openEditDialog = (table: Table) => {
     setEditingTable(table);
@@ -280,10 +399,7 @@ export function SeatingManager({
         setEditSelectedGuests([]);
         return;
       }
-      const totalCount = editSelectedGuests.reduce((sum, id) => {
-        const g = unassignedGuests.find((ug) => ug.id === id);
-        return sum + 1 + (g?.children?.length ?? 0);
-      }, 0);
+      const totalCount = editSelectedGuests.reduce((sum, id) => sum + entrySize(id), 0);
       setEditSelectedGuests([]);
       setEditGuestSearch('');
       toast({
@@ -340,7 +456,7 @@ export function SeatingManager({
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{unassignedGuests.length}</p>
+              <p className="text-2xl font-bold">{unassignedPeopleCount}</p>
               <p className="text-sm text-muted-foreground">{t('seating.unassigned')}</p>
             </div>
           </CardContent>
@@ -447,7 +563,7 @@ export function SeatingManager({
                   </SelectTrigger>
                   <SelectContent>
                     {tables.map((table) => {
-                      const occupied = getTableGuests(table.id).length;
+                      const occupied = getOccupied(table.id);
                       return (
                         <SelectItem
                           key={table.id}
@@ -523,9 +639,14 @@ export function SeatingManager({
                             />
                             <span className="text-sm">
                               {guest.first_name} {guest.last_name}
-                              {guest.children.length > 0 && (
+                              {guest.size > 1 && (
                                 <span className="ml-1 text-xs text-muted-foreground">
-                                  {t('seating.groupSize', { count: guest.children.length + 1 })}
+                                  {t('seating.groupSize', { count: guest.size })}
+                                </span>
+                              )}
+                              {guest.parentName && (
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  ({t('seating.memberOf', { name: guest.parentName })})
                                 </span>
                               )}
                             </span>
@@ -547,10 +668,7 @@ export function SeatingManager({
                   ? t('seating.assigning')
                   : selectedGuests.length > 0
                     ? t('seating.assignCount', {
-                        count: selectedGuests.reduce((sum, id) => {
-                          const g = unassignedGuests.find((ug) => ug.id === id);
-                          return sum + 1 + (g?.children?.length ?? 0);
-                        }, 0),
+                        count: selectedGuests.reduce((sum, id) => sum + entrySize(id), 0),
                       })
                     : t('seating.assignGuest')}
               </Button>
@@ -571,8 +689,8 @@ export function SeatingManager({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tables.map((table) => {
-            const tableGuests = getTableGuests(table.id);
-            const isFull = tableGuests.length >= table.capacity;
+            const occupied = getOccupied(table.id);
+            const isFull = occupied >= table.capacity;
             return (
               <Card
                 key={table.id}
@@ -596,7 +714,7 @@ export function SeatingManager({
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={isFull ? 'destructive' : 'outline'}>
-                        {tableGuests.length}/{table.capacity}
+                        {occupied}/{table.capacity}
                       </Badge>
                       <Button
                         variant="ghost"
@@ -616,43 +734,10 @@ export function SeatingManager({
                   {table.notes && (
                     <p className="mb-2 text-xs text-muted-foreground">{table.notes}</p>
                   )}
-                  {tableGuests.length === 0 ? (
+                  {occupied === 0 ? (
                     <p className="text-sm text-muted-foreground">{t('seating.noGuestsAssigned')}</p>
                   ) : (
-                    <div className="space-y-2">
-                      {tableGuests.map((assignment) => {
-                        const childCount = getChildrenInTable(
-                          assignment.guests?.id ?? '',
-                          table.id
-                        ).length;
-                        return (
-                          <div
-                            key={assignment.id}
-                            className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
-                          >
-                            <span className="text-sm">
-                              {assignment.guests?.first_name} {assignment.guests?.last_name}
-                              {childCount > 0 && (
-                                <span className="ml-1 text-xs text-muted-foreground">
-                                  (+{childCount})
-                                </span>
-                              )}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveAssignment(assignment.guests?.id);
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    renderMembers(table.id)
                   )}
                 </CardContent>
               </Card>
@@ -667,7 +752,7 @@ export function SeatingManager({
           <CardHeader>
             <CardTitle className="font-serif">
               {t('seating.unassignedGuests', {
-                count: unassignedGuests.length,
+                count: unassignedPeopleCount,
               })}
             </CardTitle>
           </CardHeader>
@@ -676,6 +761,14 @@ export function SeatingManager({
               {unassignedGuests.map((guest) => (
                 <Badge key={guest.id} variant="outline">
                   {guest.first_name} {guest.last_name}
+                  {guest.size > 1 && (
+                    <span className="ml-1 text-muted-foreground">(+{guest.size - 1})</span>
+                  )}
+                  {guest.parentName && (
+                    <span className="ml-1 text-muted-foreground">
+                      ({t('seating.memberOf', { name: guest.parentName })})
+                    </span>
+                  )}
                 </Badge>
               ))}
             </div>
@@ -772,29 +865,10 @@ export function SeatingManager({
                 {/* Currently assigned */}
                 <div className="space-y-2">
                   <Label>{t('seating.assignedGuests')}</Label>
-                  {getTableGuests(editingTable.id).length === 0 ? (
+                  {getOccupied(editingTable.id) === 0 ? (
                     <p className="text-sm text-muted-foreground">{t('seating.noGuestsAssigned')}</p>
                   ) : (
-                    <div className="space-y-1">
-                      {getTableGuests(editingTable.id).map((assignment) => (
-                        <div
-                          key={assignment.id}
-                          className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
-                        >
-                          <span className="text-sm">
-                            {assignment.guests?.first_name} {assignment.guests?.last_name}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveAssignment(assignment.guests?.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                    renderMembers(editingTable.id)
                   )}
                 </div>
 

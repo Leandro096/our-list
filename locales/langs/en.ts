@@ -558,6 +558,9 @@ export const en = {
     capacityExceeded: 'Not enough capacity ({needed} needed, {available} available).',
     groupAssigned: 'Group assigned',
     groupAssignedDesc: '{count} member(s) assigned to table.',
+    moveTo: 'Move to…',
+    memberOf: 'of {name}',
+    moveToAnotherTable: 'Move to another table',
   },
   settings: {
     title: 'Settings',
